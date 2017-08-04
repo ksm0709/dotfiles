@@ -1,0 +1,20 @@
+각 운영체제 별 Docker의 설치 방법은 공식 홈페이지에 잘 정리되어 있습니다. 제가 사용하는 Ubuntu의 경우에는 Docker에서 제공하는 스크립트 파일 하나를 통해서 원큐에 정말 쉽게 Docker를 설치할 수 있습니다. 가상 머신에서도 설치가 가능하니, 가능하다면 Ubuntu 환경을 사용하길 권장합니다. 네, 글을 쓰는 편의상.
+
+curl -s https://get.docker.io/ubuntu/ | sudo sh
+
+단, 당연히 curl이 설치 되어있어야합니다.1 1월 현재 12.04 / 13.10에서도 같은 방법으로 설치가 가능했습니다만, 설치 과정에 문제가 있거나 다른 운영체제를 사용하시는 경우엔 설치 문서를 꼼꼼히 읽어보시고 진행해나가시기 바랍니다. 설치가 끝나면 설치가 잘 됐나 확인해봅니다.
+
+$ docker -v
+Docker version 0.7.6, build bc3b2ec
+
+Wow! 훌륭합니다. 필요하다면 ufw(방화벽) 설정을 통해서 도커가 사용하는 4243/tcp 포트도 열어줍니다.
+
+sudo ufw allow 4243/tcp
+
+기본적으로 docker의 대부분의 명령어를 실행 시 root 권한이 필요합니다. 따라서 sudo를 사용해야하는 번거로움이 따라오는데, 이를 위해 현재 유저를 docker 그룹에 포함시켜 줍니다.
+
+$ sudo groupadd docker
+$ sudo gpasswd -a ${USER} docker
+$ sudo service docker restart
+
+명령어들을 실행하고 재로그인을 하게 되면 더 이상 sudo 명령어를 앞에 붙이지 않아도 docker 명령을 사용할 수 있습니다. 단, 이 방법을 사용할 경우엔, 공식 문서에서도 경고하고 있듯이 docker group은 root와 같은 권한 가지고 있다는 사실을 인지하고 있어야합니다.

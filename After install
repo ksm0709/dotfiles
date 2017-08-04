@@ -1,0 +1,15 @@
+tmux
+vim
+vundle
+powerline
+texlive
+ko.tex
+--------------------------------------------------------------------
+sudo apt-get install tmux -qq
+sudo apt-get install vim -qq
+git clone https://github.com/gmarik/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+git clone https://github.com/powerline/fonts.git
+cd fonts
+bash ./install.sh
+sudo apt-get install texlive
+sudo apt-get install ko.tex
