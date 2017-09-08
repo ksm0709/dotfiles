@@ -89,15 +89,15 @@ call vundle#end()            " required
  set rtp+=/usr/local/lib/python2.7/dist-packages/powerline/bindings/vim/
  set t_Co=256
  set guifont=Liberation_Mono_for_Powerline:h10 
- let g:airline_powerline_fonts = 1
+ let g:airline_powerline_fonts = 0
  let g:Powerline_symbols = 'unicode'
  " 버퍼 목록 켜기
  let g:airline#extensions#tabline#enabled = 1
 "
 " " 파일명만 출력
  let g:airline#extensions#tabline#fnamemod = ':t'
- let g:airline#extensions#left_sep = ' '
- let g:airline#extensions#left_alt_sep = '|'
+ let g:airline#extensions#left_sep = ''
+ let g:airline#extensions#left_alt_sep = ''
  let g:airline_theme = 'bubblegum' 
 
  set laststatus=2
