@@ -1,0 +1,196 @@
+<?xml version="1.0"?>
+
+<launch>
+	<arg name="database_path"	  default="rtabmap.db"/>
+	<arg name="localization"	  default="false"/>
+	<arg name="rgbd_odometry"     default="true"/>
+	<arg name="args"			  default="--delete_db_on_start"/>
+	<arg name="rviz_cfg"		  default="$(find turtlebot3_bringup)/launch/config/rgbd.rviz"/>
+	<arg name="rtabmap_cfg"		  default="$(find turtlebot3_bringup)/launch/config/rtabmap.ini"/>
+	<arg name="rtabmapviz_cfg"	  default="$(find turtlebot3_bringup)/launch/config/rgbd_gui.ini"/>
+	<arg name="resolution"		  default="hd"/>
+	<arg name="navigation"		  default="false"/>
+	<arg name="map_path"		  default="/home/robot/.ros/maps"/>
+	<arg name="map_file"		  default="map.yaml"/>
+	<arg name="load_map"		  default="false"/>
+
+	<arg name="wait_for_transform"  default="3.0"/> 
+
+	<arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+
+	<arg name="cmd_vel_topic" default="/cmd_vel" />
+	<arg name="vo_topic"   default="/rtabmap/odom"/>
+	<arg name="wo_topic"   default="/robot/odom"/>
+	<arg name="odom_topic" default="/rtabmap/odometry/filtered" />
+
+	<arg name="odom_frame_id" default="odom"/>
+	<arg name="base_frame_id"	default="base_footprint"/>
+	<arg name="map_frame_id"	default="map"/>
+ 
+   <!-- ODOMETRY MAIN ARGUMENTS: 
+        -"strategy"        : Strategy: Frame-to-Map 1=Frame-To-Frame
+        -"feature"         : Feature type: 0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK
+        -"nn"              : Nearest neighbor strategy : 0=Linear, 1=FLANN_KDTREE, 2=FLANN_LSH, 3=BRUTEFORCE 
+                             Set to 1 for float descriptor like SIFT/SURF                  
+                             Set to 3 for binary descriptor like ORB/FREAK/BRIEF/BRISK  
+        -"max_depth"       : Maximum features depth (m)  
+        -"min_inliers"     : Minimum visual correspondences to accept a transformation (m)  
+        -"inlier_distance" : RANSAC maximum inliers distance (m)  
+        -"local_map"       : Local map size: number of unique features to keep track 
+    -->
+   <arg name="strategy" default="1" />
+   <arg name="feature" default="2" />
+   <arg name="nn" default="1" />
+   <arg name="max_depth" default="10.0" />
+   <arg name="max_features" default="1500" />
+   <arg name="min_inliers" default="25" />
+   <arg name="inlier_distance" default="0.01" />
+   <arg name="local_map" default="50" />
+ 
+    <!-- Connect to OpenCR Board -->
+    <include file="$(find turtlebot3_bringup)/launch/turtlebot3_core.launch"/>
+
+    <!-- Load Robot Model and publish TF -->
+    <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch" />
+
+	<!-- Connect to Kinect V2 -->	
+	<include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch"/>
+
+	<!-- Start IMU Filter -->
+	<include file="$(find imu_complementary_filter)/launch/complementary_filter.launch"/>
+
+	<!-- Start Navigation Stack -->
+	<!-- Map server -->
+	<node if="$(arg load_map)" pkg="map_server" name="map_server" type="map_server" args="$(arg map_path)/$(arg map_file)"/>
+
+	<!-- AMCL -->
+	<include if="$(arg navigation)" file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
+
+	<!-- move_base -->
+	<node if="$(arg navigation)" pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+		<param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+
+		<rosparam file="$(find turtlebot3_navigation)/param/costmap_common_params_$(arg model).yaml" command="load" ns="global_costmap" />
+		<rosparam file="$(find turtlebot3_navigation)/param/costmap_common_params_$(arg model).yaml" command="load" ns="local_costmap" />
+		<rosparam file="$(find turtlebot3_navigation)/param/local_costmap_params.yaml" command="load" />
+		<rosparam file="$(find turtlebot3_navigation)/param/global_costmap_params.yaml" command="load" />
+		<rosparam file="$(find turtlebot3_navigation)/param/move_base_params.yaml" command="load" />
+		<rosparam file="$(find turtlebot3_navigation)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
+
+		<remap from="cmd_vel" to="$(arg cmd_vel_topic)"/>
+		<remap from="odom" to="$(arg odom_topic)"/>
+	</node>
+
+	
+	<!-- Start Rtabmap -->
+	<group ns="rtabmap">
+  		
+		<!-- Odometry -->
+		<node if="$(arg rgbd_odometry)" pkg="rtabmap_ros" type="rgbd_odometry" name="visual_odometry" output="screen">
+			<remap from="rgb/image" to="/kinect2/$(arg resolution)/image_color_rect"/>
+			<remap from="depth/image" to="/kinect2/$(arg resolution)/image_depth_rect"/>
+			<remap from="rgb/camera_info" to="/kinect2/$(arg resolution)/camera_info"/>
+
+			<!-- Dont publish a odom->base_link tf, robot_localization will do that -->
+			<param name="publish_tf" type="bool" value="false"/> 
+
+			<param name="frame_id" type="string" value="$(arg base_frame_id)"/>
+			<param name="approx_sync" type="bool" value="true"/>
+			
+			<param name="config_path"		  type="string" value="$(arg rtabmap_cfg)"/>
+
+			<param name="Odom/Strategy" type="string" value="$(arg strategy)"/> 
+			<param name="Vis/FeatureType" type="string" value="$(arg feature)"/>  
+			<param name="Vis/CorNNType" type="string" value="$(arg nn)"/>
+			<param name="Vis/MaxDepth" type="string" value="$(arg max_depth)"/>  
+			<param name="Vis/MinInliers" type="string" value="$(arg min_inliers)"/> 
+			<param name="Vis/InlierDistance" type="string" value="$(arg inlier_distance)"/>       
+			<param name="OdomF2M/MaxSize" type="string" value="$(arg local_map)"/>
+			<param name="Odom/FillInfoData" type="string" value="true"/>
+			<param name="Vis/MaxFeatures" type="string" value="$(arg max_features)"/>
+			
+			<param name="ORB/Gpu"	value="true"/>
+
+		</node>
+
+		
+		<node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="$(arg args)">
+			
+			<!-- inputs -->
+			<remap from="scan"            to="/scan"/>
+			<remap from="rgb/image"       to="/kinect2/$(arg resolution)/image_color_rect"/>
+			<remap from="depth/image"     to="/kinect2/$(arg resolution)/image_depth_rect"/>
+			<remap from="rgb/camera_info" to="/kinect2/$(arg resolution)/camera_info"/>
+
+			<!-- output -->
+			<remap from="grid_map" to="/map"/>
+
+			<!-- RTABMAP_ROS parameters -->
+			<param name="database_path"       type="string" value="$(arg database_path)"/>
+			<param name="frame_id"            type="string" value="$(arg base_frame_id)"/>
+			<param name="config_path"		  type="string" value="$(arg rtabmap_cfg)"/>
+
+			<param name="map_frame_id"		  type="string" value="map"/>
+			<param name="odom_frame_id"       type="string" value="$(arg odom_frame_id)"/>
+			<param name="wait_for_transform_duration"  type="double"   value="$(arg wait_for_transform)"/>
+			<param name="subscribe_depth"     type="bool"   value="true"/>
+			<param name="subscribe_scan"      type="bool"   value="false"/>
+			<param name="gen_scan"			  type="bool"	value="false"/>
+			<param name="approx_sync"		  type="bool" 	value="true"/>
+			<param name="queue_size"		  type="int"	value="100"/>
+			
+			<!-- localization mode -->
+			<param     if="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="false"/>
+			<param unless="$(arg localization)" name="Mem/IncrementalMemory" type="string" value="true"/>
+			<param name="Mem/InitWMWithAllNodes" type="string" value="$(arg localization)"/> 
+
+
+			<!-- RTAB-Map's parameters: do "rosrun rtabmap rtabmap (double-dash)params" to see the list of available parameters. -->
+			<param name="Grid/3D" value="false"/>                                    <!--[A 3D occupancy grid is required if you want an Octomap. Set to false if you want only a 2D map, the cloud will be projected on xy plane. A 2D map can be still generated if checked, but it requires more memory and time to generate it. Ignored if laser scan is 2D and "Grid/FromDepth" is false.]-->
+				<param name="Grid/GroundIsObstacle" value="false"/>                   <!--[[Grid/3D=true] Ground is an obstacle. Use this only if you want an Octomap with ground identified as an obstacle (e.g., with an UAV).]-->
+<!---->		<param name="Grid/MaxGroundHeight" value="0.1"/>                        <!--[Maximum ground height (0=disabled). Should be set if "Grid/NormalsSegmentation" is true.]-->
+<!---->		<param name="Grid/MaxObstacleHeight" value="0.3"/>                      <!--[Maximum obstacles height (0=disabled).]-->
+<!---->		<param name="Grid/MinGroundHeight" value="0.0"/>                        <!--[Minimum ground height (0=disabled).]-->
+
+<!---->		<param name="Kp/DetectorStrategy" value="$(arg feature)"/>                           <!--[0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK 8=GFTT/ORB.]-->
+<!---->		<param name="Kp/MaxFeatures" value="$(arg max_features)"/>                              <!--[Maximum features extracted from the images (0 means not bounded, <0 means no extraction).]-->
+<!---->		<param name="Optimizer/Strategy" value="1"/>                            <!--[Graph optimization strategy: 0=TORO, 1=g2o and 2=GTSAM.]-->
+
+<!---->		<param name="Reg/Force3DoF" value="true"/>                              <!--[Force 3 degrees-of-freedom transform (3Dof: x,y and yaw). Parameters z, roll and pitch will be set to 0.]-->
+<!---->		<param name="Reg/Strategy" value="0"/>                                  <!--[0=Vis, 1=Icp, 2=VisIcp]-->
+
+		</node>
+
+		<!-- Start Odom_combine -->
+		<node pkg="robot_localization" type="ekf_localization_node" name="ekf_node" clear_params="true">
+			<rosparam command="load" file="$(find turtlebot3_bringup)/params/ekf_params.yaml"/> 	
+		</node>
+		
+		<!-- sync cloud with odometry and voxelize the point cloud (for fast visualization in rviz) -->
+		<node pkg="nodelet" type="nodelet" name="standalone_nodelet"  args="manager" output="screen"/>
+		<node pkg="nodelet" type="nodelet" name="data_odom_sync" args="load rtabmap_ros/data_odom_sync standalone_nodelet">
+			<remap from="rgb/image"       to="/kinect2/$(arg resolution)/image_color_rect"/>
+			<remap from="depth/image"     to="/kinect2/$(arg resolution)/image_depth_rect"/>
+			<remap from="rgb/camera_info" to="/kinect2/$(arg resolution)/camera_info"/>
+
+			<remap from="odom_in"             to="$(arg odom_topic)"/>
+
+			<param name="approx_sync" type="bool" value="false"/>
+
+			<remap from="rgb/image_out"       to="data_odom_sync/image"/>
+			<remap from="depth/image_out"     to="data_odom_sync/depth"/>
+			<remap from="rgb/camera_info_out" to="data_odom_sync/camera_info"/>
+			<remap from="odom_out"            to="odom_sync"/>
+		</node>
+
+		<node pkg="nodelet" type="nodelet" name="points_xyzrgb" args="load rtabmap_ros/point_cloud_xyzrgb standalone_nodelet">
+			<remap from="rgb/image"       to="data_odom_sync/image"/>
+			<remap from="depth/image"     to="data_odom_sync/depth"/>
+			<remap from="rgb/camera_info" to="data_odom_sync/camera_info"/>
+			<remap from="cloud"           to="voxel_cloud" />
+
+			<param name="voxel_size" type="double" value="0.01"/>
+		</node>
+
+	</group>
+</launch>
