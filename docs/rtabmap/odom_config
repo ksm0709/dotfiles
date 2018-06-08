@@ -1,0 +1,18 @@
+Depending on the SLAM approach, odometry can be loosely or tightly coupled with the SLAM approach. In RTAB-Map, odometry is loosely coupled, as it acts like a black box at the input of the SLAM system. There is no feedback from the mapping algorithm to odometry (only odometry -> mapping). The advantage is that mapping node is independant of the odometry, so you can use either wheel/robot odometry, laser scan odometry, visual odometry or a fusion of them. The one used by rtabmap is the topic "odom" connected at its input. The "odom" topic can be a single odometry approach, or a fusion of multiple odometry (e.g., robot_localization) 
+
+The "odom/" parameters affect only rgbd_odometry node, not rtabmap node. If you don't use rgbd_odometry node, these parameters are not used. If you want to use robot odometry, don't start visual odometry node, and just connect odometry message from your robot odometry node to rtabmap directly. For odometry correction, this is done by the loop closure approach, which is visual and/or scan based. Parameter groups are "Reg/", "Vis/", "Icp/". Is "RGBD/NeighborLinkRefining" is enabled, the odometry is refined between consecutive nodes added to graph using the same parameters of the same groups. 
+
+"Odom/" parameters don't affect odometry from the robot. You can see visual odometry node as an independent node publishing its own odometry, like robot odometry. Frame-to-Frame (or Frame-to-Keyframe) is a well known visual odometry approach. Frame-to-Map in RTAB-Map doesn't mean that the map of rtabmap is used for odometry, it means that odometry manages its own local map of features to match against and track the current frame. For frame-to-map odometry (and for frame-to-frame), the words are defined by "Vis/" parameters, while in rtabmap they are defined by "Kp/" parameters. 
+
+See this paper about graph optimization: Online Global Loop Closure Detection for Large-Scale Multi-Session 
+Graph-Based SLAM. All links are modified to minimize the global error in the graph. Visual registration is done using visual features, as ICP registration is done using point clouds or laser scans. When both are done, ICP is done after visual registration. 
+
+No, if odometry is good, ICP translation will be likely to be well under the displacement. It is more related to covariance of odometry, how much the odometry drifts. For example, if you move 1 meter between two nodes added to graph and odometry error is 1 cm, then ICP should correct only 1 cm. If it corrects 10 cm, the ICP transformation may resulted in a wrong transformation, or the odometry drifted a lot more than expected. If the odometry error is 1 meter, then ICP could correct up to 1 meter (if it is possible). The correspondence ratio can help to ignore transformations for which there not a lot of correspondences comparing to maximum size of laser scans. When a low ratio of correspondences is found, the transformation is likely to be bad. 
+
+For the second post. Odometry happens well before graph optimization. Odometry affects graph optimization by the covariance set in the odometry messages. Graph optimization uses the covariance to know how much a link can be corrected when minimizing the global error of the graph. 
+
+EDIT
+3DoF force visual odometry/graph optimization to be done in 2D. If your robot is moving on a 2D plane (e.g., indoor), set it to true to avoid errors in "z", "roll" and "pitch". If your robot is moving on a 3D terrain or in the air, set it to false so that 6DoF odometry/localization is done. 
+
+For approx_sync, see this page: http://wiki.ros.org/message_filters/ApproximateTime
+
