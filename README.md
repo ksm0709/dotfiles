@@ -1,4 +1,6 @@
-# 기본세팅
+# 우분투 세팅
+
+## 기본세팅
 
 ```
 sudo apt-get install tmux -qq
@@ -15,7 +17,7 @@ vim
 ````
 ==========================
 
-# ROS설치
+## ROS설치
 
 ```
 cd ros
@@ -25,6 +27,6 @@ cd ros
 
 ==========================
 
-# VS Code Sync
+## VS Code Sync
 
 - Access Token : **1ba0a4fe28c3811da78c6ad38e1fc411f5c59a4d**
