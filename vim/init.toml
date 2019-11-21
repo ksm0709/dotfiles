@@ -24,14 +24,15 @@
     statusline_unicode_symbols = false
     buffer_index_type = 4
     enable_tabline_filetype_icon = true
-    enable_statusline_mode = false
-    auto_disable_touchpad = false    
+    auto_disable_touchpad = true    
 
     filemanager = "nerdtree"
     filetree_direction = "left"
 
     bootstrap_after = "config#after"
     bootstrap_before = "config#before"
+
+    automatic_update = 1
 
 # Enable autocomplete layer
 [[layers]]
@@ -41,8 +42,11 @@ auto-completion-tab-key-behavior = "smart"
 
 [[layers]]
 name = 'shell'
-default_position = 'top'
+default_position = 'bottom'
 default_height = 30
+
+[[layers]]
+name = 'ui'
 
 [[layers]]
 name = 'colorscheme'
@@ -66,16 +70,13 @@ name = 'colorscheme'
   name = 'lang#python'
 
 [[layers]]
-  name = 'lang#javascript'
-
-[[layers]]
   name = 'lang#html'
 
 [[layers]]
   name = 'lang#xml'
 
 [[layers]]
-  name = 'leaderf'
+  name = 'unite'
 
 [[layers]]
   name = 'ctrlp'
@@ -90,7 +91,14 @@ name = 'colorscheme'
   name = 'github'
 
 [[layers]]
+  name = 'git'
+
+[[layers]]
   name = 'lang#markdown'
+
+[[layers]]
+  name = "gtags"
+  gtagslabel = "ctags"
 
 [[custom_plugins]]
 name = "lilydjwg/colorizer"
