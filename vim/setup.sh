@@ -13,20 +13,21 @@ sudo update-alternatives --install /usr/bin/editor editor /usr/bin/nvim 60
 
 # spacevim
 curl -sLf https://spacevim.org/install.sh | bash
+mkdir $HOME/.SpaceVim.d
 mkdir $HOME/.SpaceVim.d/autoload
 
 cp init.toml $HOME/.SpaceVim.d
 cp config.vim $HOME/.SpaceVim.d/autoload
 
 # gtags
-tar xvf global-6.6.3.tar.gz
-cd global-6.6.3
+#tar xvf global-6.6.3.tar.gz
+#cd global-6.6.3
 
-./configure --with-exuberant-ctags=/usr/bin/ctags
-make
-sudo make install
+#./configure --with-exuberant-ctags=/usr/bin/ctags
+#make
+#sudo make install
 
-cp gtags.conf ~/.globalrc
-echo export GTAGSLABEL=pygments >> .profile
-
-cd ..
+#cp gtags.conf ~/.globalrc
+#echo export GTAGSLABEL=pygments >> .profile
+#
+#cd ..
