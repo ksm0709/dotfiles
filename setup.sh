@@ -1,5 +1,7 @@
 #!/bin/bash
 
+sudo apt-get install git curl wget -y
+
 # echo 색상 목록
 RED='\033[1;31m'
 GREEN='\033[1;32m'
