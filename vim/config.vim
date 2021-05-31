@@ -13,7 +13,7 @@ func! config#before() abort
    "이전 버퍼로
    nmap <leader>l :bn<CR>
    "현재 버퍼를 닫고 이전 버퍼로 이동
-   "nmap <leader>q :bp <BAR> bd #<CR>
+   nmap <leader>x :bp <BAR> bd #<CR>
    "모든 버퍼와 각 버퍼상태 출력
    nmap <leader>o :ls<CR>
    "현재 버퍼 강제 저장

@@ -1,4 +1,0 @@
-@set UPDATED 17 December 2018
-@set UPDATED-MONTH December 2018
-@set EDITION 6.6.3
-@set VERSION 6.6.3
