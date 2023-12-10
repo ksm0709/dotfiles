@@ -74,11 +74,8 @@ call vundle#begin()
 	Plugin 'vim-airline/vim-airline'
 	Plugin 'vim-airline/vim-airline-themes'
 	Plugin 'kien/ctrlp.vim'
-	Plugin 'gerw/vim-latex-suite'	
 	Plugin 'xuyuanp/nerdtree-git-plugin'
 	Plugin 'scrooloose/syntastic'
-	Plugin 'valloric/youcompleteme'
-	Plugin 'JamshedVesuna/vim-markdown-preview'
 
 	" All of your Plugins must be added before the following line
 call vundle#end()            " required
