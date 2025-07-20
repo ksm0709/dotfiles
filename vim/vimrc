@@ -1,3 +1,76 @@
+" ############## 플러그인 #########################################################################
+set nocompatible " Vim 디폴트 기능들을 사용함, polyglot, gutentags 등 플러그인 호환성 문제를 피하기 위함
+
+" vim-plug 설치 시작
+call plug#begin('~/.vim/plugged')
+
+	" Airline - 상태줄
+	" :AirlineToggle, :AirlineTheme <theme>
+	Plug 'vim-airline/vim-airline'
+	Plug 'vim-airline/vim-airline-themes'
+	
+	" Color Scheme
+	Plug 'joshdick/onedark.vim'
+
+	" Supertab - 탭 자동완성
+	" :SuperTab, :SuperTabNext, :SuperTabPrev
+	Plug 'ervandew/supertab'
+
+	" FZF - 파일 검색 및 명령어 실행
+	" :FZF, :Files, :GFiles, :Buffers, :Lines, :Ag, :Rg
+	Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+	Plug 'junegunn/fzf.vim'
+
+	" CoC - Language Server Protocol (LSP) support
+	" :CoCInstall <extension>, :CocCommand <command>
+	Plug 'neoclide/coc.nvim', {'branch': 'release'}
+	let g:coc_global_extensions = ['coc-clangd', 'coc-sh', 'coc-pairs', 'coc-json', 'coc-yaml']
+	let g:coc_user_config = { 'coc.preferences.semanticTokens': v:true }
+	" CoC - format on save
+	augroup CocGroup
+	  autocmd!
+	  autocmd BufWritePre * if CocHasProvider('format') | call CocAction('format') | endif
+	augroup END
+
+	" Signify - Git diff signs
+	" :SignifyDiff, :SignifyHunkDiff
+	if has('nvim') || has('patch-8.0.902')
+	  Plug 'mhinz/vim-signify'
+	else
+	  Plug 'mhinz/vim-signify', { 'tag': 'legacy' }
+	endif
+	" default updatetime 4000ms is not good for async update
+	set updatetime=100
+
+	" Vim Polyglot - Language packs
+	Plug 'sheerun/vim-polyglot'
+
+	" Gutentags - Automatic tags generation
+	" :GutentagsUpdate
+	Plug 'ludovicchabant/vim-gutentags'
+
+	" NERDTree - File explorer
+	" :NERDTreeToggle (F5 to open), :NERDTreeFind, :NERDTreeClose
+	Plug 'preservim/nerdtree'
+
+	" Fugitive - Git integration
+	" :Git status, :Git commit, :Git push, :Git pull
+	Plug 'tpope/vim-fugitive'
+
+	" Copilot - AI code completion
+	Plug 'github/copilot.vim'
+	highlight CopilotSuggestion guifg=#5f87ff ctermfg=75
+	imap <C-k> <Plug>(copilot-next)
+	imap <C-j> <Plug>(copilot-previous)
+
+call plug#end()
+
+" Airline - enable buffer tab
+let g:airline#extensions#tabline#enabled = 1
+let g:airline_theme = 'base16_dracula' " 기본 테마 설정
+" Color Scheme - One Dark
+colorscheme onedark
+
 " ############## 기본 설정 #########################################################################
 
 set enc=utf-8
@@ -32,91 +105,15 @@ set showmatch             " 매치되는 괄호의 반대쪽을 보여줌 "
 set autowrite             " :next나  :make 같은 명령를 입력하면 자동으로 저장 "
 set linespace=3         " 줄간격 "
 set title                 " 타이틀바에 현재 편집중인 파일을 표시 "
+set laststatus=2         " 상태줄을 항상 표시 "
 set statusline=\ %<%l:%v\ [%P]%=%a\ %h%m%r\ %F\     " 다중 문서 작업을 위한 Status 줄 "
 set tags+=./tags        " add current directory's generated tags file to available tags "
 set hidden 				" 버퍼를 수정한 직후 버퍼를 감춘다.
-set grepprg=grep\-nH\ $*
+set grepprg=grep\-nH\ $* 
+set colorcolumn=81       " 80번째 열에 컬럼 표시
 "set shellslash
 
-" ################ 플러그인 매니저 VUNDLE 관련 설정 ################################################
 
-" set the runtime path to include Vundle and initialize
-set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
-	" alternatively, pass a path where Vundle should install plugins
-	"call vundle#begin('~/some/path/here')
-
-	" let Vundle manage Vundle, required
-	Plugin 'gmarik/Vundle.vim'
-
-	" The following are examples of different formats supported.
-	" Keep Plugin commands between vundle#begin/end.
-	" plugin on GitHub repo
-	Plugin 'tpope/vim-fugitive'
-	" plugin from http://vim-scripts.org/vim/scripts.html
-	Plugin 'L9'
-	" Git plugin not hosted on GitHub
-	"Plugin 'git://git.wincent.com/command-t.git'
-	" git repos on your local machine (i.e. when working on your own plugin)
-	"Plugin 'file:///home/gmarik/path/to/plugin'
-	" The sparkup vim script is in a subdirectory of this repo called vim.
-	" Pass the path to set the runtimepath properly.
-	"Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
-	" Avoid a name conflict with L9
-	"Plugin 'user/L9', {'name': 'newL9'}
-	
-	Plugin 'c.vim'
-	Plugin 'The-NERD-Tree'
-	Plugin 'AutoComplPop'
-	Plugin 'snipMate'
-	Plugin 'srcexpl'
-	Plugin 'majutsushi/tagbar'
-	Plugin 'vim-airline/vim-airline'
-	Plugin 'vim-airline/vim-airline-themes'
-	Plugin 'kien/ctrlp.vim'
-	Plugin 'gerw/vim-latex-suite'	
-	Plugin 'xuyuanp/nerdtree-git-plugin'
-	Plugin 'scrooloose/syntastic'
-	Plugin 'valloric/youcompleteme'
-	Plugin 'JamshedVesuna/vim-markdown-preview'
-
-	" All of your Plugins must be added before the following line
-call vundle#end()            " required
-	filetype plugin indent on    " required
-	" To ignore plugin indent changes, instead use:
-	"filetype plugin on
-	"
-	" Brief help
-	" :PluginList       - lists configured plugins
-	" :PluginInstall    - installs plugins; append `!` to update or just :PluginUpdate
-	" :PluginSearch foo - searches for foo; append `!` to refresh local cache
-	" :PluginClean      - confirms removal of unused plugins; append `!` to auto-approve removal
-	"
-	" see :h vundle for more details or wiki for FAQ
-	" Put your non-Plugin stuff after this linespace
-	" 
-
- " Powerline setting
- set rtp+=/usr/local/lib/python2.7/dist-packages/powerline/bindings/vim/
- set t_Co=256
- set guifont=Liberation_Mono_for_Powerline:h10 
- let g:airline_powerline_fonts = 0
- let g:Powerline_symbols = 'unicode'
- " 버퍼 목록 켜기
- let g:airline#extensions#tabline#enabled = 1
-"
-" " 파일명만 출력
- let g:airline#extensions#tabline#fnamemod = ':t'
- let g:airline#extensions#left_sep = ''
- let g:airline#extensions#left_alt_sep = ''
- let g:airline_theme = 'bubblegum' 
-
- set laststatus=2
-
- " c.vim setting
-  let  g:C_UseTool_cmake   = 'yes'
-  let  g:C_UseTool_doxygen = 'yes'
-  let  g:C_UseTool_make = 'yes'
 
 " #################### 단축키 설정  ######################################################################
 
@@ -134,11 +131,6 @@ endfunc
 
 "---------- 정의, 설정 -----------------------------------Lock'
 
-"latex
-let g:tex_flavor='latex'
-let g:tex_Leader=','
-
-
 "ctags
 "set tags=./tags
 "set tags+=/opt/tags
@@ -148,64 +140,41 @@ let g:tex_Leader=','
 "cs add /usr/cscope.out
 
 
-let g:ctrlp_custom_ignore = {
-  \ 'dir':  '\v[\/](\.(git|hg|svn)|\_site)$',
-  \ 'file': '\v\.(exe|so|dll|class|png|jpg|jpeg)$',
-  \}
-let g:ctrlp_working_path_mode = 'r'
-
+"---------- 키맵 ------------------------------------------
 let mapleader = "`"
 
-let g:SrcExpl_winHeight = 9
-let g:SrcExpl_refreshTime = 100
-let g:SrcExpl_jumpKey = "<ENTER>"
-let g:SrcExpl_gobackKey = "<SPACE>"
-let g:SrcExpl_isUpdateTags = 0
-
-" // Use 'Exuberant Ctags' with '--sort=foldcase -R .' or '-L cscope.files' to
-" " //  create/update a tags file
-let g:SrcExpl_updateTagsCmd = "ctags --sort=foldcase -R ."
-" // Set "<F12>" key for updating the tags file artificially
-let g:SrcExpl_updateTagsKey = "<F12>"
-" // Set "<F3>" key for displaying the previous definition in the jump list
-let g:SrcExpl_prevDefKey = "<F9>"
-" // Set "<F4>" key for displaying the next definition in the jump list
-let g:SrcExpl_nextDefKey = "<F10>" 
-let g:SrcExpl_pluginList = [
-			\ "__Tag_List__",
-			\ "_NERD_tree_"
-			\] 
-
-
-" markdown preview
-let vim_markdown_preview_toggle=1
-let vim_markdown_preview_hotkey='<C-m>'
-let vim_markdown_preview_browser='Google Chrome'
-
-"---------- 키맵 ------------------------------------------
 "버퍼 새로열기
 nmap <leader>b :enew<CR>
 "다음 버퍼로
 nmap <leader>h :bprevious<CR>
 "이전 버퍼로
 nmap <leader>l :bn<CR>
+" 특정 버퍼 인덱스로
+nmap <leader>1 :b 1<CR>
+nmap <leader>2 :b 2<CR>
+nmap <leader>3 :b 3<CR>
+nmap <leader>4 :b 4<CR>
+nmap <leader>5 :b 5<CR>
+nmap <leader>6 :b 6<CR>
+nmap <leader>7 :b 7<CR>
+nmap <leader>8 :b 8<CR>
+nmap <leader>9 :b 9<CR>
 "현재 버퍼를 닫고 이전 버퍼로 이동
 nmap <leader>q :bp <BAR> bd #<CR>
 "모든 버퍼와 각 버퍼상태 출력
-nmap <leader>o :ls<CR>
+nmap <leader>p :Buffers<CR>
 "현재 버퍼 강제 저장
-nmap <leader>s ::w!<CR>
+nmap <leader>w ::w!<CR>
 
-"CtrlP Plugin관련 설정
-nmap <leader>t :enew<CR>:term<CR>
-nmap <leader>i :startinsert<CR>
-nmap <leader>p :CtrlP<CR>
-nmap <leader>pb :CtrlPBuffer<CR>
-nmap <leader>pm :CtrlPMixed<CR>
-nmap <leader>ps :CtrlPMRU<CR>
+"터미널 설정 
+nmap <leader>t :enew<CR>:term<CR>i
+tnoremap \\ <C-\><C-n>
+" 터미널 버퍼 이름 자동 변경
+autocmd TermOpen * execute 'file shell:' . bufnr('%')
 
 "입력모드 빠져나가기
-imap jj <ESC>
+imap \\ <ESC>
+
 "현재 커서에서 새로운줄 삽입
 map <C-J> i<CR><ESC>
 "비주얼모드에서 주석 처리
@@ -217,22 +186,16 @@ nmap <C-c> <esc>v:call CmtOn() <cr>
 "노말모드에서 주석 해제
 nmap <C-x> <esc>v:call CmtOff() <cr>
 
-nmap cm ::!catkin_make -C catkin_ws<cr>
-
-nmap <F1> :!bash<CR>
-nmap <F2> [{v]}zf
-nmap <F3> zo
 nmap <F5> :NERDTreeToggle<CR>B
-nmap <F6> :TagbarToggle<CR>
-nmap <F7> :SrcExplToggle<CR>
 
-"tnoremap <Esc> <C-\><C-n>
-"tnoremap <A-h> <C-\><C-n><C-w>h
-"tnoremap <A-j> <C-\><C-n><C-w>j
-"tnoremap <A-k> <C-\><C-n><C-w>k
-"tnoremap <A-l> <C-\><C-n><C-w>l
+" Use <C-p> to open FZF file finder
+nmap <C-p> :Files ~<CR>
+" Use <C-a> to open FZF Ag command
+nmap <C-a> :Ag<CR>
+
 nnoremap <A-h> <C-w>h
 nnoremap <A-j> <C-w>j
 nnoremap <A-k> <C-w>k
 nnoremap <A-l> <C-w>l
+
 
