@@ -63,14 +63,17 @@ call plug#begin('~/.vim/plugged')
 	" :Git status, :Git commit, :Git push, :Git pull
 	Plug 'tpope/vim-fugitive'
 
+	" Plenary - Lua functions for Neovim
+	Plug 'nvim-lua/plenary.nvim'
+
 	" Copilot - AI code completion
 	Plug 'github/copilot.vim'
+	Plug 'CopilotC-Nvim/CopilotChat.nvim'
 	highlight CopilotSuggestion guifg=#5f87ff ctermfg=75
 	imap <C-k> <Plug>(copilot-next)
 	imap <C-j> <Plug>(copilot-previous)
 
 	" Telescope - Fuzzy finder
-	Plug 'nvim-lua/plenary.nvim'
 	Plug 'nvim-telescope/telescope.nvim', { 'tag': '0.1.8' }
 
 	" Treesitter - Syntax highlighting and code parsing
@@ -216,7 +219,7 @@ nmap <leader>fg :Telescope live_grep<CR>
 nmap <leader>fb :Telescope buffers<CR>
 nmap <leader>fh :Telescope help_tags<CR>
 
-" Treesitter 
+" Lua script for plugins
 lua << EOF
 require('nvim-treesitter.configs').setup{
 	highlight={
@@ -229,4 +232,9 @@ require('nvim-treesitter.configs').setup{
 		"c", "cpp", "python", "javascript", "typescript", "html", "css", "lua", "bash", "json", "yaml"
 	},
 }
+
+require("CopilotChat").setup {
+  model = "gpt-4o",
+}
+
 EOF
