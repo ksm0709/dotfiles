@@ -1,4 +1,5 @@
 " ############## 플러그인 #########################################################################
+let mapleader = "`"
 set nocompatible " Vim 디폴트 기능들을 사용함, polyglot, gutentags 등 플러그인 호환성 문제를 피하기 위함
 
 " vim-plug 설치 시작
@@ -8,6 +9,10 @@ call plug#begin('~/.vim/plugged')
 	" :AirlineToggle, :AirlineTheme <theme>
 	Plug 'vim-airline/vim-airline'
 	Plug 'vim-airline/vim-airline-themes'
+	" Airline theme dracula"
+	Plug 'dracula/vim', { 'as': 'dracula' }
+	" Airline theme: Catppuccin
+	Plug 'catppuccin/vim', { 'as': 'catppuccin' }
 	
 	" Color Scheme
 	Plug 'joshdick/onedark.vim'
@@ -47,7 +52,8 @@ call plug#begin('~/.vim/plugged')
 
 	" Gutentags - Automatic tags generation
 	" :GutentagsUpdate
-	Plug 'ludovicchabant/vim-gutentags'
+	" Disable it since ctags is too slow for large projects...
+	"Plug 'ludovicchabant/vim-gutentags'
 
 	" NERDTree - File explorer
 	" :NERDTreeToggle (F5 to open), :NERDTreeFind, :NERDTreeClose
@@ -63,13 +69,22 @@ call plug#begin('~/.vim/plugged')
 	imap <C-k> <Plug>(copilot-next)
 	imap <C-j> <Plug>(copilot-previous)
 
+	" Telescope - Fuzzy finder
+	Plug 'nvim-lua/plenary.nvim'
+	Plug 'nvim-telescope/telescope.nvim', { 'tag': '0.1.8' }
+
+	" Treesitter - Syntax highlighting and code parsing
+	Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}  " We recommend updating the parsers on update
+
 call plug#end()
 
-" Airline - enable buffer tab
+" Airline - enable buffer tab, show filename to buffer tab
 let g:airline#extensions#tabline#enabled = 1
-let g:airline_theme = 'base16_dracula' " 기본 테마 설정
-" Color Scheme - One Dark
-colorscheme onedark
+let g:airline#extensions#tabline#fnamemod = ':t'
+let g:airline_theme = 'catppuccin_frappe' " 기본 테마 설정
+" Color Scheme
+colorscheme catppuccin_frappe
+
 
 " ############## 기본 설정 #########################################################################
 
@@ -106,13 +121,11 @@ set autowrite             " :next나  :make 같은 명령를 입력하면 자동
 set linespace=3         " 줄간격 "
 set title                 " 타이틀바에 현재 편집중인 파일을 표시 "
 set laststatus=2         " 상태줄을 항상 표시 "
-set statusline=\ %<%l:%v\ [%P]%=%a\ %h%m%r\ %F\     " 다중 문서 작업을 위한 Status 줄 "
-set tags+=./tags        " add current directory's generated tags file to available tags "
+set statusline=\ %<%l:%v\ [%P]%=%a\ %h%m%r\ %F\ %t     " 다중 문서 작업을 위한 Status 줄 "
 set hidden 				" 버퍼를 수정한 직후 버퍼를 감춘다.
 set grepprg=grep\-nH\ $* 
 set colorcolumn=81       " 80번째 열에 컬럼 표시
 "set shellslash
-
 
 
 " #################### 단축키 설정  ######################################################################
@@ -141,7 +154,6 @@ endfunc
 
 
 "---------- 키맵 ------------------------------------------
-let mapleader = "`"
 
 "버퍼 새로열기
 nmap <leader>b :enew<CR>
@@ -198,4 +210,23 @@ nnoremap <A-j> <C-w>j
 nnoremap <A-k> <C-w>k
 nnoremap <A-l> <C-w>l
 
+" Telescope - Find files using Telescope command-line sugar.
+nmap <leader>ff :Telescope find_files<CR>
+nmap <leader>fg :Telescope live_grep<CR>
+nmap <leader>fb :Telescope buffers<CR>
+nmap <leader>fh :Telescope help_tags<CR>
 
+" Treesitter 
+lua << EOF
+require('nvim-treesitter.configs').setup{
+	highlight={
+		enable=true
+	},
+	indent={
+		enable=true
+	},  
+	ensure_installed = {
+		"c", "cpp", "python", "javascript", "typescript", "html", "css", "lua", "bash", "json", "yaml"
+	},
+}
+EOF
