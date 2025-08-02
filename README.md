@@ -1,32 +1,8 @@
-# 개인 우분투 세팅
+# Personal Ubuntu Config Scripts
 
-## 기본세팅
-
-```
-sudo apt-get install tmux -qq
-sudo apt-get install vim -qq
-cp tmux.conf ../.tmux.conf
-cp vimrc ../.vimrc
-git clone https://github.com/gmarik/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-```
-
-- vim 플러그인 설치
-```
-vim
-:PluginInstall
-````
-==========================
-
-## ROS설치
+Setup script with sub-folder name will trigger the `setup.sh` in the sub-folder.
+Each sub-folder's setup scripts are responsible for installing app/environment.
 
 ```
-cd ros
-
-./ros_install.sh <workspace name> <ros distro>
+./setup.sh lazyvim
 ```
-
-==========================
-
-## VS Code Sync
-
-- Access Token : **1ba0a4fe28c3811da78c6ad38e1fc411f5c59a4d**

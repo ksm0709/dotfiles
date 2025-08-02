@@ -1,7 +1,0 @@
-wget -O "KMbeuUXv1_11-EFIGS.tgz" "https://o.cses.konicaminolta.com/file/Default.aspx?FilePath=DL/201605/30111732/KMbeuUXv1_11%20EFIGS.tgz"
-
-tar xfvz KMbeuUXv1_11-EFIGS.tgz
-
-cd KMbeuUXv1_11\ EFIGS/
-
-sudo ./install.pl
