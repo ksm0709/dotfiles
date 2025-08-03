@@ -10,16 +10,17 @@ return {
   ---@type avante.Config
   opts = {
     -- add any opts here
+    suggestions = true, -- Enable suggestions by default
     -- for example
     provider = "gemini", -- Set Gemini as the primary provider
     providers = {
       gemini = {
         api_key_name = "AVANTE_GEMINI_API_KEY", -- Environment variable name for your Gemini API key
-        model = "gemini-2.0-flash-lite", -- Specify the Gemini model you want to use
+        model = "gemini-2.5-flash", -- Specify the Gemini model you want to use
         timeout = 30000, -- Timeout in milliseconds
         temperature = 0,
         max_completion_tokens = 8192,
-        -- reasoning_effort = "medium", -- Optional: for reasoning models
+        reasoning_effort = "medium", -- Optional: for reasoning models
       },
     },
   },

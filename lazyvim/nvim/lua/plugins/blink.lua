@@ -31,26 +31,29 @@ return {
     },
   },
   -- For avante.nvim
-  --  {
-  --    "saghen/blink.cmp",
-  --    dependencies = {
-  --      "kaiser-yang/blink-cmp-avante",
-  --      -- ... other dependencies
-  --    },
-  --    opts = {
-  --      sources = {
-  --        -- add 'avante' to the list
-  --        default = { "avante", "lsp", "path", "luasnip", "buffer" },
-  --        providers = {
-  --          avante = {
-  --            module = "blink-cmp-avante",
-  --            name = "avante",
-  --            opts = {
-  --              -- options for blink-cmp-avante
-  --            },
-  --          },
-  --        },
-  --      },
-  --    },
-  --  },
+  {
+    "Saghen/blink.cmp",
+    dependencies = {
+      "kaiser-yang/blink-cmp-avante",
+      -- ... other dependencies
+    },
+    opts = {
+      sources = {
+        -- add 'avante' to the list
+        default = { "avante", "lsp", "path", "buffer" },
+        providers = {
+          avante = {
+            module = "blink-cmp-avante",
+            name = "avante",
+            opts = {
+              -- options for blink-cmp-avante
+            },
+          },
+          snippets = {
+            preset = "luasnip",
+          },
+        },
+      },
+    },
+  },
 }
