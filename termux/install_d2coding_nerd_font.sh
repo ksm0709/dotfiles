@@ -20,10 +20,11 @@ wget -O "$TEMP_DIR/D2Coding.zip" "https://github.com/ryanoasis/nerd-fonts/releas
 
 echo "폰트 압축을 해제합니다..."
 unzip "$TEMP_DIR/D2Coding.zip" -d "$TEMP_DIR"
+echo $TEMP_DIR
 
 echo "폰트를 설치합니다..."
 # 압축 해제된 파일 중에서 정확한 폰트 파일을 찾아 복사
-FONT_FILE=$(find "$TEMP_DIR" -name "D2CodingNerdFont-Regular.ttf")
+FONT_FILE=$(find "$TEMP_DIR" -name "D2CodingLigatureNerdFont-Regular.ttf")
 if [ -z "$FONT_FILE" ]; then
     echo "오류: D2CodingNerdFont-Regular.ttf 파일을 찾을 수 없습니다."
     exit 1
