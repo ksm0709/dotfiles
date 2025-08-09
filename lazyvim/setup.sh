@@ -3,9 +3,6 @@
 # Neovim
 ./install-nvim.sh
 
-# Install wezterm
-./install-wezterm.sh
-
 # Install lazyvim
 #  1 - use starter pack
 #  0 - use custom lazyvim configs

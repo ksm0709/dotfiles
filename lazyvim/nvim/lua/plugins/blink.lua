@@ -2,6 +2,7 @@ return {
   "Saghen/blink.cmp",
   -- Keymaps for better super-tab behaviors
   opts = {
+
     keymap = {
       ["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
       ["<C-e>"] = { "hide", "fallback" },
@@ -29,31 +30,21 @@ return {
 
       ["<C-k>"] = { "show_signature", "hide_signature", "fallback" },
     },
-  },
-  -- For avante.nvim
-  {
-    "Saghen/blink.cmp",
-    dependencies = {
-      "kaiser-yang/blink-cmp-avante",
-      -- ... other dependencies
-    },
-    opts = {
-      sources = {
-        -- add 'avante' to the list
-        default = { "avante", "lsp", "path", "buffer" },
-        providers = {
-          avante = {
-            module = "blink-cmp-avante",
-            name = "avante",
-            opts = {
-              -- options for blink-cmp-avante
-            },
-          },
-          snippets = {
-            preset = "luasnip",
+    sources = {
+      -- add 'avante' to the list
+      default = { "avante", "lsp", "path", "buffer" },
+      providers = {
+        avante = {
+          module = "blink-cmp-avante",
+          name = "avante",
+          opts = {
+            -- options for blink-cmp-avante
           },
         },
       },
     },
+  },
+  dependencies = {
+    "kaiser-yang/blink-cmp-avante",
   },
 }
