@@ -1,0 +1,85 @@
+#!/bin/bash
+
+echo -n "Please enter username for proot installation: " > /dev/tty
+read username < /dev/tty
+
+# Change repository
+if ! termux-change-repo; then
+  echo "Failed to change repository. Exiting."
+  exit 1
+fi
+
+# Check if storage access is already granted
+if [ -d ~/storage ]; then
+  echo "Storage access is already granted"
+else
+  # Setup Termux Storage Access only if not already granted
+  if ! termux-setup-storage; then
+      echo "Failed to set up Termux storage. Exiting."
+      echo "${YELLOW}Please clear termux data in app info setting and run setup again${NC}"
+      exit 1
+  fi
+fi
+
+# Upgrade packages
+if ! pkg upgrade -y -o Dpkg::Options::="--force-confold"; then
+  echo "Failed to upgrade packages. Exiting."
+  exit 1
+fi
+
+# Update termux.properties
+if [ -f "$HOME/.termux/termux.properties" ]; then
+  sed -i '12s/^#//' $HOME/.termux/termux.properties
+else
+  echo "Warning: termux.properties file not found. Skipping update."
+fi
+
+# Install core dependencies
+dependencies=('wget' 'proot-distro' 'git')
+missing_deps=()
+for dep in "${dependencies[@]}"; do
+  if ! command -v "$dep" &> /dev/null; then
+      missing_deps+=("$dep")
+  fi
+done
+
+if [ "${#missing_deps[@]}" -gt 0 ]; then
+  if ! pkg install -y "${missing_deps[@]}" -o Dpkg::Options::="--force-confold"; then
+      echo "Failed to install missing dependencies: ${missing_deps[*]}. Exiting."
+      exit 1
+  fi
+fi
+
+# Set aliases
+echo "
+alias ubuntu='proot-distro login ubuntu --user $username --shared-tmp'
+" >> $HOME/.bashrc
+
+# Install ubuntu distro
+pkgs_proot=('sudo' 'git' 'wget')
+pd install ubuntu
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 apt update
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 apt upgrade -y
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 apt install "${pkgs_proot[@]}" -y -o Dpkg::Options::="--force-confold"
+
+# Create user
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 groupadd storage
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 groupadd wheel
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 useradd -m -g users -G wheel,audio,video,storage -s /bin/bash "$username"
+
+# Add user to sudoers
+chmod u+rw $PREFIX/var/lib/proot-distro/installed-rootfs/ubuntu/etc/sudoers
+echo "$username ALL=(ALL) NOPASSWD:ALL" | tee -a $PREFIX/var/lib/proot-distro/installed-rootfs/ubuntu/etc/sudoers > /dev/null
+chmod u-w  $PREFIX/var/lib/proot-distro/installed-rootfs/ubuntu/etc/sudoers
+
+# Set proot DISPLAY
+echo "export DISPLAY=:0" >> $PREFIX/var/lib/proot-distro/installed-rootfs/ubuntu/home/$username/.bashrc
+
+# Set proot timezone
+timezone=$(getprop persist.sys.timezone)
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 rm /etc/localtime
+pd login ubuntu --shared-tmp -- env DISPLAY=:0 cp /usr/share/zoneinfo/$timezone /etc/localtime
+
+# Finalize
+source $PREFIX/etc/bash.bashrc
+termux-reload-settings
