@@ -2,12 +2,12 @@
 
 # Apt deps
 sudo apt-get install -y \
+	clang \
+	make \
 	wget \
 	luarocks \
 	fzf \
 	imagemagick \
 	lazygit \
-	fd-find
-
-# mermaid-cli for snacks.image to render mermaid
-npm install -g @mermaid-js/mermaid-cli
+	fd-find \
+	chromium-browser

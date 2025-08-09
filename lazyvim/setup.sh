@@ -4,9 +4,10 @@
 ./install-nvim.sh
 
 # Install lazyvim
-#  1 - use starter pack
-#  0 - use custom lazyvim configs
-./install-lazyvim.sh 1
+./install-lazyvim.sh
 
 # Install dependent packages & binaries
 ./install-deps.sh
+
+# Custom configs (lazyvim)
+./install-nvim-config.sh
