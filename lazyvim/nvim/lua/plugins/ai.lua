@@ -1,8 +1,4 @@
 return {
-  --{
-  --  "Exafunction/windsurf.vim",
-  --  event = "BufEnter",
-  --},
   {
     "Exafunction/windsurf.nvim",
     dependencies = {
