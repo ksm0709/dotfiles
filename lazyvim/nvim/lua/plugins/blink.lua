@@ -1,8 +1,6 @@
 return {
   "Saghen/blink.cmp",
-  -- Keymaps for better super-tab behaviors
   opts = {
-
     keymap = {
       ["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
       ["<C-e>"] = { "hide", "fallback" },
@@ -31,20 +29,10 @@ return {
       ["<C-k>"] = { "show_signature", "hide_signature", "fallback" },
     },
     sources = {
-      -- add 'avante' to the list
-      default = { "avante", "lsp", "path", "buffer" },
+      default = { "lsp", "path", "snippets", "buffer", "codeium" },
       providers = {
-        avante = {
-          module = "blink-cmp-avante",
-          name = "avante",
-          opts = {
-            -- options for blink-cmp-avante
-          },
-        },
+        codeium = { name = "Codeium", module = "codeium.blink", async = true },
       },
     },
-  },
-  dependencies = {
-    "kaiser-yang/blink-cmp-avante",
   },
 }
