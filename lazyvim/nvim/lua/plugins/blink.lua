@@ -28,6 +28,7 @@ return {
 
       ["<C-k>"] = { "show_signature", "hide_signature", "fallback" },
     },
+
     sources = {
       default = { "lsp", "path", "snippets", "buffer", "codeium" },
       providers = {

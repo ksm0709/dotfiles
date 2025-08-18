@@ -1,7 +1,7 @@
 return {
   "obsidian-nvim/obsidian.nvim",
   version = "*", -- recommended, use latest release instead of latest commit
-  lazy = true,
+  lazy = false,
   ft = "markdown",
   -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
   -- event = {
@@ -11,14 +11,26 @@ return {
   --   "BufReadPre path/to/my-vault/*.md",
   --   "BufNewFile path/to/my-vault/*.md",
   -- },
-  ---@module 'obsidian'
-  ---@type obsidian.config
+  dependencies = {
+    -- Required.
+    "nvim-lua/plenary.nvim",
+
+    -- see below for full list of optional dependencies 👇
+  },
   opts = {
     workspaces = {
       {
-        name = "zettel",
-        path = "~/zettel",
+        name = "notes",
+        path = "~/vaults/notes",
       },
     },
+    picker = {
+      name = "snacks.pick",
+    },
+  },
+  keys = {
+    { "<leader>oo", "<Cmd>Obsidian today<cr>", desc = "Open today dailynote" },
+    { "<leader>od", "<Cmd>obsidian dailies<cr>", desc = "Open dailies" },
+    { "<leader>ot", "<Cmd>Obsidian tags<cr>", desc = "Open tags" },
   },
 }
