@@ -57,6 +57,19 @@ return {
           end
           return nil -- Fallback to default
         end,
+        display = {
+          action_palette = {
+            width = 100,
+            height = 20,
+            prompt = "Prompt ", -- Prompt used for interactive LLM calls
+            provider = "default", -- Can be "default", "telescope", "fzf_lua", "mini_pick" or "snacks". If not specified, the plugin will autodetect installed providers.
+            opts = {
+              show_default_actions = true, -- Show the default actions in the action palette?
+              show_default_prompt_library = true, -- Show the default prompt library in the action palette?
+              title = "CodeCompanion actions", -- The title of the action palette
+            },
+          },
+        },
         strategies = {
           chat = {
             adapter = {
@@ -109,31 +122,6 @@ return {
             fold_context = true,
             show_settings = true, -- Show LLM settings at the top of the chat buffer?
             keymaps = {
-              options = {
-                modes = {
-                  n = "?",
-                },
-                callback = "keymaps.options",
-                description = "Options",
-                hide = true,
-              },
-              completion = {
-                modes = {
-                  i = "<C-_>",
-                },
-                index = 1,
-                callback = "keymaps.completion",
-                description = "Completion Menu",
-              },
-              send = {
-                modes = {
-                  n = { "<CR>", "<C-s>" },
-                  i = "<C-s>",
-                },
-                index = 2,
-                callback = "keymaps.send",
-                description = "Send",
-              },
               regenerate = {
                 modes = {
                   n = "<LocalLeader>r",
@@ -150,14 +138,6 @@ return {
                 callback = "keymaps.close",
                 description = "Close Chat",
               },
-              stop = {
-                modes = {
-                  n = "q",
-                },
-                index = 5,
-                callback = "keymaps.stop",
-                description = "Stop Request",
-              },
               clear = {
                 modes = {
                   n = "<LocalLeader>x",
@@ -165,46 +145,6 @@ return {
                 index = 6,
                 callback = "keymaps.clear",
                 description = "Clear Chat",
-              },
-              codeblock = {
-                modes = {
-                  n = "gc",
-                },
-                index = 7,
-                callback = "keymaps.codeblock",
-                description = "Insert Codeblock",
-              },
-              yank_code = {
-                modes = {
-                  n = "gy",
-                },
-                index = 8,
-                callback = "keymaps.yank_code",
-                description = "Yank Code",
-              },
-              pin = {
-                modes = {
-                  n = "gp",
-                },
-                index = 9,
-                callback = "keymaps.pin_context",
-                description = "Pin context",
-              },
-              watch = {
-                modes = {
-                  n = "gw",
-                },
-                index = 10,
-                callback = "keymaps.toggle_watch",
-                description = "Watch Buffer",
-              },
-              next_chat = {
-                modes = {
-                  n = "}",
-                },
-                index = 11,
-                callback = "keymaps.next_chat",
-                description = "Next Chat",
               },
             },
           },
@@ -231,7 +171,6 @@ return {
               show_result_in_chat = true,
             },
           },
-          spinner = {},
           history = {
             enabled = true,
             opts = {
@@ -246,9 +185,9 @@ return {
     dependencies = {
       "nvim-lua/plenary.nvim",
       "nvim-treesitter/nvim-treesitter",
-      "franco-ruggeri/codecompanion-spinner.nvim",
       "ravitemer/codecompanion-history.nvim",
       "ravitemer/mcphub.nvim",
+      "j-hui/fidget.nvim",
     },
     keys = {
       { "<C-a>", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanionActions", noremap = true, silent = true },
@@ -261,5 +200,8 @@ return {
         silent = true,
       },
     },
+    init = function()
+      require("plugins.codecompanion.fidget-spinner"):init()
+    end,
   },
 }
