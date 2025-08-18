@@ -20,5 +20,13 @@ return {
         path = "~/zettel",
       },
     },
+    picker = {
+      name = "snacks.pick",
+    },
+  },
+  keys = {
+    { "<leader>oo", "<Cmd>Obsidian today<cr>", desc = "Open today dailynote" },
+    { "<leader>od", "<Cmd>obsidian dailies<cr>", desc = "Open dailies" },
+    { "<leader>ot", "<Cmd>Obsidian tags<cr>", desc = "Open tags" },
   },
 }
