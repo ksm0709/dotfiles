@@ -1,0 +1,34 @@
+{
+  "selectedAuthType": "oauth-personal",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "your-token-here"
+      }
+    },
+    "task_master": {
+      "disabled": false,
+      "env": {
+        "GOOGLE_API_KEY": "${GOOGLE_API_KEY}"
+      },
+      "args": [
+        "-y",
+        "--package=task-master-ai",
+        "task-master-ai"
+      ],
+      "command": "npx"
+    }
+  }
+}
