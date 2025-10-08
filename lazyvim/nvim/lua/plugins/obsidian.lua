@@ -21,7 +21,7 @@ return {
     workspaces = {
       {
         name = "notes",
-        path = "~/vaults/notes",
+        path = "~/vaults/zettel",
       },
     },
     picker = {

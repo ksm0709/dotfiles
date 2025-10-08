@@ -30,7 +30,7 @@ return {
     },
 
     sources = {
-      default = { "lsp", "path", "snippets", "buffer", "codeium" },
+      default = { "lsp", "path", "snippets", "buffer" },
       providers = {
         codeium = { name = "Codeium", module = "codeium.blink", async = true },
       },
