@@ -8,3 +8,8 @@
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
 vim.api.nvim_create_user_command("ReloadConfig", "source $MYVIMRC", {})
+
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*.md",
+  command = "setlocal nospell",
+})

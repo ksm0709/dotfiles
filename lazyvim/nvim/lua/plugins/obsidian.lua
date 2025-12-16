@@ -21,7 +21,7 @@ return {
     workspaces = {
       {
         name = "notes",
-        path = "~/vaults/zettel",
+        path = "~/notes",
       },
     },
     picker = {
@@ -29,8 +29,8 @@ return {
     },
   },
   keys = {
-    { "<leader>oo", "<Cmd>Obsidian today<cr>", desc = "Open today dailynote" },
-    { "<leader>od", "<Cmd>obsidian dailies<cr>", desc = "Open dailies" },
-    { "<leader>ot", "<Cmd>Obsidian tags<cr>", desc = "Open tags" },
+    { "<LocalLeader><LocalLeader>", "<Cmd>Obsidian today<cr>", desc = "Open today dailynote" },
+    { "<LocalLeader>t", "<Cmd>Obsidian tags<cr>", desc = "Open tags" },
+    { "<LocalLeader>s", "<Cmd>Obsidian search<cr>", desc = "Open search" },
   },
 }

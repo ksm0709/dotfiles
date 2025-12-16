@@ -28,7 +28,7 @@ return {
       current_line_blame = true,
     },
     keys = {
-      { "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>" },
+      -- { "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>" },
     },
   },
 }
