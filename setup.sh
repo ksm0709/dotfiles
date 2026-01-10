@@ -21,8 +21,9 @@ if [ $# -lt 1 ]; then
 
   echo -e "    ./setup.sh vim tmux   : Install vim and tmux"
   echo -e "    ./setup.sh vim        : Install vim only"
+  echo -e "    ./setup.sh openchamber: Install and setup openchamber service"
   echo
-  echo -e "${BLUE} Available options : ${GREEN} vim, tmux, ros"
+  echo -e "${BLUE} Available options : ${GREEN} vim, tmux, ros, openchamber"
   exit 1
 fi 
 
