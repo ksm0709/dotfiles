@@ -1,7 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "big-pickle",
   "instructions": ["rules/memory.md"],
-  "plugin": ["@tarquinen/opencode-dcp@latest"],
+  "plugin": ["@tarquinen/opencode-dcp@latest", "@plannotator/opencode@latest"],
   "mcp": {
     "context7": {
       "type": "remote",
