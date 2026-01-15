@@ -72,6 +72,14 @@ AI assistants MUST maintain a structured todo list for every non-trivial task (3
 3. **Transparency**: The todo list serves as the primary progress indicator for the user.
 4. **Completion**: Mark all tasks as `completed` before finishing the interaction.
 
+## Git Push Approval
+
+AI assistants MUST NOT execute `git push` without explicit user approval.
+
+1. **Summarize**: Before pushing, provide a concise summary of all changes to be pushed.
+2. **Request Approval**: Explicitly ask the user for permission to push.
+3. **Wait**: Do not proceed with the push until the user provides approval.
+
 ## Before Any Task
 
 **Context Checklist:**
