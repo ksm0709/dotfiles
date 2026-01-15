@@ -63,6 +63,15 @@ After deployment, create separate PR to:
 - Use `openspec archive <change-id> --skip-specs --yes` for tooling-only changes (always pass the change ID explicitly)
 - Run `openspec validate --strict` to confirm the archived change passes checks
 
+## Todo List Management
+
+AI assistants MUST maintain a structured todo list for every non-trivial task (3+ steps).
+
+1. **Initialization**: Use the `todowrite` tool at the start of a task to define all steps.
+2. **Real-time Updates**: Update task status (`in_progress`, `completed`) immediately as you work.
+3. **Transparency**: The todo list serves as the primary progress indicator for the user.
+4. **Completion**: Mark all tasks as `completed` before finishing the interaction.
+
 ## Before Any Task
 
 **Context Checklist:**
