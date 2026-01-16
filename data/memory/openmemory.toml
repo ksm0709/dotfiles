@@ -1,0 +1,15 @@
+# OpenMemory Configuration
+
+[db]
+url = "sqlite:///openmemory.db"
+
+[context]
+max_items = 16
+max_tokens = 2048
+
+[decay]
+half_life_days = 14
+
+[ai]
+embedding_provider = "ollama"
+ollama_url = "http://localhost:11434"

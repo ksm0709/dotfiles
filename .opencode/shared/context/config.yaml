@@ -1,0 +1,39 @@
+# Context Manager Configuration
+# OpenMemory 및 2계층 메모리 설정
+
+tier: hybrid
+
+embeddings:
+  provider: ollama  # synthetic | ollama | openai | gemini
+  model: nomic-embed-text
+  url: http://localhost:11434
+  fallback: synthetic
+
+database:
+  backend: sqlite
+  path: ${PROJECT_ROOT}/data/memory/context.sqlite
+
+context:
+  search:
+    min_score: 0.3
+    default_limit: 10
+    keyword_boost: 2.5
+  decay:
+    enabled: true
+    lambda: 0.02
+    reinforce_on_query: true
+
+working:
+  auto_checkpoint_interval: 3
+  max_items: 50
+  persist: true
+  persist_path: ${PROJECT_ROOT}/data/memory/working_memory.json
+  summary:
+    priority_weights:
+      error_fix: 10
+      decision: 8
+      change: 5
+      read: 1
+
+logging:
+  level: INFO
