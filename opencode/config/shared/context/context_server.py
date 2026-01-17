@@ -9,12 +9,12 @@ It provides a CLI interface to the ContextManager functionality.
 import argparse
 import json
 import sys
-from typing import Optional
 
 
 def get_manager():
     """Get or create ContextManager instance."""
     from opencode_memory import ContextManager, load_config
+
     config = load_config()
     return ContextManager(config)
 
@@ -73,39 +73,53 @@ def output_text(text: str):
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="context_server",
-        description="Context Manager backend for plugin"
+        prog="context_server", description="Context Manager backend for plugin"
     )
-    
+
     subparsers = parser.add_subparsers(dest="command", help="Commands")
-    
+
     # init
     p_init = subparsers.add_parser("init", help="Initialize session")
     p_init.add_argument("--session", required=True, help="Session ID")
-    
+
     # start
     p_start = subparsers.add_parser("start", help="Start task")
     p_start.add_argument("--task", required=True, help="Task description")
-    
+
     # checkpoint
     p_checkpoint = subparsers.add_parser("checkpoint", help="Perform checkpoint")
     p_checkpoint.add_argument("--summary", default="", help="Summary (optional)")
-    
+
     # auto-checkpoint
     subparsers.add_parser("auto-checkpoint", help="Auto checkpoint on idle")
-    
+
+    # status
+    subparsers.add_parser("status", help="Get current status")
+
+    # end
+    p_end = subparsers.add_parser("end", help="End task")
+    p_end.add_argument("--result", default="", help="Result summary (optional)")
+
+    # get-compaction-context
+    subparsers.add_parser("get-compaction-context", help="Get context for compaction")
+
     # record
     p_record = subparsers.add_parser("record", help="Record an event/item")
-    p_record.add_argument("--type", required=True, choices=["change", "read", "decision", "error", "fix", "note"], help="Item type")
+    p_record.add_argument(
+        "--type",
+        required=True,
+        choices=["change", "read", "decision", "error", "fix", "note"],
+        help="Item type",
+    )
     p_record.add_argument("--content", required=True, help="Content to record")
     p_record.add_argument("--file", help="Related file path (optional)")
-    
+
     args = parser.parse_args()
-    
+
     if args.command is None:
         parser.print_help()
         sys.exit(1)
-    
+
     try:
         if args.command == "init":
             result = cmd_init(args.session)
@@ -146,7 +160,7 @@ def main():
         else:
             parser.print_help()
             sys.exit(1)
-            
+
     except Exception as e:
         error_output = {"error": str(e), "type": type(e).__name__}
         print(json.dumps(error_output), file=sys.stderr)

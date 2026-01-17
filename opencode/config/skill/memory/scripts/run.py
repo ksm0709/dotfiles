@@ -18,8 +18,24 @@ import json
 import sys
 from pathlib import Path
 
+
 # Add project root to path
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
+def find_project_root():
+    current = Path(__file__).resolve().parent
+    for _ in range(10):
+        if (
+            (current / ".opencode").exists()
+            or (current / "shared" / "context" / "config.yaml").exists()
+            or (current / ".git").exists()
+        ):
+            return current
+        if current.parent == current:
+            break
+        current = current.parent
+    return Path(__file__).resolve().parents[4]
+
+
+PROJECT_ROOT = find_project_root()
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
@@ -77,6 +93,15 @@ def cmd_delete(args):
     client = MemoryClient(user_id="context-manager")
     result = client.delete(args.memory_id)
     print(format_output(result))
+
+
+def cmd_status(args):
+    """Handle status command."""
+    from opencode_memory import ContextManager, load_config
+
+    config = load_config(project_root=PROJECT_ROOT)
+    cm = ContextManager(config)
+    print(format_output(cm.status()))
 
 
 def cmd_clear(args):
@@ -152,6 +177,10 @@ Examples:
     delete_parser = subparsers.add_parser("delete", help="Delete a memory")
     delete_parser.add_argument("memory_id", help="ID of the memory to delete")
     delete_parser.set_defaults(func=cmd_delete)
+
+    # Status command
+    status_parser = subparsers.add_parser("status", help="Show memory system status")
+    status_parser.set_defaults(func=cmd_status)
 
     # Clear command
     clear_parser = subparsers.add_parser("clear", help="Clear all memories")

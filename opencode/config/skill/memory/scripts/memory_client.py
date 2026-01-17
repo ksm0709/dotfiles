@@ -19,10 +19,24 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+
 # Ensure project root is in path
-# Script is at: .opencode/skill/memory/scripts/memory_client.py
-# Project root is 4 levels up: .opencode/skill/memory/scripts/ → .opencode/skill/memory/ → .opencode/skill/ → .opencode/ → project_root
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
+def find_project_root():
+    current = Path(__file__).resolve().parent
+    for _ in range(10):
+        if (
+            (current / ".opencode").exists()
+            or (current / "shared" / "context" / "config.yaml").exists()
+            or (current / ".git").exists()
+        ):
+            return current
+        if current.parent == current:
+            break
+        current = current.parent
+    return Path(__file__).resolve().parents[4]
+
+
+PROJECT_ROOT = find_project_root()
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # Memory database directory

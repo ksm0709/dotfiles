@@ -21,18 +21,12 @@ OpenMemory-based AI agent long-term memory management.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│     context-manager Plugin (Auto Context Mgmt)      │
-│     • Automatic session lifecycle management        │
-│     • Auto query task-related memories              │
-│     • Auto save checkpoints/results                 │
-└────────────────────────┬────────────────────────────┘
-                         │ Shared (same DB)
-┌────────────────────────┴────────────────────────────┐
 │         memory Skill (Explicit Memory Ops)          │
 │     • /memory add - Manually add memory             │
 │     • /memory query - Manually search memories      │
 │     • /memory list - List memories                  │
 │     • /memory delete - Delete memory                │
+│     • /memory status - Show memory system status    │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -69,6 +63,9 @@ OpenMemory-based AI agent long-term memory management.
 
 # Delete memory
 /memory delete <memory_id>
+
+# Show status
+/memory status
 
 # Clear all memories (caution!)
 /memory clear --confirm
