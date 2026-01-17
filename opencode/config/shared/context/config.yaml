@@ -1,0 +1,60 @@
+# Context Manager Configuration
+# OpenMemory and 2-layer memory settings
+
+# Performance Tier
+# - hybrid: Balanced performance (default)
+# - fast: Prioritize response speed
+# - smart: Prioritize quality
+# - deep: Highest quality (slow)
+tier: hybrid
+
+# Embedding Provider
+embeddings:
+  provider: ollama  # synthetic | ollama | openai | gemini
+  # Ollama settings
+  model: nomic-embed-text
+  url: http://localhost:11434
+  # If provider is openai:
+  # model: text-embedding-3-small
+  fallback: synthetic
+
+# Database
+database:
+  backend: sqlite
+  # ${PROJECT_ROOT} is auto-replaced with project root
+  path: ${PROJECT_ROOT}/data/memory/context.sqlite
+
+# Context Memory (OpenMemory)
+context:
+  # Search settings
+  search:
+    min_score: 0.3      # Minimum similarity score
+    default_limit: 10   # Default search result count
+    keyword_boost: 2.5  # Keyword matching weight
+  # Decay settings
+  decay:
+    enabled: true
+    lambda: 0.02        # Time decay coefficient
+    reinforce_on_query: true  # Reinforce importance on query
+
+# Working Memory
+working:
+  # Auto checkpoint interval (session idle count)
+  auto_checkpoint_interval: 3
+  # Max items per checkpoint
+  max_items: 50
+  # File-based persistence (maintain state across subprocess calls)
+  persist: true
+  persist_path: ${PROJECT_ROOT}/data/memory/working_memory.json
+  
+  # Priority weights for summary
+  summary:
+    priority_weights:
+      error_fix: 10   # Error→fix pattern
+      decision: 8     # Decisions
+      change: 5       # File changes
+      read: 1         # Simple reads
+
+# Logging
+logging:
+  level: INFO  # DEBUG | INFO | WARNING | ERROR

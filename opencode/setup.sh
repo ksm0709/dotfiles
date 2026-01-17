@@ -12,7 +12,8 @@ chmod +x "$SCRIPT_DIR/backup-config.sh"
 # Install opencode
 "$SCRIPT_DIR/install.sh"
 
-# Install config
+# Install config and setup venv
 "$SCRIPT_DIR/install-config.sh"
 
 echo "Setup complete."
+echo "Note: Python virtual environment has been set up in $HOME/.config/opencode/venv"
