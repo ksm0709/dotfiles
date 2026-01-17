@@ -42,7 +42,7 @@ print_status "npm found: $(npm --version)"
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER_SCRIPT="$SCRIPT_DIR/vibe-kanban-wrapper.sh"
-CONFIG_TEMPLATE="$SCRIPT_DIR/config-template.sh"
+CONFIG_TEMPLATE="$SCRIPT_DIR/config-template.yaml"
 SERVICE_INSTALL_SCRIPT="$SCRIPT_DIR/install-service.sh"
 
 # Check if required files exist
@@ -63,7 +63,7 @@ fi
 
 # Create config directory if it doesn't exist
 CONFIG_DIR="$HOME/.config"
-CONFIG_FILE="$CONFIG_DIR/vibe-kanban.sh"
+CONFIG_FILE="$CONFIG_DIR/vibe-kanban.yaml"
 
 print_status "Setting up configuration..."
 mkdir -p "$CONFIG_DIR"
@@ -72,8 +72,7 @@ mkdir -p "$CONFIG_DIR"
 if [ ! -f "$CONFIG_FILE" ]; then
     print_status "Creating default config file: $CONFIG_FILE"
     cp "$CONFIG_TEMPLATE" "$CONFIG_FILE"
-    chmod +x "$CONFIG_FILE"
-    print_status "Default configuration created with HOST=0.0.0.0 and PORT=54545"
+    print_status "Default configuration created with host=0.0.0.0 and port=54545"
     print_status "You can modify it at: $CONFIG_FILE"
 else
     print_warning "Configuration file already exists: $CONFIG_FILE"

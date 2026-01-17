@@ -1,0 +1,8 @@
+# Vibe Kanban Configuration Template
+# Modify these settings to customize your vibe-kanban instance
+
+# The host address to bind to (0.0.0.0 for all interfaces)
+host: 0.0.0.0
+
+# The port number to listen on
+port: 54545

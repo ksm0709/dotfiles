@@ -3,19 +3,32 @@
 # Vibe Kanban Service Runner - Direct execution without npm
 # This runs the globally installed binary directly
 
-# Source config file
-CONFIG_FILE="$HOME/.config/vibe-kanban.sh"
+CONFIG_FILE="$HOME/.config/vibe-kanban.yaml"
+
+# Parse YAML configuration using Python3
 if [ -f "$CONFIG_FILE" ]; then
-    source "$CONFIG_FILE"
+    eval $(python3 -c "
+import yaml, sys
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        cfg = yaml.safe_load(f)
+        if cfg and isinstance(cfg, dict):
+            for k, v in cfg.items():
+                if v is not None:
+                    print(f'export VK_{k.upper()}=\"{v}\"')
+except Exception:
+    pass
+")
 fi
 
 # Set defaults if not configured
-HOST="${VK_HOST:-0.0.0.0}"
-PORT="${VK_PORT:-54545}"
-
-# Export environment variables
-export HOST="$HOST"
-export PORT="$PORT"
+export HOST="${VK_HOST:-0.0.0.0}"
+export PORT="${VK_PORT:-54545}"
 
 # Direct execution of globally installed vibe-kanban binary
-exec vibe-kanban "$@"
+# Use absolute path to avoid wrapper conflict
+if [ -f "/usr/local/lib/node_modules/vibe-kanban/bin/cli.js" ]; then
+    exec node /usr/local/lib/node_modules/vibe-kanban/bin/cli.js "$@"
+else
+    exec vibe-kanban "$@"
+fi

@@ -148,7 +148,6 @@ After=network.target
 Type=simple
 User=$SERVICE_USER
 Environment=HOME=/home/$SERVICE_USER
-EnvironmentFile=-/home/$SERVICE_USER/.config/vibe-kanban.sh
 $ENV_PATH_LINE
 ExecStart=/home/$SERVICE_USER/.local/bin/vk-runner
 Restart=always
