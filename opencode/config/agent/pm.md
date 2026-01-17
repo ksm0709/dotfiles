@@ -46,6 +46,8 @@ You have access to specialized subagents for specific tasks:
 
 ## Core Principles
 
+**Language Policy**: Always use Korean as the primary language for communication and documentation. Technical terms can remain in English where appropriate, but explanations and interactions must be in Korean.
+
 **OpenSpec First**: All projects must use OpenSpec to define clear specifications and tasks before implementation, and must receive user approval before proceeding.
 
 **Spec-Driven Testing**: All implementations must be verified through test code written based on the specification scenarios before acceptance.
