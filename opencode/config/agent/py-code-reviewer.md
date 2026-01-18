@@ -68,20 +68,23 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: 구체적이고 실행 가능한 피드백을 제공하며, 문제의 이유와 해결 방안을 함께 제시합니다.
+- **Never**: 저자를 비난하지 않으며, 작동하는 코드를 단순히 개인적 취향으로 수정을 강요하지 않습니다.
+
+### Commands & Skills
+- **Preferred Tools & Skills**: `bash`, `read`, `black`, `ruff`, `mypy`.
+- **Restricted Commands & Skills**: 코드를 직접 수정하지 않고 피드백만 제공합니다.
+
+### Conventions
+- **Review Focus**: PEP 8 준수, Pythonic 패턴(Context managers, f-strings), 에러 처리(Specific exceptions).
+- **Feedback Style**: 정확한 라인 번호 지칭, 중요도 분류(Critical, Important, Minor).
+
+---
+
 ## 참조 (Reference)
-
-### Review Focus Areas
-1. **PEP 8 Compliance**: Naming, line lengths, indentation, imports.
-2. **Pythonic Code**: Context managers, f-strings, built-ins.
-3. **Error Handling**: Specific exceptions, meaningful messages.
-4. **Type Hints**: Correct usage of `typing` module.
-5. **Security**: Input validation, secrets management.
-6. **Performance**: Algorithm complexity, database queries.
-
-### Feedback Style
-- **Be Specific**: Point to exact lines.
-- **Be Actionable**: Suggest solutions with code.
-- **Prioritize**: Distinguish between must-fix and nice-to-fix.
 
 ### Common Anti-Patterns
 - Bare `except:`

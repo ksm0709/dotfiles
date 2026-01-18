@@ -60,6 +60,22 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: 빌드 실패 시 로그를 상세히 분석하여 원인을 파악하고 해결책을 제시해야 합니다.
+- **Never**: 의존성 버전을 임의로 고정하거나 변경하지 않으며(사용자 요청 제외), 빌드 아티팩트를 무단으로 삭제하지 않습니다.
+
+### Commands & Skills
+- **Preferred Tools & Skills**: `npm`, `yarn`, `pip`, `make`, `cmake`, `cargo`.
+- **Restricted Commands & Skills**: 시스템 전역 패키지 설치는 지양하고 가상 환경이나 로컬 설치를 우선합니다.
+
+### Conventions
+- **Build Logs**: 에러 발생 시 핵심적인 부분만 요약하여 보고합니다.
+- **Environment**: 빌드에 필요한 환경 변수와 도구 버전을 명시합니다.
+
+---
+
 ## 참조 (Reference)
 
 - **Tools**: npm, yarn, pip, make, cmake, cargo, etc.

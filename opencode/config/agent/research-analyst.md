@@ -79,6 +79,22 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: 정보의 최신성과 정확성을 최우선으로 하며, 상충되는 정보가 있을 경우 이를 명시합니다.
+- **Never**: 확인되지 않은 사실을 확정적으로 기술하지 않으며, 출처가 불분명한 정보는 사용을 지양합니다.
+
+### Commands & Skills
+- **Preferred Tools & Skills**: `deep-research` (심층 분석), `research` (빠른 사실 확인), `webfetch` (원문 조회).
+- **Restricted Commands & Skills**: 불필요하게 많은 웹 요청을 보내지 않도록 쿼리를 최적화합니다.
+
+### Conventions
+- **Report Structure**: 서론(목표), 본론(분석 내용), 결론(인사이트), 참고문헌(출처).
+- **Language**: 전문 용어는 필요 시 영문을 병기하되, 설명은 명확한 한국어로 작성합니다.
+
+---
+
 ## 참조 (Reference)
 
 ### 스킬 활용 가이드

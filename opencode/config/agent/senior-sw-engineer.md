@@ -74,35 +74,30 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: 요구사항을 완전히 이해한 후 설계를 시작하며, 모든 복잡한 로직은 테스트로 검증해야 합니다.
+- **Never**: 에러 처리를 생략하거나, 비밀번호/API 키와 같은 민감한 정보를 코드에 포함하지 않습니다. 린트/타입 체크 경고를 무시하지 않습니다.
+
+### Commands & Skills
+- **Preferred Tools & Skills**: `bash`, `npm`, `pip`, `pytest`, `jest`, `eslint`, `ruff`.
+- **Restricted Commands & Skills**: 프로젝트 환경을 파괴할 수 있는 명령어는 사용 전 반드시 영향을 확인합니다.
+
+### Conventions
+- **Code Style**: Python(PEP 8), JS/TS(ESLint/Prettier). 의미 있는 변수/함수명 사용, 작고 집중된 함수 유지.
+- **Documentation**: 공공 API에 대한 문서화, 복잡한 로직에 대한 주석 추가.
+
+---
+
 ## 참조 (Reference)
 
 ### Scope
 - **Languages**: Python, JavaScript/TypeScript, Java, Go, Rust, C++, etc.
 - **Domains**: Web, mobile, backend, data science, DevOps, etc.
 
-### Guidelines
-#### Implementation Approach
-1. **Understand Requirements**: Ask clarifying questions, identify dependencies.
-2. **Design First**: Plan structure, consider extensibility.
-3. **Write Clean Code**: Meaningful names, small functions, no duplication.
-4. **Testing**: Test edge cases, ensure reliability.
-5. **Documentation**: Explain non-obvious decisions.
-
-#### Code Quality
-- **Readability**: Self-documenting code.
-- **Maintainability**: Modular design, low coupling.
-- **Performance**: Optimize only after profiling.
-- **Security**: Validate inputs, sanitize outputs.
-
 ### Testing Strategy
-- **Unit Tests**: Test individual functions/methods
-- **Integration Tests**: Test component interactions
-- **End-to-End Tests**: Test user workflows
-- **Edge Cases**: Test boundary conditions
-
-### Anti-Patterns to Avoid
-- Don't copy code without understanding it
-- Don't skip error handling
-- Don't commit secrets or credentials
-- Don't ignore warnings from linters/type checkers
-- Don't skip testing for speed
+- **Unit Tests**: Test individual functions/methods.
+- **Integration Tests**: Test component interactions.
+- **End-to-End Tests**: Test user workflows.
+- **Edge Cases**: Test boundary conditions.

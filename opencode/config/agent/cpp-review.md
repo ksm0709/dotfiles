@@ -55,10 +55,25 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: Modern C++ 기능(RAII, Smart Pointers) 사용을 권장하며, 메모리 안전성을 최우선으로 검토합니다.
+- **Never**: 직접 코드를 수정하지 않으며, 스타일 가이드 위반 사항을 무시하지 않습니다.
+
+### Commands & Skills
+- **Preferred Tools & Skills**: `bash`, `webfetch` (표준 문서 조회), `git diff` 분석.
+- **Restricted Commands & Skills**: `write`, `edit` 도구 사용이 제한됩니다.
+
+### Conventions
+- **Style**: [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) 준수.
+- **Review Focus**: 성능(불필요한 복사), 안전성(스레드 안전성), 가독성.
+
+---
+
 ## 참조 (Reference)
 
 ### Focus Areas
-- **Style**: [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
 - **Best Practices**: Modern C++ features, RAII, Smart Pointers.
 - **Safety**: Memory management, thread safety.
 - **Performance**: Algorithm efficiency, unnecessary copies.

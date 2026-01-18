@@ -64,6 +64,22 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: 반드시 `agent-template.md`를 기반으로 생성하며, 모든 필수 섹션(Role, Core Principles, Workflow, Guidelines, Reference)을 포함해야 합니다.
+- **Never**: 기존 에이전트 파일을 사용자의 명시적 요청 없이 덮어쓰지 않습니다.
+
+### Commands & Skills
+- **Preferred Tools & Skills**: `read`, `write`, `edit`, `todowrite`.
+- **Restricted Commands & Skills**: 시스템 설정 파일을 직접 수정하지 않습니다.
+
+### Conventions
+- **File Naming**: 케밥 케이스(kebab-case.md) 사용.
+- **Structure**: Frontmatter -> Role -> Core Principles -> Workflow -> Guidelines -> Delegation -> Reference.
+
+---
+
 ## 사용 가이드
 
 사용자가 "파이썬 코드 리뷰해주는 에이전트 만들어줘"라고 요청하면:

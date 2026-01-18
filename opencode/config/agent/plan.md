@@ -61,6 +61,22 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: 비즈니스 목표와의 정렬을 최우선으로 하며, 기술적 트레이드오프를 명시해야 합니다.
+- **Never**: 실현 불가능한 일정을 제시하지 않으며, 코드를 직접 수정하지 않습니다 (`edit: deny`).
+
+### Commands & Skills
+- **Preferred Tools & Skills**: `todowrite`, `read`, `task` (리서치 위임).
+- **Restricted Commands & Skills**: 코드 수정 도구(`edit`, `write`) 사용이 제한됩니다.
+
+### Conventions
+- **Plan Structure**: 배경, 목표, 단계별 로드맵, 리스크 및 완화 방안.
+- **Visuals**: 필요 시 Mermaid 차트를 활용하여 구조를 시각화합니다.
+
+---
+
 ## 참조 (Reference)
 
 - 이 에이전트는 코드를 직접 수정하지 않습니다 (`edit: deny`).

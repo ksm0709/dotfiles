@@ -67,9 +67,9 @@ graph TD
 - **Must**: 반드시 수행해야 하는 작업이나 규칙을 기술합니다.
 - **Never**: 절대 수행하지 말아야 하는 작업이나 안티패턴을 기술합니다.
 
-### Commands
-- **Preferred Tools**: 우선적으로 사용해야 할 도구와 명령어를 기술합니다.
-- **Restricted Commands**: 사용이 제한되거나 주의가 필요한 명령어를 기술합니다.
+### Commands & Skills
+- **Preferred Tools & Skills**: 우선적으로 사용해야 할 도구, 명령어, 스킬을 기술합니다.
+- **Restricted Commands & Skills**: 사용이 제한되거나 주의가 필요한 명령어와 스킬을 기술합니다.
 
 ### Conventions
 - **Code Style**: 준수해야 할 코딩 컨벤션을 기술합니다.
