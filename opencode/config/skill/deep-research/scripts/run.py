@@ -39,6 +39,9 @@ logger = logging.getLogger(__name__)
 from search_engine import SearchEngine  # noqa: E402
 from scraper import WebScraper  # noqa: E402
 from llm_client import llm_complete  # noqa: E402
+from env_manager import get_env_manager  # noqa: E402
+from dependency_checker import get_dependency_checker  # noqa: E402
+from error_handler import get_error_handler  # noqa: E402
 
 
 class ResearchArchive:
@@ -224,30 +227,53 @@ class DeepResearch:
         return report
 
 
-def check_api_keys() -> Dict[str, bool]:
-    """Check available API keys."""
-    gemini_key = os.environ.get("GEMINI_API_KEY", "")
-    openai_key = os.environ.get("OPENAI_API_KEY", "")
-
-    status = {
-        "gemini": bool(gemini_key),
-        "openai": bool(openai_key),
-        "any": bool(gemini_key or openai_key),
+def check_system_readiness() -> Dict[str, any]:
+    """Check system readiness including API keys, dependencies, and connectivity."""
+    env_manager = get_env_manager()
+    dep_checker = get_dependency_checker()
+    
+    print("🔍 Checking system readiness...")
+    
+    # Check API keys
+    api_status = env_manager.get_status_summary()
+    print(f"   API Keys: {len(api_status['loaded_keys'])} found")
+    
+    if not api_status['is_valid']:
+        for issue in api_status['issues']:
+            print(f"   ⚠️  {issue}")
+    
+    # Check dependencies
+    dep_status = dep_checker.get_dependency_status()
+    print(f"   Dependencies: {len(dep_status['available_required'])}/{len(dep_checker.REQUIRED_PACKAGES)} required packages available")
+    
+    if dep_status['missing_required']:
+        print(f"   Missing: {', '.join(dep_status['missing_required'])}")
+    
+    # Check system requirements
+    sys_status = dep_checker.check_system_requirements()
+    print(f"   System: Python {sys.version_info.major}.{sys.version_info.minor}+ ✓" if sys_status['python_version'] else "   System: Python version too old ✗")
+    print(f"   Network: {'Available' if sys_status['network_access'] else 'Unavailable'}")
+    print(f"   Cache: {'Writable' if sys_status['cache_directory'] else 'Not writable'}")
+    
+    # Overall status
+    can_run = api_status['is_valid'] and dep_status['can_run_research'] and sys_status['python_version']
+    
+    if can_run:
+        provider = api_status['preferred_provider']
+        if provider in api_status['key_previews']:
+            preview = api_status['key_previews'][f"{provider.upper()}_API_KEY"]
+            print(f"✅ Ready to run with {provider} (key: {preview})")
+        else:
+            print(f"✅ Ready to run with {provider}")
+    else:
+        print("⚠️  System not ready - will use mock mode")
+    
+    return {
+        "api_status": api_status,
+        "dependency_status": dep_status,
+        "system_status": sys_status,
+        "can_run": can_run,
     }
-
-    if not status["any"]:
-        print("⚠️  No API keys found!")
-        print("   Run: source scripts/load_env.sh")
-        print("   Or: export GEMINI_API_KEY='your-key'")
-        print("   Falling back to mock responses...\n")
-    elif status["gemini"]:
-        preview = "*" * max(0, len(gemini_key) - 8) + gemini_key[-8:]
-        print(f"✅ Using Gemini API (key: {preview})")
-    elif status["openai"]:
-        preview = "*" * max(0, len(openai_key) - 8) + openai_key[-8:]
-        print(f"✅ Using OpenAI API (key: {preview})")
-
-    return status
 
 
 def main():
@@ -256,35 +282,53 @@ def main():
     parser.add_argument("--depth", type=int, default=3, help="URLs per step")
     parser.add_argument("--output-dir", type=str, default=None, 
                         help="Custom output directory for research cache")
+    parser.add_argument("--check-only", action="store_true",
+                        help="Only check system readiness without running research")
 
     args = parser.parse_args()
 
-    # Check API keys
-    check_api_keys()
+    # Check system readiness
+    readiness = check_system_readiness()
+    
+    if args.check_only:
+        if readiness['can_run']:
+            print("\n✅ System is ready for deep research!")
+        else:
+            print("\n⚠️  System needs attention before running research")
+        return
+    
+    print(f"\n🔬 Starting deep research: {args.topic}")
 
-    print(f"🔬 Starting deep research: {args.topic}")
+    try:
+        # Run research with error handling
+        researcher = DeepResearch(llm_callback=llm_complete, base_dir=args.output_dir)
 
-    # Run research
-    researcher = DeepResearch(llm_callback=llm_complete, base_dir=args.output_dir)
+        session = researcher.create_plan(args.topic)
+        print(f"\n📋 Plan:\n{json.dumps(session['plan'], indent=2, ensure_ascii=False)}")
 
-    session = researcher.create_plan(args.topic)
-    print(f"\n📋 Plan:\n{json.dumps(session['plan'], indent=2, ensure_ascii=False)}")
+        results = researcher.execute_plan(session, max_urls_per_step=args.depth)
 
-    results = researcher.execute_plan(session, max_urls_per_step=args.depth)
+        print("\n📝 Generating report...")
+        report = researcher.generate_report(session, results)
 
-    print("\n📝 Generating report...")
-    report = researcher.generate_report(session, results)
+        print("\n" + "=" * 60)
+        print("📊 FINAL REPORT")
+        print("=" * 60)
+        print(report)
+        print("=" * 60)
 
-    print("\n" + "=" * 60)
-    print("📊 FINAL REPORT")
-    print("=" * 60)
-    print(report)
-    print("=" * 60)
-
-    report_path = (
-        f"{researcher.archive.base_dir}/{session['session_id']}/final_report.md"
-    )
-    print(f"\n💾 Saved to: {report_path}")
+        report_path = (
+            f"{researcher.archive.base_dir}/{session['session_id']}/final_report.md"
+        )
+        print(f"\n💾 Saved to: {report_path}")
+        
+    except Exception as e:
+        error_handler = get_error_handler()
+        user_message = error_handler.handle_error(e, context={"topic": args.topic})
+        print(f"\n{user_message}")
+        return 1
+    
+    return 0
 
 
 if __name__ == "__main__":

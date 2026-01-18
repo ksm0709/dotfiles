@@ -2,8 +2,8 @@
 """
 LLM Client Module - Unified interface for Gemini/OpenAI
 
-Standalone module for deep-research skill.
-Loads API keys from environment variables.
+Enhanced module for deep-research skill with improved error handling
+and integration with the new environment management system.
 """
 
 import os
@@ -13,27 +13,34 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# Import new modules
+try:
+    from .env_manager import get_env_manager
+    from .error_handler import get_error_handler, ErrorType
+except ImportError:
+    # Fallback for direct execution
+    from env_manager import get_env_manager
+    from error_handler import get_error_handler, ErrorType
+
 # Optional imports
 _gemini_available = False
 _openai_available = False
 
 try:
     from google import genai
-
     _gemini_available = True
 except ImportError:
     genai = None
 
 try:
     from openai import OpenAI
-
     _openai_available = True
 except ImportError:
     OpenAI = None
 
 
 def gemini_complete(prompt: str, model: str = "gemini-2.0-flash") -> str:
-    """Call Gemini API.
+    """Call Gemini API with enhanced error handling.
 
     Args:
         prompt: The prompt to send.
@@ -42,7 +49,12 @@ def gemini_complete(prompt: str, model: str = "gemini-2.0-flash") -> str:
     Returns:
         Response text or mock response if API unavailable.
     """
-    api_key = os.environ.get("GEMINI_API_KEY")
+    env_manager = get_env_manager()
+    error_handler = get_error_handler()
+    
+    # Get API key from environment manager
+    api_keys = env_manager.load_api_keys()
+    api_key = api_keys.get("GEMINI_API_KEY")
 
     if not api_key:
         logger.warning("GEMINI_API_KEY not found, using mock response")
@@ -58,11 +70,15 @@ def gemini_complete(prompt: str, model: str = "gemini-2.0-flash") -> str:
         return response.text or ""
     except Exception as e:
         logger.error(f"Gemini API error: {e}")
+        # Use error handler for better user experience
+        if error_handler.should_fallback(e):
+            logger.info("Falling back to mock response due to API error")
+            return mock_response(prompt)
         return f"Error: {e}"
 
 
 def openai_complete(prompt: str, model: str = "gpt-4o") -> str:
-    """Call OpenAI API.
+    """Call OpenAI API with enhanced error handling.
 
     Args:
         prompt: The prompt to send.
@@ -71,7 +87,12 @@ def openai_complete(prompt: str, model: str = "gpt-4o") -> str:
     Returns:
         Response text or mock response if API unavailable.
     """
-    api_key = os.environ.get("OPENAI_API_KEY")
+    env_manager = get_env_manager()
+    error_handler = get_error_handler()
+    
+    # Get API key from environment manager
+    api_keys = env_manager.load_api_keys()
+    api_key = api_keys.get("OPENAI_API_KEY")
 
     if not api_key:
         logger.warning("OPENAI_API_KEY not found, using mock response")
@@ -91,19 +112,23 @@ def openai_complete(prompt: str, model: str = "gpt-4o") -> str:
         return response.choices[0].message.content or ""
     except Exception as e:
         logger.error(f"OpenAI API error: {e}")
+        # Use error handler for better user experience
+        if error_handler.should_fallback(e):
+            logger.info("Falling back to mock response due to API error")
+            return mock_response(prompt)
         return f"Error: {e}"
 
 
 def llm_complete(
     prompt: str, provider: Optional[str] = None, model: Optional[str] = None
 ) -> str:
-    """Unified LLM interface.
+    """Unified LLM interface with enhanced provider selection.
 
     Priority:
     1. Explicit provider argument
     2. LLM_PROVIDER env var
-    3. Default to Gemini if GEMINI_API_KEY exists
-    4. Fall back to OpenAI
+    3. Default to preferred provider from EnvManager
+    4. Fall back to available provider
     5. Mock response
 
     Args:
@@ -114,22 +139,28 @@ def llm_complete(
     Returns:
         Response text.
     """
+    env_manager = get_env_manager()
+    
     if not provider:
-        provider = os.environ.get("LLM_PROVIDER")
+        provider = env_manager.get_preferred_provider()
 
-    if not provider:
-        # Auto-detect based on available keys
-        if os.environ.get("GEMINI_API_KEY"):
-            provider = "gemini"
-        elif os.environ.get("OPENAI_API_KEY"):
-            provider = "openai"
-        else:
-            provider = "gemini"  # Will fall back to mock
+    # Check if chosen provider is available
+    api_keys = env_manager.load_api_keys()
+    
+    if provider == "openai" and "OPENAI_API_KEY" not in api_keys:
+        logger.warning("OpenAI provider requested but no API key available, falling back")
+        provider = "gemini" if "GEMINI_API_KEY" in api_keys else "mock"
+    elif provider == "gemini" and "GEMINI_API_KEY" not in api_keys:
+        logger.warning("Gemini provider requested but no API key available, falling back")
+        provider = "openai" if "OPENAI_API_KEY" in api_keys else "mock"
 
     if provider == "openai":
         return openai_complete(prompt, model=model or "gpt-4o")
-    else:
+    elif provider == "gemini":
         return gemini_complete(prompt, model=model or "gemini-2.0-flash")
+    else:
+        logger.info("Using mock response (no valid provider available)")
+        return mock_response(prompt)
 
 
 def mock_response(prompt: str) -> str:
