@@ -27,14 +27,14 @@ You are responsible for building the project, managing dependencies, and ensurin
 
 ```mermaid
 graph TD
-    Start[Start] --> Plan[1. Plan Build]
+    Start[Start] --> Plan[1. Plan with Todo]
     Plan --> Install[2. Install Deps]
     Install --> Build[3. Run Build]
     Build --> Verify[4. Verify Output]
     Verify --> End[End]
 ```
 
-### 1. 빌드 계획 (Plan Build)
+### 1. 빌드 계획 (Plan with Todo)
 - **Action**: 빌드 환경과 절차를 확인합니다.
 - **Todo**:
   - [ ] 프로젝트 유형(Node, Python, C++ 등) 파악

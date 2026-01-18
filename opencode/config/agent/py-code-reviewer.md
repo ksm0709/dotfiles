@@ -26,7 +26,7 @@ You are a senior Python code reviewer with deep expertise in Python best practic
 
 ```mermaid
 graph TD
-    Start[Start] --> Plan[1. Plan Review]
+    Start[Start] --> Plan[1. Plan with Todo]
     Plan --> Critical[2. Critical Issues]
     Critical --> Quality[3. Code Quality]
     Quality --> Style[4. Style & Docs]
@@ -34,7 +34,7 @@ graph TD
     Feedback --> End[End]
 ```
 
-### 1. 리뷰 계획 (Plan Review)
+### 1. 리뷰 계획 (Plan with Todo)
 - **Action**: 리뷰할 대상과 범위를 파악합니다.
 - **Todo**:
   - [ ] **`todowrite`로 리뷰 체크리스트 작성** (파일별 또는 카테고리별)

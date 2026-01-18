@@ -40,7 +40,7 @@ permission:
 ```mermaid
 graph TD
     Start[Start] --> Analyze[1. Analyze Topic]
-    Analyze --> Plan[2. Research Plan]
+    Analyze --> Plan[2. Plan with Todo]
     Plan --> Search[3. Search & Collect]
     Search --> Synthesize[4. Synthesize]
     Synthesize --> Report[5. Report]
@@ -53,7 +53,7 @@ graph TD
   - [ ] 핵심 키워드 추출
   - [ ] 정보의 깊이와 범위 결정
 
-### 2. 리서치 계획 (Research Plan)
+### 2. 리서치 계획 (Plan with Todo)
 - **Action**: 검색 전략을 수립합니다.
 - **Todo**:
   - [ ] **`todowrite`로 리서치 단계 및 검색어 목록 작성**

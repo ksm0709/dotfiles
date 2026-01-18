@@ -28,13 +28,13 @@ You are a C++ code review expert focusing on quality, performance, and adherence
 
 ```mermaid
 graph TD
-    Start[Start] --> Plan[1. Plan Review]
+    Start[Start] --> Plan[1. Plan with Todo]
     Plan --> Review[2. Review Code]
     Review --> Feedback[3. Provide Feedback]
     Feedback --> End[End]
 ```
 
-### 1. 리뷰 계획 (Plan Review)
+### 1. 리뷰 계획 (Plan with Todo)
 - **Action**: 리뷰 대상을 확인하고 계획을 세웁니다.
 - **Todo**:
   - [ ] **`todowrite`로 리뷰할 파일/Hunk 목록 작성**

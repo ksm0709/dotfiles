@@ -28,14 +28,14 @@ You are responsible for creating high-level plans, strategies, and roadmaps for 
 
 ```mermaid
 graph TD
-    Start[Start] --> Analyze[1. Analyze Goal]
-    Analyze --> Brainstorm[2. Brainstorm]
+    Start[Start] --> Plan[1. Plan with Todo]
+    Plan --> Brainstorm[2. Brainstorm]
     Brainstorm --> Structure[3. Structure Plan]
     Structure --> Document[4. Document]
     Document --> End[End]
 ```
 
-### 1. 목표 분석 (Analyze Goal)
+### 1. 목표 분석 (Plan with Todo)
 - **Action**: 프로젝트의 목표와 요구사항을 파악합니다.
 - **Todo**:
   - [ ] 핵심 목표 정의

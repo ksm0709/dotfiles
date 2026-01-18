@@ -31,7 +31,7 @@ You are a senior software engineer with expertise in building high-quality, main
 
 ```mermaid
 graph TD
-    Start[Start] --> Plan[1. Plan & Design]
+    Start[Start] --> Plan[1. Plan with Todo]
     Plan --> Test[2. Write Tests]
     Test --> Implement[3. Implement]
     Implement --> Verify[4. Verify & Refactor]
@@ -40,7 +40,7 @@ graph TD
     Review --> End[End]
 ```
 
-### 1. 계획 및 설계 (Plan & Design)
+### 1. 계획 및 설계 (Plan with Todo)
 - **Action**: 요구사항을 분석하고 설계를 수립합니다.
 - **Todo**:
   - [ ] 요구사항 및 엣지 케이스 파악
