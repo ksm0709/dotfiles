@@ -10,7 +10,25 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 
+// ==================== DEBUG LOGGING ====================
+const DEBUG = true;
+const LOG_FILE = path.join(os.homedir(), ".local/share/opencode/log/context-manager-debug.log");
+
+function debugLog(message: string, data?: any) {
+  if (!DEBUG) return;
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] ${message}${data ? `: ${JSON.stringify(data, null, 2)}` : ''}\n`;
+  try {
+    fs.appendFileSync(LOG_FILE, logEntry);
+  } catch (e) {
+    // ignore write errors
+  }
+}
+// ========================================================
+
 export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => {
+  debugLog("Plugin initialized", { directory });
+  
   const homeDir = os.homedir();
   const globalConfigDir = path.join(homeDir, ".config/opencode");
 
@@ -42,7 +60,10 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
   const paths = getPaths();
   
   const runPython = async (args: string[]): Promise<string> => {
+    debugLog("runPython called", { args });
+    
     if (!paths) {
+      debugLog("runPython error: paths not found");
       return "Error: Context server not found. Please run install.sh";
     }
     
@@ -55,16 +76,23 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
       if (result.exitCode !== 0) {
         const stderr = result.stderr.toString().trim();
         const stdout = result.stdout.toString().trim();
+        debugLog("runPython error", { exitCode: result.exitCode, stderr, stdout });
         return `Error (exit ${result.exitCode}): ${stderr || stdout || "unknown error"}`;
       }
-      return result.stdout.toString().trim();
+      const output = result.stdout.toString().trim();
+      debugLog("runPython success", { args, outputLength: output.length });
+      return output;
     } catch (error) {
+      debugLog("runPython exception", { error: String(error) });
       return `Error: ${error}`;
     }
   };
 
   // State for auto-start
   let isInitialized = false;
+  
+  // Store args from tool.execute.before for use in tool.execute.after
+  const pendingToolCalls = new Map<string, any>();
 
   return {
     tool: {
@@ -111,34 +139,78 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
       }),
     },
     event: async ({ event }) => {
+      debugLog("Event received", { type: event.type });
+      
       // Initialize session asynchronously (non-blocking)
       if (event.type === "session.created") {
-        runPython(["init", "--session", event.data.id]).catch(() => {});
+        const sessionId = event.data?.id;
+        debugLog("session.created - calling init", { sessionId });
+        if (sessionId) {
+          runPython(["init", "--session", sessionId]).catch((e) => {
+            debugLog("session.created init error", { error: String(e) });
+          });
+        }
       }
-
-      // Auto-start on first user message
-      if (event.type === "message.updated" && !isInitialized) {
-        try {
-          const message = event.data;
-          if (message.role === "user") {
-            const text = message.parts
-              ?.filter((p: any) => p.type === "text")
-              ?.map((p: any) => p.text)
-              ?.join("\n");
-            
-            if (text?.trim()) {
-              runPython(["start", "--task", text])
-                .then(() => { isInitialized = true; })
-                .catch(() => {});
-            }
+      
+      // Note: Auto-start is now handled in tool.execute.before
+      // message.updated event.data is empty in opencode, so we can't use it
+    },
+    "tool.execute.before": async (input, _output) => {
+      debugLog("tool.execute.before called", { 
+        tool: input.tool, 
+        sessionID: input.sessionID,
+        callID: input.callID,
+        args: _output.args,
+        isInitialized
+      });
+      
+      // Store args for use in tool.execute.after
+      pendingToolCalls.set(input.callID, _output.args);
+      
+      // Auto-start context on first tool execution (if not already initialized)
+      // This is more reliable than message.updated since event.data is empty
+      if (!isInitialized) {
+        const ignoredForAutoStart = new Set([
+          "context_start", "context_checkpoint", "context_end", "context_status"
+        ]);
+        
+        if (!ignoredForAutoStart.has(input.tool)) {
+          debugLog("Auto-start triggered from tool.execute.before", { tool: input.tool });
+          isInitialized = true; // Set immediately to prevent duplicate starts
+          
+          // Build task description from tool context
+          let taskDescription = `Tool execution: ${input.tool}`;
+          const args = _output.args || {};
+          
+          if (input.tool === "bash" && args.description) {
+            taskDescription = args.description;
+          } else if (input.tool === "read" && args.filePath) {
+            taskDescription = `Reading file: ${args.filePath}`;
+          } else if (input.tool === "edit" && args.filePath) {
+            taskDescription = `Editing file: ${args.filePath}`;
+          } else if (input.tool === "task" && args.description) {
+            taskDescription = args.description;
           }
-        } catch (error) {
-          // ignore errors in auto-start
+          
+          runPython(["start", "--task", taskDescription]).catch((e) => {
+            debugLog("Auto-start error", { error: String(e) });
+            isInitialized = false; // Reset on failure
+          });
         }
       }
     },
     "tool.execute.after": async (input, _output) => {
       const toolName = input.tool;
+      const args = pendingToolCalls.get(input.callID) || {};
+      pendingToolCalls.delete(input.callID); // Cleanup
+      
+      debugLog("tool.execute.after called", { 
+        tool: toolName, 
+        sessionID: input.sessionID,
+        callID: input.callID,
+        hasArgs: !!args
+      });
+      
       const ignoredTools = new Set([
         "read", "glob", "ls", "grep", 
         "context_start", "context_checkpoint", "context_end", "context_status",
@@ -146,6 +218,7 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
       ]);
       
       if (!ignoredTools.has(toolName)) {
+        debugLog("Processing tool", { tool: toolName });
         try {
           // 1. Auto-record the tool execution
           let recordType = "note";
@@ -154,19 +227,43 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
 
           if (toolName === "write" || toolName === "edit") {
             recordType = "change";
-            file = (input.args as any).filePath || "";
+            file = args.filePath || "";
             content = `Modified file: ${file}`;
           } else if (toolName === "bash") {
-            content = `Ran command: ${(input.args as any).command}`;
+            content = `Ran command: ${args.command || 'unknown'}`;
+          } else if (toolName === "task") {
+            recordType = "decision";
+            content = `Delegated task to subagent: ${args.description || 'unknown'}`;
+            debugLog("Task tool detected", { description: args.description });
           }
 
-          await runPython(["record", "--type", recordType, "--content", content, "--file", file]);
+          debugLog("Recording tool execution", { recordType, content, file });
+          const recordArgs = ["record", "--type", recordType, "--content", content];
+          if (file) {
+            recordArgs.push("--file", file);
+          }
+          await runPython(recordArgs);
 
           // 2. Check if checkpoint is needed
+          debugLog("Calling auto-checkpoint");
           await runPython(["auto-checkpoint"]);
         } catch (error) {
-          // ignore errors in auto-checkpoint
+          debugLog("tool.execute.after error", { error: String(error) });
         }
+      } else {
+        debugLog("Tool ignored", { tool: toolName });
+      }
+    },
+    "experimental.session.compacting": async (input, output) => {
+      debugLog("Compacting session - injecting context");
+      try {
+        const context = await runPython(["get-compaction-context"]);
+        if (context && !context.includes("Error retrieving context")) {
+          output.context.push(context);
+          debugLog("Context injected into compaction", { length: context.length });
+        }
+      } catch (error) {
+        debugLog("Compaction injection error", { error: String(error) });
       }
     }
   };

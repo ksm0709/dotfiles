@@ -1,171 +1,438 @@
-#!/usr/bin/env python3
 """
-Context Server - CLI interface for Context Manager Plugin
+Context API Server
 
-This script serves as the backend for the TypeScript plugin.
-It provides a CLI interface to the ContextManager functionality.
+FastAPI-based server for Context Manager.
+Provides HTTP endpoints for plugin communication.
 """
 
-import argparse
+import asyncio
 import json
+import logging
+import os
+import signal
 import sys
+import time
+from contextlib import asynccontextmanager
+from typing import Optional
+
+import uvicorn
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from .config import get_project_root
+from .server_state import ServerState
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)],
+)
+logger = logging.getLogger("context-server")
+
+# Constants
+IDLE_TIMEOUT = 30 * 60  # 30 minutes
+CHECK_INTERVAL = 60  # Check every minute
+
+# Global state
+state = ServerState.get_instance()
+shutdown_event = asyncio.Event()
 
 
-def get_manager():
-    """Get or create ContextManager instance."""
-    from opencode_memory import ContextManager, load_config
-
-    config = load_config()
-    return ContextManager(config)
+# Request Models
+class InitRequest(BaseModel):
+    session_id: str
 
 
-def cmd_init(session_id: str) -> dict:
-    """Initialize session."""
-    cm = get_manager()
-    return cm.init(session_id)
+class StartRequest(BaseModel):
+    session_id: str
+    task: str
 
 
-def cmd_start(task: str) -> dict:
-    """Start task and retrieve related memories."""
-    cm = get_manager()
-    return cm.start(task)
+class CheckpointRequest(BaseModel):
+    session_id: str
+    summary: str = ""
 
 
-def cmd_checkpoint(summary: str = "") -> dict:
-    """Perform checkpoint."""
-    cm = get_manager()
-    return cm.checkpoint(summary)
+class EndRequest(BaseModel):
+    session_id: str
+    result: str = ""
 
 
-def cmd_auto_checkpoint() -> dict:
-    """Auto checkpoint (on session idle)."""
-    cm = get_manager()
-    return cm.auto_checkpoint()
+class RecordRequest(BaseModel):
+    session_id: str
+    type: str
+    content: str
+    importance: str = "low"
+    metadata: Optional[dict] = None
 
 
-def cmd_end(result: str = "") -> dict:
-    """End task."""
-    cm = get_manager()
-    return cm.end(result)
+class AddRequest(BaseModel):
+    content: str
+    tags: Optional[list[str]] = None
+    metadata: Optional[dict] = None
 
 
-def cmd_status() -> dict:
-    """Get current status."""
-    cm = get_manager()
-    return cm.status()
+class QueryRequest(BaseModel):
+    query: str
+    limit: int = 5
+    tags: Optional[list[str]] = None
 
 
-def cmd_get_compaction_context() -> str:
-    """Get context for compaction."""
-    cm = get_manager()
-    return cm.get_compaction_context()
+# Lifecycle Manager
+async def idle_checker():
+    """Monitor idle time and shutdown if inactive."""
+    while not shutdown_event.is_set():
+        if state.is_idle(IDLE_TIMEOUT):
+            logger.info(f"Server idle for {IDLE_TIMEOUT}s (Activity Timeout). Shutting down...")
+            os.kill(os.getpid(), signal.SIGTERM)
+            break
+        await asyncio.sleep(CHECK_INTERVAL)
 
 
-def output_json(data):
-    """Output data as JSON."""
-    print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Starting Context API Server...")
 
+    project_root = get_project_root()
+    registry_path = project_root / "data" / "context_server.json"
 
-def output_text(text: str):
-    """Output text directly."""
-    print(text)
+    # Check for existing server
+    if registry_path.exists():
+        try:
+            with open(registry_path, "r") as f:
+                data = json.load(f)
+                pid = data.get("pid")
+                if pid:
+                    try:
+                        os.kill(pid, 0)
+                        logger.warning(f"Another server is running at PID {pid}. Exiting.")
+                        sys.exit(0)
+                    except OSError:
+                        # Process not running
+                        pass
+        except Exception:
+            # Ignore read errors
+            pass
 
-
-def main():
-    parser = argparse.ArgumentParser(
-        prog="context_server", description="Context Manager backend for plugin"
-    )
-
-    subparsers = parser.add_subparsers(dest="command", help="Commands")
-
-    # init
-    p_init = subparsers.add_parser("init", help="Initialize session")
-    p_init.add_argument("--session", required=True, help="Session ID")
-
-    # start
-    p_start = subparsers.add_parser("start", help="Start task")
-    p_start.add_argument("--task", required=True, help="Task description")
-
-    # checkpoint
-    p_checkpoint = subparsers.add_parser("checkpoint", help="Perform checkpoint")
-    p_checkpoint.add_argument("--summary", default="", help="Summary (optional)")
-
-    # auto-checkpoint
-    subparsers.add_parser("auto-checkpoint", help="Auto checkpoint on idle")
-
-    # status
-    subparsers.add_parser("status", help="Get current status")
-
-    # end
-    p_end = subparsers.add_parser("end", help="End task")
-    p_end.add_argument("--result", default="", help="Result summary (optional)")
-
-    # get-compaction-context
-    subparsers.add_parser("get-compaction-context", help="Get context for compaction")
-
-    # record
-    p_record = subparsers.add_parser("record", help="Record an event/item")
-    p_record.add_argument(
-        "--type",
-        required=True,
-        choices=["change", "read", "decision", "error", "fix", "note"],
-        help="Item type",
-    )
-    p_record.add_argument("--content", required=True, help="Content to record")
-    p_record.add_argument("--file", help="Related file path (optional)")
-
-    args = parser.parse_args()
-
-    if args.command is None:
-        parser.print_help()
-        sys.exit(1)
-
+    # Write registry file
     try:
-        if args.command == "init":
-            result = cmd_init(args.session)
-            output_json(result)
-        elif args.command == "start":
-            result = cmd_start(args.task)
-            output_json(result)
-        elif args.command == "checkpoint":
-            result = cmd_checkpoint(args.summary)
-            output_json(result)
-        elif args.command == "auto-checkpoint":
-            result = cmd_auto_checkpoint()
-            output_json(result)
-        elif args.command == "record":
-            cm = get_manager()
-            if args.type == "change":
-                result = cm.record_change(args.content, args.file)
-            elif args.type == "read":
-                result = cm.record_read(args.content, args.file)
-            elif args.type == "decision":
-                result = cm.record_decision(args.content)
-            elif args.type == "error":
-                result = cm.record_error(args.content)
-            elif args.type == "fix":
-                result = cm.record_fix(args.content)
-            else:
-                result = cm.record_note(args.content)
-            output_json({"status": "success"})
-        elif args.command == "end":
-            result = cmd_end(args.result)
-            output_json(result)
-        elif args.command == "status":
-            result = cmd_status()
-            output_json(result)
-        elif args.command == "get-compaction-context":
-            result = cmd_get_compaction_context()
-            output_text(result)
-        else:
-            parser.print_help()
-            sys.exit(1)
+        registry_path.parent.mkdir(parents=True, exist_ok=True)
+
+        registry_data = {
+            "port": state.port,
+            "pid": os.getpid(),
+            "api_key": state.api_key,
+            "started_at": time.time(),
+        }
+
+        with open(registry_path, "w") as f:
+            json.dump(registry_data, f)
+
+        logger.info(f"Server registry written to {registry_path}")
+    except Exception as e:
+        logger.error(f"Failed to write server registry: {e}")
+
+    asyncio.create_task(idle_checker())
+    yield
+    # Shutdown
+    logger.info("Shutting down Context API Server...")
+    shutdown_event.set()
+
+    # Remove registry file
+    if registry_path:
+        try:
+            if registry_path.exists():
+                # Check PID before removing
+                should_remove = True
+                try:
+                    with open(registry_path, "r") as f:
+                        data = json.load(f)
+                        saved_pid = data.get("pid")
+                        # If file belongs to another process, do not remove
+                        if saved_pid and saved_pid != os.getpid():
+                            logger.warning(
+                                f"Registry PID ({saved_pid}) does not match "
+                                f"current PID ({os.getpid()}). Skipping removal."
+                            )
+                            should_remove = False
+                except Exception:
+                    pass
+
+                if should_remove:
+                    registry_path.unlink()
+                    logger.info("Server registry removed")
+        except Exception as e:
+            logger.error(f"Failed to remove server registry: {e}")
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+# Middleware for API Key validation
+@app.middleware("http")
+async def validate_api_key(request: Request, call_next):
+    if request.url.path == "/health":
+        return await call_next(request)
+
+    expected_key = state.api_key
+    if not expected_key:
+        return await call_next(request)
+
+    client_key = request.headers.get("X-API-Key")
+    if client_key != expected_key:
+        return JSONResponse(status_code=403, content={"error": "Invalid API Key"})
+
+    state.touch()  # Update activity on valid request
+    return await call_next(request)
+
+
+# Endpoints
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "pid": os.getpid(),
+        "uptime": time.time() - state.started_at,
+    }
+
+
+@app.post("/init")
+async def init_session(req: InitRequest):
+    try:
+        wm = state.get_working_memory(req.session_id)
+        return {
+            "status": "success",
+            "session_id": req.session_id,
+            "timestamp": time.time(),
+        }
+    except Exception as e:
+        logger.error(f"Init failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/start")
+async def start_task(req: StartRequest):
+    try:
+        wm = state.get_working_memory(req.session_id)
+        wm.start_task(req.task)
+        state.context_memory.set_current_task(req.task)
+
+        # Retrieve related memories
+        relevant = state.context_memory.get_for_task(req.task, limit=5)
+
+        # Format result
+        result = {
+            "status": "success",
+            "task": req.task,
+            "timestamp": time.time(),
+            "relevant_memories": [],
+            "context_summary": f"Starting new task: {req.task}",
+        }
+
+        if relevant:
+            result["relevant_memories"] = [
+                {
+                    "content": m["content"][:200] + "..."
+                    if len(m["content"]) > 200
+                    else m["content"],
+                    "score": round(m.get("score", 0), 2),
+                    "tags": m.get("tags", []),
+                }
+                for m in relevant
+            ]
+            # Simple summary generation (can be improved)
+            summary_lines = [f"## Task Started: {req.task}\n", "### Related Memories"]
+            for i, m in enumerate(relevant, 1):
+                summary_lines.append(
+                    f"{i}. [{round(m.get('score', 0), 2)}] {m['content'][:150]}..."
+                )
+                if m.get("tags"):
+                    summary_lines.append(f"   - Tags: {', '.join(m['tags'])}")
+            result["context_summary"] = "\n".join(summary_lines)
+
+        return result
 
     except Exception as e:
-        error_output = {"error": str(e), "type": type(e).__name__}
-        print(json.dumps(error_output), file=sys.stderr)
-        sys.exit(1)
+        logger.error(f"Start failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/checkpoint")
+async def checkpoint(req: CheckpointRequest):
+    try:
+        wm = state.get_working_memory(req.session_id)
+
+        # 1. Generate summary from working memory
+        summary = req.summary
+        if not summary:
+            summary = wm.summarize_since_checkpoint()
+
+        if not summary:
+            return {"status": "skipped", "reason": "no new content"}
+
+        # 2. Save to context memory
+        state.context_memory.query_and_update(summary)
+
+        # 3. Clear working memory
+        wm.clear_since_checkpoint()
+
+        return {"status": "success", "summary": summary, "timestamp": time.time()}
+    except Exception as e:
+        logger.error(f"Checkpoint failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/end")
+async def end_task(req: EndRequest):
+    try:
+        wm = state.get_working_memory(req.session_id)
+
+        # 1. Generate final summary
+        summary = req.result
+        if not summary:
+            summary = wm.summarize_since_checkpoint()
+
+        # 2. Save if content exists
+        if summary:
+            state.context_memory.query_and_update(summary)
+
+        # 3. Cleanup
+        wm.clear()
+        state.context_memory.set_current_task(None)
+
+        return {"status": "success", "timestamp": time.time()}
+    except Exception as e:
+        logger.error(f"End failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/record")
+async def record_item(req: RecordRequest, background_tasks: BackgroundTasks):
+    try:
+        wm = state.get_working_memory(req.session_id)
+        wm.add_item(req.type, req.content, req.importance, req.metadata)
+
+        # Also add to context memory for specific types (persistence)
+        if req.type in ["error", "fix", "decision", "change"]:
+            tags = [req.type]
+            # Run context memory addition in background to avoid blocking
+            background_tasks.add_task(
+                state.context_memory.add, req.content, tags=tags, metadata=req.metadata
+            )
+
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Record failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/add")
+async def add_memory(req: AddRequest):
+    try:
+        result = state.context_memory.add(
+            req.content, tags=req.tags, metadata=req.metadata
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Add failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/query")
+async def query_memory(req: QueryRequest):
+    try:
+        results = state.context_memory.query(req.query, limit=req.limit, tags=req.tags)
+        return results
+    except Exception as e:
+        logger.error(f"Query failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/status")
+async def get_status(session_id: Optional[str] = None):
+    try:
+        status = {
+            "server": {
+                "pid": os.getpid(),
+                "uptime": time.time() - state.started_at,
+                "sessions": list(state.sessions.keys()),
+            },
+            "context": {
+                "initialized": state.context_memory._initialized,
+                "current_task": state.context_memory._current_task,
+            },
+        }
+
+        if session_id and session_id in state.sessions:
+            wm = state.sessions[session_id]
+            status["working"] = {
+                "items_count": wm.get_items_count(),
+                "last_checkpoint": wm.last_checkpoint.isoformat()
+                if wm.last_checkpoint
+                else None,
+            }
+
+        return status
+    except Exception as e:
+        logger.error(f"Status failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/compaction-context")
+async def get_compaction_context(session_id: Optional[str] = None):
+    try:
+        summary_parts = ["## Preserved Context from Context Manager"]
+        
+        # 1. Current Task
+        if state.context_memory._current_task:
+            summary_parts.append(f"### Current Task\n{state.context_memory._current_task}")
+            
+        # 2. Working Memory Summary (if session_id provided)
+        if session_id and session_id in state.sessions:
+            wm = state.sessions[session_id]
+            wm_summary = wm.summarize_since_checkpoint()
+            if wm_summary:
+                summary_parts.append(f"### Recent Progress\n{wm_summary}")
+                
+        # 3. Relevant Memories (based on current task)
+        if state.context_memory._current_task:
+            relevant = state.context_memory.get_for_task(state.context_memory._current_task, limit=3)
+            if relevant:
+                summary_parts.append("### Relevant Past Memories")
+                for i, m in enumerate(relevant, 1):
+                    summary_parts.append(f"{i}. {m['content'][:200]}...")
+                    
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse("\n\n".join(summary_parts))
+    except Exception as e:
+        logger.error(f"Compaction context failed: {e}", exc_info=True)
+        return "## Preserved Context\n(Error retrieving context)"
+
+
+def run_server(host="127.0.0.1", port=0):
+    """Run the server using uvicorn."""
+    if port == 0:
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("", 0))
+            port = s.getsockname()[1]
+
+    state.port = port
+    logger.info(f"Server port assigned: {port}")
+    logger.info(f"Server API Key: {state.api_key}")
+
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=0)
+    args = parser.parse_args()
+    run_server(port=args.port)
