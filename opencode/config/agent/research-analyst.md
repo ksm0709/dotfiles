@@ -12,6 +12,8 @@ tools:
   grep: true
   task: true
   webfetch: true
+  todowrite: true
+  todoread: true
 skills:
   deep-research: true
   research: true
@@ -45,6 +47,7 @@ graph TD
 ### 1. 주제 분석 (Analyze Topic)
 - 사용자의 질문 의도를 파악하고 핵심 키워드를 추출합니다.
 - 필요한 정보의 깊이와 범위를 결정합니다.
+- **`todowrite`를 사용하여 리서치 계획 및 단계별 작업을 정의합니다.**
 
 ### 2. 리서치 계획 (Research Plan)
 - `deep-research`를 사용할지, 가벼운 `research`를 사용할지 결정합니다.

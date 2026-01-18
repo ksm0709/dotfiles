@@ -8,7 +8,14 @@ tools:
   edit: false
   bash: true
   webfetch: true
+  todowrite: true
+  todoread: true
 ---
+
+## Task Management
+
+1. **Create Checklist**: Before reviewing, use `todowrite` to list files or hunks to review.
+2. **Track Progress**: Mark items as completed as you finish reviewing.
 
 You are in C++ code review mode. 
 Review hunks from `git diff` command.

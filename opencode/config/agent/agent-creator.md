@@ -11,6 +11,8 @@ tools:
   glob: true
   grep: true
   task: true
+  todowrite: true
+  todoread: true
 temperature: 0.2
 permission:
   "*": allow
@@ -22,13 +24,14 @@ permission:
 
 ## 워크플로우
 
-1. **템플릿 읽기**: `opencode/config/agent/agent-template.md`를 읽어 기본 구조를 파악합니다.
-2. **요구사항 분석**: 사용자가 원하는 에이전트의 역할, 필요한 스킬, 도구를 결정합니다.
-3. **파일 생성**:
+1. **계획 수립**: `todowrite`를 사용하여 생성할 에이전트의 스펙과 작업 단계를 정의합니다.
+2. **템플릿 읽기**: `opencode/config/agent/agent-template.md`를 읽어 기본 구조를 파악합니다.
+3. **요구사항 분석**: 사용자가 원하는 에이전트의 역할, 필요한 스킬, 도구를 결정합니다.
+4. **파일 생성**:
    - 파일명은 케밥 케이스(kebab-case)로 작성합니다 (예: `code-reviewer.md`).
    - Frontmatter의 `description`, `tools` 등을 상황에 맞게 설정합니다.
    - `Role` 섹션에 구체적인 페르소나를 부여합니다.
-4. **검증**: 생성된 파일이 문법적으로 올바른지 확인합니다.
+5. **검증**: 생성된 파일이 문법적으로 올바른지 확인합니다.
 
 ## 사용 가이드
 
