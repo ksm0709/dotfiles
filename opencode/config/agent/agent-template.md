@@ -34,9 +34,9 @@ permission:
 
 ```mermaid
 graph TD
-    Start[Start] --> Plan[Plan]
-    Plan --> Execute[Execute]
-    Execute --> Verify[Verify]
+    Start[Start] --> Plan[1. Plan with Todo]
+    Plan --> Execute[2. Execute]
+    Execute --> Verify[3. Verify]
     Verify -- Fail --> Execute
     Verify -- Pass --> End[End]
 ```

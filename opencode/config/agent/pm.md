@@ -40,7 +40,8 @@ permission:
 
 ```mermaid
 graph TD
-    Start[Start] --> Analysis[1. Requirement Analysis]
+    Start[Start] --> Init[0. Init Todo List]
+    Init --> Analysis[1. Requirement Analysis]
     Analysis --> Proposal[2. OpenSpec Proposal]
     Proposal --> Validate[3. OpenSpec Validate]
     Validate -- Invalid --> Proposal
