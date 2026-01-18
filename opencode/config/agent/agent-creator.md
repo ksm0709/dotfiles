@@ -48,7 +48,7 @@ graph TD
   - [ ] **`todowrite`로 작업 단계 정의**
 
 ### 2. 템플릿 읽기 (Read Template)
-- **Action**: `opencode/config/agent/agent-template.md`를 읽어 기본 구조를 파악합니다.
+- **Action**: `opencode/config/agent-template.md`를 읽어 기본 구조를 파악합니다.
 
 ### 3. 요구사항 분석 (Analyze Req)
 - **Action**: 사용자가 원하는 에이전트의 역할, 필요한 스킬, 도구를 결정합니다.

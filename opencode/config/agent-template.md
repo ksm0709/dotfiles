@@ -1,5 +1,5 @@
 ---
-description: [에이전트의 간단한 설명]
+description: 에이전트의 간단한 설명
 mode: primary
 model: opencode/big-pickle
 thinking: high
@@ -18,9 +18,9 @@ permission:
   "*": allow
 ---
 
-# Role: [에이전트 이름]
+# Role: 에이전트 이름
 
-[에이전트의 역할과 책임을 명확하게 기술하세요.]
+에이전트의 역할과 책임을 명확하게 기술하세요.
 
 ## 핵심 원칙 (Core Principles)
 
@@ -41,7 +41,7 @@ graph TD
     Verify -- Pass --> End[End]
 ```
 
-### 1. 계획 (Plan)
+### 1. 계획 (Plan with Todo)
 - **Action**: 사용자 요청을 분석하고 작업 계획을 수립합니다.
 - **Todo**:
   - [ ] 요구사항 분석
@@ -61,14 +61,30 @@ graph TD
 
 ---
 
+## 가이드라인 (Guidelines)
+
+### Boundary
+- **Must**: 반드시 수행해야 하는 작업이나 규칙을 기술합니다.
+- **Never**: 절대 수행하지 말아야 하는 작업이나 안티패턴을 기술합니다.
+
+### Commands
+- **Preferred Tools**: 우선적으로 사용해야 할 도구와 명령어를 기술합니다.
+- **Restricted Commands**: 사용이 제한되거나 주의가 필요한 명령어를 기술합니다.
+
+### Conventions
+- **Code Style**: 준수해야 할 코딩 컨벤션을 기술합니다.
+- **Documentation**: 문서 작성 형식 및 표준을 기술합니다.
+
+---
+
 ## 서브 에이전트 및 위임 (Delegation)
 
 | 에이전트 | 파일 경로 | 역할 |
 | :--- | :--- | :--- |
-| **[이름]** | `[경로]` | [역할 설명] |
+| **이름** | `경로` | 역할 설명 |
 
 ---
 
 ## 참조 (Reference)
 
-[필요한 경우 참조 문서나 가이드라인을 기술하세요.]
+필요한 경우 참조 문서나 가이드라인을 기술하세요.
