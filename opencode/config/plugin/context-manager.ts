@@ -80,7 +80,7 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
         return `Error (exit ${result.exitCode}): ${stderr || stdout || "unknown error"}`;
       }
       const output = result.stdout.toString().trim();
-      debugLog("runPython success", { args, outputLength: output.length });
+      debugLog("runPython success", { args, output }); // Log full output for audit
       return output;
     } catch (error) {
       debugLog("runPython exception", { error: String(error) });
@@ -93,6 +93,8 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
   
   // Store args from tool.execute.before for use in tool.execute.after
   const pendingToolCalls = new Map<string, any>();
+  // Store context to be injected in tool.execute.after
+  const pendingContext = new Map<string, string>();
 
   return {
     tool: {
@@ -192,10 +194,22 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
             taskDescription = args.description;
           }
           
-          runPython(["start", "--task", taskDescription]).catch((e) => {
+          try {
+            const resultStr = await runPython(["start", "--task", taskDescription]);
+            try {
+              const result = JSON.parse(resultStr);
+              if (result.context_summary) {
+                pendingContext.set(input.callID, result.context_summary);
+                debugLog("Context retrieved for injection", { length: result.context_summary.length });
+              }
+            } catch (parseError) {
+              debugLog("Failed to parse start result", { error: String(parseError), resultStr });
+            }
+            isInitialized = true; // Set immediately to prevent duplicate starts
+          } catch (e) {
             debugLog("Auto-start error", { error: String(e) });
             isInitialized = false; // Reset on failure
-          });
+          }
         }
       }
     },
@@ -203,6 +217,15 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
       const toolName = input.tool;
       const args = pendingToolCalls.get(input.callID) || {};
       pendingToolCalls.delete(input.callID); // Cleanup
+      
+      // Inject context if available
+      const contextToInject = pendingContext.get(input.callID);
+      pendingContext.delete(input.callID);
+
+      if (contextToInject) {
+        _output.output += `\n\n=== Context Memory ===\n${contextToInject}`;
+        debugLog("Injected context into tool output", { length: contextToInject.length });
+      }
       
       debugLog("tool.execute.after called", { 
         tool: toolName, 
@@ -255,12 +278,17 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
       }
     },
     "experimental.session.compacting": async (input, output) => {
-      debugLog("Compacting session - injecting context");
+      debugLog("Compacting session - injecting context", { sessionID: input.sessionID });
       try {
         const context = await runPython(["get-compaction-context"]);
-        if (context && !context.includes("Error retrieving context")) {
+        if (context && !context.includes("Error retrieving context") && context.trim().length > 0) {
           output.context.push(context);
-          debugLog("Context injected into compaction", { length: context.length });
+          debugLog("Context injected into compaction", { 
+            length: context.length,
+            fullContext: context // Log full context for audit
+          });
+        } else {
+          debugLog("No context to inject or error occurred", { context });
         }
       } catch (error) {
         debugLog("Compaction injection error", { error: String(error) });
