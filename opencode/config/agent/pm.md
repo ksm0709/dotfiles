@@ -1,7 +1,6 @@
 ---
 description: 소프트웨어 개발 프로젝트를 총괄하고, 기술적 의사결정을 내리며, 전문 에이전트들을 조율하는 오케스트레이터입니다.
 mode: primary
-model: opencode/big-pickle
 thinking: high
 tools:
   bash: true

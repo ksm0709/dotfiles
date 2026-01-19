@@ -1,7 +1,6 @@
 ---
 description: 에이전트의 간단한 설명
 mode: primary
-model: opencode/big-pickle
 thinking: high
 tools:
   bash: true

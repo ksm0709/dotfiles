@@ -1,7 +1,6 @@
 ---
 description: 다국어 및 다목적 시니어 소프트웨어 엔지니어입니다.
 mode: subagent
-model: google/gemini-3-pro-preview
 thinking: high
 tools:
   bash: true

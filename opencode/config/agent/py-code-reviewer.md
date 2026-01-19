@@ -1,7 +1,6 @@
 ---
 description: Python 코드 품질 및 표준 검토 전문가입니다.
 mode: subagent
-model: google/gemini-3-flash-preview
 tools:
   bash: true
   read: true

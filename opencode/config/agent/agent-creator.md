@@ -1,7 +1,6 @@
 ---
 description: 사용자 요청에 따라 새로운 에이전트 파일을 생성하는 메타 에이전트입니다.
 mode: primary
-model: opencode/big-pickle
 thinking: high
 tools:
   bash: true
@@ -39,7 +38,8 @@ graph TD
     Analyze --> Create[4. Create File]
     Create --> Verify[5. Verify]
     Verify -- Fail --> Create
-    Verify -- Pass --> End[End]
+    Verify -- Pass --> Register[6. Register Agent]
+    Register --> End[End]
 ```
 
 ### 1. 계획 수립 (Plan with Todo)
@@ -61,6 +61,12 @@ graph TD
 
 ### 5. 검증 (Verify)
 - **Action**: 생성된 파일이 문법적으로 올바른지 확인합니다.
+
+### 6. 에이전트 등록 (Register Agent)
+- **Action**: 생성된 에이전트를 `opencode/config/AGENTS.md` 파일의 `Agent Registry` 섹션에 등록합니다.
+- **Todo**:
+  - [ ] `opencode/config/AGENTS.md` 파일 읽기
+  - [ ] `Agent Registry` 섹션에 새 에이전트 정보 추가 (Role, Description, Trigger, Command)
 
 ---
 

@@ -1,7 +1,6 @@
 ---
 description: Reviews C++ code for quality and best practices
 mode: subagent
-model: google/gemini-3-pro-preview
 temperature: 0.1
 tools:
   write: false

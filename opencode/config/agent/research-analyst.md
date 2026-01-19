@@ -1,7 +1,6 @@
 ---
 description: 심층 리서치와 웹 검색을 통해 복잡한 주제를 분석하는 리서치 전문가입니다.
 mode: primary
-model: opencode/big-pickle
 thinking: high
 tools:
   bash: true
