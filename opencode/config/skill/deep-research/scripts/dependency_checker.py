@@ -10,7 +10,7 @@ import sys
 import importlib
 import subprocess
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -21,15 +21,15 @@ class DependencyChecker:
     
     # Required packages with minimum versions
     REQUIRED_PACKAGES = {
-        "duckduckgo_search": "3.0.0",
+        "ddgs": "8.0.0",  # NEW: replaced duckduckgo_search
         "beautifulsoup4": "4.9.0", 
         "requests": "2.25.0",
     }
     
     # Optional provider packages
     OPTIONAL_PACKAGES = {
-        "google.generativeai": "0.3.0",  # Gemini
-        "openai": "1.0.0",               # OpenAI
+        "google.genai": "1.0.0",  # Gemini (NEW: replaced google.generativeai)
+        "openai": "1.0.0",        # OpenAI
     }
     
     def __init__(self):
@@ -101,8 +101,8 @@ class DependencyChecker:
         """Convert package name to import name."""
         import_mapping = {
             "beautifulsoup4": "bs4",
-            "duckduckgo_search": "duckduckgo_search",
-            "google.generativeai": "google.generativeai",
+            "ddgs": "ddgs",  # NEW: replaced duckduckgo_search
+            "google.genai": "google.genai",  # NEW: replaced google.generativeai
             "openai": "openai",
             "requests": "requests",
         }
@@ -155,10 +155,10 @@ class DependencyChecker:
         other_packages = []
         
         for package in missing:
-            if package in ["beautifulsoup4", "duckduckgo_search", "requests", "openai"]:
+            if package in ["beautifulsoup4", "ddgs", "requests", "openai"]:
                 pip_packages.append(package)
-            elif package == "google.generativeai":
-                pip_packages.append("google-generativeai")
+            elif package == "google.genai":
+                pip_packages.append("google-genai")
             else:
                 other_packages.append(package)
                 
@@ -176,8 +176,8 @@ class DependencyChecker:
         commands.append("### Alternative: Install all dependencies")
         all_packages = []
         for pkg in missing:
-            if pkg == "google.generativeai":
-                all_packages.append("google-generativeai")
+            if pkg == "google.genai":
+                all_packages.append("google-genai")
             else:
                 all_packages.append(pkg)
         commands.append(f"pip install {' '.join(all_packages)}")
@@ -194,7 +194,7 @@ class DependencyChecker:
         results = {}
         
         # Test Gemini connectivity
-        if self._check_package_version("google.generativeai", "0.3.0"):
+        if self._check_package_version("google.genai", "1.0.0"):
             results["gemini"] = self._test_gemini_connectivity()
         else:
             results["gemini"] = False
@@ -263,7 +263,7 @@ class DependencyChecker:
             logger.debug(f"OpenAI connectivity test failed: {e}")
             return False
     
-    def get_dependency_status(self) -> Dict[str, any]:
+    def get_dependency_status(self) -> Dict[str, Any]:
         """
         Get comprehensive dependency status.
         

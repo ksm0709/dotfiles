@@ -117,12 +117,20 @@ class DeepResearch:
     def create_plan(self, topic: str) -> Dict[str, Any]:
         """Generate a research plan."""
         session_id = self.archive.create_session(topic)
+        
+        # 현재 시각 메타데이터
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
+        current_date = datetime.now().strftime("%Y-%m-%d")
 
         prompt = (
+            f"=== Research Request ===\n"
             f"Topic: {topic}\n"
+            f"Request Time: {current_time}\n"
+            f"Current Date: {current_date}\n"
+            f"========================\n\n"
             "Create a research plan. Return ONLY raw JSON:\n"
             '{"steps": [{"query": "search query", "rationale": "reason"}, ...]}\n'
-            "Limit to 3-5 steps."
+            "Limit to 3-5 steps. Consider the current date for time-sensitive topics."
         )
 
         logger.info(f"Generating plan for: {topic}")
@@ -200,7 +208,11 @@ class DeepResearch:
 
     def generate_report(self, session_data: Dict, results: List[Dict]) -> str:
         """Generate final report."""
-        context = f"# Research Topic: {session_data['topic']}\n\n"
+        # 현재 시각 메타데이터
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
+        
+        context = f"# Research Topic: {session_data['topic']}\n"
+        context += f"## Report Generated: {current_time}\n\n"
 
         for step in results:
             context += f"## Findings for: {step['query']}\n"
@@ -208,9 +220,13 @@ class DeepResearch:
                 context += snippet + "\n\n---\n\n"
 
         prompt = (
+            f"=== Report Generation Request ===\n"
+            f"Topic: {session_data['topic']}\n"
+            f"Generation Time: {current_time}\n"
+            f"=================================\n\n"
             "Write a comprehensive research report based on the gathered data.\n"
             "Structure: Executive Summary, Key Findings, Details, Conclusion.\n"
-            "Cite sources where possible.\n\n"
+            "Cite sources where possible. Consider the report generation timestamp for context.\n\n"
             f"{context[:15000]}"
         )
 
@@ -227,7 +243,7 @@ class DeepResearch:
         return report
 
 
-def check_system_readiness() -> Dict[str, any]:
+def check_system_readiness() -> Dict[str, Any]:
     """Check system readiness including API keys, dependencies, and connectivity."""
     env_manager = get_env_manager()
     dep_checker = get_dependency_checker()
@@ -278,8 +294,8 @@ def check_system_readiness() -> Dict[str, any]:
 
 def main():
     parser = argparse.ArgumentParser(description="Deep Research Tool")
-    parser.add_argument("topic", help="Research topic")
-    parser.add_argument("--depth", type=int, default=3, help="URLs per step")
+    parser.add_argument("topic", nargs="?", default=None, help="Research topic")
+    parser.add_argument("--depth", type=int, default=10, help="URLs per step")
     parser.add_argument("--output-dir", type=str, default=None, 
                         help="Custom output directory for research cache")
     parser.add_argument("--check-only", action="store_true",
@@ -295,7 +311,11 @@ def main():
             print("\n✅ System is ready for deep research!")
         else:
             print("\n⚠️  System needs attention before running research")
-        return
+        return 0
+    
+    # Topic is required if not check-only
+    if not args.topic:
+        parser.error("topic is required unless using --check-only")
     
     print(f"\n🔬 Starting deep research: {args.topic}")
 

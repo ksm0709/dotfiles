@@ -10,7 +10,7 @@ import os
 import re
 import json
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -195,7 +195,7 @@ class EnvManager:
         else:
             return key[:4] + "*" * (len(key) - 8) + key[-4:]
     
-    def get_status_summary(self) -> Dict[str, any]:
+    def get_status_summary(self) -> Dict[str, Any]:
         """
         Get a comprehensive status summary for debugging.
         

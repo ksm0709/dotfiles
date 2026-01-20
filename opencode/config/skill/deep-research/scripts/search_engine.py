@@ -3,17 +3,32 @@
 Search Engine Module - DuckDuckGo based web search
 
 Standalone module for deep-research skill.
+Supports both new 'ddgs' package and legacy 'duckduckgo-search'.
 """
 
 from typing import List, Dict, Optional
 import logging
-
-try:
-    from duckduckgo_search import DDGS
-except ImportError:
-    DDGS = None
+import warnings
 
 logger = logging.getLogger(__name__)
+
+# Try new package first, then fallback to legacy
+DDGS = None
+_using_legacy = False
+
+try:
+    # New package: ddgs
+    from ddgs import DDGS
+except ImportError:
+    try:
+        # Legacy package: duckduckgo-search (deprecated)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            from duckduckgo_search import DDGS
+            _using_legacy = True
+            logger.debug("Using legacy duckduckgo-search package. Consider: pip install ddgs")
+    except ImportError:
+        DDGS = None
 
 
 class SearchEngine:
@@ -27,10 +42,13 @@ class SearchEngine:
         """
         if DDGS is None:
             raise ImportError(
-                "duckduckgo-search not installed. Run: pip install duckduckgo-search"
+                "Search package not installed. Run: pip install ddgs"
             )
         self.max_results = max_results
         self._ddgs = DDGS()
+        
+        if _using_legacy:
+            logger.warning("Using deprecated duckduckgo-search. Run: pip install ddgs")
 
     def search(
         self, query: str, max_results: Optional[int] = None
