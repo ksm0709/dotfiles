@@ -157,37 +157,96 @@ export OPENAI_API_KEY="your-api-key"
 ./scripts/run_research.sh "주제" [옵션]
 
 옵션:
-  --depth N         각 단계당 수집할 URL 수 (기본값: 3)
-  --output-dir DIR  리서치 결과 저장 디렉토리
-  --check-only      시스템 준비 상태만 확인
-  --setup           실행 전 venv 재설정
+  --breadth N        각 단계당 수집할 URL 수 (기본값: 5)
+  --depth N          재귀 탐색 깊이 (기본값: 2, 최대: 5)
+  --output-dir DIR   리서치 결과 저장 디렉토리
+  --check-only       시스템 준비 상태만 확인
+  --setup            실행 전 venv 재설정
+```
+
+### 실행 모드
+
+#### 1. Classic 모드 (하위 호환)
+`--breadth` 없이 `--depth`만 지정하면 기존 단일 패스 모드로 동작합니다.
+
+```bash
+# --depth가 URL 수로 해석됨 (기존 동작)
+./scripts/run_research.sh "AI trends" --depth 10
+```
+
+#### 2. Iterative 모드 (신규)
+`--breadth`를 지정하면 재귀적 깊이 탐색이 활성화됩니다.
+
+```bash
+# breadth=5 URLs per step, depth=3 iterations
+./scripts/run_research.sh "AI trends" --breadth 5 --depth 3
+```
+
+```mermaid
+flowchart TD
+    Start([사용자 쿼리]) --> Init[초기화: depth, breadth 설정]
+    Init --> CreatePlan[Plan 생성]
+    
+    subgraph Loop["Depth Loop (depth > 0)"]
+        CreatePlan --> Execute[Plan 실행: 검색 + 스크래핑]
+        Execute --> Analyze[결과 분석]
+        Analyze --> Extract[Learnings + Directions 추출]
+        Extract --> Evaluate{답변 완성?}
+        Evaluate -->|Yes| ExitLoop[루프 종료]
+        Evaluate -->|No| SelectDirection[최적 방향 선택]
+        SelectDirection --> DecrementDepth[depth -= 1]
+        DecrementDepth --> CheckDepth{depth > 0?}
+        CheckDepth -->|Yes| CreatePlan
+        CheckDepth -->|No| ExitLoop
+    end
+    
+    ExitLoop --> GenerateReport[최종 리포트 생성]
+    GenerateReport --> End([리포트 출력])
 ```
 
 ### 예시
 
 ```bash
-# 기본 리서치
+# 기본 리서치 (iterative 모드, depth=2)
 ./scripts/run_research.sh "Climate change solutions"
 
-# 깊은 리서치 (각 단계당 5개 URL)
+# Classic 모드 (단일 패스, 5개 URL)
 ./scripts/run_research.sh "Quantum computing advances" --depth 5
+
+# Iterative 모드 (재귀 탐색)
+./scripts/run_research.sh "AI ethics" --breadth 5 --depth 3
 
 # 시스템 상태 확인
 ./scripts/run_research.sh --check-only
 
 # venv 재설정 후 실행
-./scripts/run_research.sh --setup "AI ethics"
+./scripts/run_research.sh --setup "Machine learning trends"
 ```
 
 ### Python API
 
 ```python
-from scripts.run import DeepResearch, llm_complete
+from scripts.run import DeepResearch, ResearchState, llm_complete
 
 researcher = DeepResearch(llm_callback=llm_complete)
+
+# Classic 모드
 session = researcher.create_plan("Climate change solutions")
 results = researcher.execute_plan(session)
 report = researcher.generate_report(session, results)
+
+# Iterative 모드
+state = ResearchState(
+    topic="AI ethics",
+    session_id="",
+    depth=3,
+    breadth=5,
+)
+final_state = researcher.deep_research(state)
+report = researcher.generate_report(
+    {"session_id": final_state.session_id, "topic": final_state.topic},
+    final_state.all_results
+)
 ```
 
 ## 출력

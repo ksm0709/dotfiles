@@ -21,8 +21,9 @@ import os
 import sys
 import time
 import hashlib
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Dict, Callable, Any
+from typing import List, Dict, Callable, Any, Set, Optional
 
 # Add scripts directory to path for local imports
 scripts_dir = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +43,78 @@ from llm_client import llm_complete  # noqa: E402
 from env_manager import get_env_manager  # noqa: E402
 from dependency_checker import get_dependency_checker  # noqa: E402
 from error_handler import get_error_handler  # noqa: E402
+
+
+# Constants for iterative research
+MAX_DEPTH = 5  # Maximum recursion depth
+DEFAULT_DEPTH = 2  # Default recursion depth
+DEFAULT_BREADTH = 5  # Default URLs per step
+CONFIDENCE_THRESHOLD = 0.7  # Minimum confidence for early exit
+MAX_LEARNINGS = 20  # Maximum learnings to keep
+
+
+@dataclass
+class ResearchState:
+    """State for iterative deep research.
+    
+    Tracks the current research context including accumulated learnings,
+    exploration directions, and visited URLs for deduplication.
+    """
+    topic: str
+    session_id: str
+    depth: int  # Remaining recursion depth
+    breadth: int  # URLs per step
+    learnings: List[str] = field(default_factory=list)
+    directions: List[str] = field(default_factory=list)
+    visited_urls: Set[str] = field(default_factory=set)
+    all_results: List[Dict] = field(default_factory=list)
+
+
+@dataclass
+class AnalysisResult:
+    """Result from analyzing research findings.
+    
+    Contains extracted learnings, new exploration directions,
+    and completion assessment.
+    """
+    learnings: List[str]
+    directions: List[str]
+    is_complete: bool
+    confidence: float  # 0.0 - 1.0
+
+
+def limit_learnings(learnings: List[str], max_count: int = MAX_LEARNINGS) -> List[str]:
+    """Limit learnings to the most recent entries.
+    
+    Args:
+        learnings: List of accumulated learnings
+        max_count: Maximum number to keep (default: 20)
+        
+    Returns:
+        Truncated list with most recent learnings
+    """
+    if len(learnings) <= max_count:
+        return learnings
+    return learnings[-max_count:]
+
+
+def create_argument_parser() -> argparse.ArgumentParser:
+    """Create argument parser for CLI.
+    
+    Returns:
+        Configured ArgumentParser with --breadth, --depth, etc.
+    """
+    parser = argparse.ArgumentParser(description="Deep Research Tool")
+    parser.add_argument("topic", nargs="?", default=None, help="Research topic")
+    parser.add_argument("--breadth", type=int, default=None,
+                        help="URLs per step (enables iterative mode)")
+    parser.add_argument("--depth", type=int, default=DEFAULT_DEPTH,
+                        help="Recursion depth for iterative research (default: 2)")
+    parser.add_argument("--output-dir", type=str, default=None,
+                        help="Custom output directory for research cache")
+    parser.add_argument("--check-only", action="store_true",
+                        help="Only check system readiness without running research")
+    return parser
 
 
 class ResearchArchive:
@@ -242,6 +315,149 @@ class DeepResearch:
 
         return report
 
+    def analyze_results(
+        self, topic: str, results: List[Dict], existing_learnings: List[str]
+    ) -> AnalysisResult:
+        """Analyze research results to extract learnings and directions.
+        
+        Args:
+            topic: The original research topic
+            results: List of research results from execute_plan
+            existing_learnings: Previously accumulated learnings
+            
+        Returns:
+            AnalysisResult with extracted learnings, new directions, and completion status
+        """
+        # Prepare context from results
+        context = ""
+        for step_result in results:
+            for snippet in step_result.get("snippets", []):
+                context += snippet[:1000] + "\n\n"
+        
+        # Prepare learnings summary
+        learnings_summary = "\n".join(f"- {l}" for l in existing_learnings[-10:]) if existing_learnings else "None yet"
+        
+        prompt = (
+            "Analyze the research results and extract:\n"
+            "1. Key Learnings: What facts/insights were discovered?\n"
+            "2. New Directions: What questions remain unanswered?\n"
+            "3. Completeness: Is the original question fully answered?\n\n"
+            f"Original Question: {topic}\n"
+            f"Previous Learnings:\n{learnings_summary}\n\n"
+            f"New Data:\n{context[:10000]}\n\n"
+            "Return ONLY raw JSON:\n"
+            '{"learnings": ["..."], "directions": ["..."], "is_complete": true/false, "confidence": 0.0-1.0}'
+        )
+        
+        try:
+            response = self.llm(prompt)
+            clean_resp = response.strip()
+            
+            # Clean markdown code blocks
+            if clean_resp.startswith("```"):
+                clean_resp = clean_resp.split("\n", 1)[1].rsplit("\n", 1)[0]
+            if clean_resp.startswith("json"):
+                clean_resp = clean_resp[4:]
+            
+            data = json.loads(clean_resp)
+            
+            return AnalysisResult(
+                learnings=data.get("learnings", []),
+                directions=data.get("directions", []),
+                is_complete=data.get("is_complete", False),
+                confidence=float(data.get("confidence", 0.5)),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to parse analysis response: {e}")
+            return AnalysisResult(
+                learnings=[],
+                directions=[],
+                is_complete=False,
+                confidence=0.0,
+            )
+
+    def select_best_direction(self, directions: List[str]) -> Optional[str]:
+        """Select the best direction for next research iteration.
+        
+        For Phase 1, simply returns the first direction.
+        Future phases may use LLM to rank directions.
+        
+        Args:
+            directions: List of potential exploration directions
+            
+        Returns:
+            The selected direction or None if list is empty
+        """
+        if not directions:
+            return None
+        return directions[0]
+
+    def deep_research(self, state: ResearchState) -> ResearchState:
+        """Execute iterative deep research.
+        
+        Recursively explores the topic, accumulating learnings and
+        following promising directions until complete or depth exhausted.
+        
+        Args:
+            state: Current research state
+            
+        Returns:
+            Updated research state with accumulated results
+        """
+        # Enforce maximum depth
+        effective_depth = min(state.depth, MAX_DEPTH)
+        
+        if effective_depth <= 0:
+            logger.info("Depth exhausted, stopping research")
+            return state
+        
+        print(f"\n🔄 Iterative research - Depth remaining: {effective_depth}")
+        
+        # Create and execute plan
+        if not state.session_id or state.session_id == "":
+            session_data = self.create_plan(state.topic)
+            state.session_id = session_data["session_id"]
+        else:
+            # Use existing session, create new plan based on current direction
+            current_topic = state.directions[0] if state.directions else state.topic
+            session_data = {
+                "session_id": state.session_id,
+                "topic": current_topic,
+                "plan": {"steps": [
+                    {"query": current_topic, "rationale": "Follow-up exploration"}
+                ]}
+            }
+        
+        # Execute research
+        results = self.execute_plan(session_data, max_urls_per_step=state.breadth)
+        state.all_results.extend(results)
+        
+        # Analyze results
+        analysis = self.analyze_results(
+            topic=state.topic,
+            results=results,
+            existing_learnings=state.learnings
+        )
+        
+        # Accumulate learnings
+        state.learnings.extend(analysis.learnings)
+        state.learnings = limit_learnings(state.learnings)
+        
+        # Check completion
+        if analysis.is_complete and analysis.confidence >= CONFIDENCE_THRESHOLD:
+            logger.info(f"Research complete with confidence {analysis.confidence:.2f}")
+            return state
+        
+        # Select next direction and recurse
+        next_direction = self.select_best_direction(analysis.directions)
+        if next_direction:
+            state.directions = [next_direction] + analysis.directions[1:]
+            state.depth = effective_depth - 1
+            return self.deep_research(state)
+        
+        logger.info("No more directions to explore")
+        return state
+
 
 def check_system_readiness() -> Dict[str, Any]:
     """Check system readiness including API keys, dependencies, and connectivity."""
@@ -293,14 +509,7 @@ def check_system_readiness() -> Dict[str, Any]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Deep Research Tool")
-    parser.add_argument("topic", nargs="?", default=None, help="Research topic")
-    parser.add_argument("--depth", type=int, default=10, help="URLs per step")
-    parser.add_argument("--output-dir", type=str, default=None, 
-                        help="Custom output directory for research cache")
-    parser.add_argument("--check-only", action="store_true",
-                        help="Only check system readiness without running research")
-
+    parser = create_argument_parser()
     args = parser.parse_args()
 
     # Check system readiness
@@ -323,13 +532,40 @@ def main():
         # Run research with error handling
         researcher = DeepResearch(llm_callback=llm_complete, base_dir=args.output_dir)
 
-        session = researcher.create_plan(args.topic)
-        print(f"\n📋 Plan:\n{json.dumps(session['plan'], indent=2, ensure_ascii=False)}")
+        # Determine mode: iterative (if --breadth specified) or classic
+        if args.breadth is not None:
+            # Iterative mode with explicit breadth
+            print(f"   Mode: Iterative (breadth={args.breadth}, depth={args.depth})")
+            
+            state = ResearchState(
+                topic=args.topic,
+                session_id="",
+                depth=args.depth,
+                breadth=args.breadth,
+            )
+            
+            final_state = researcher.deep_research(state)
+            
+            print(f"\n📚 Accumulated {len(final_state.learnings)} learnings")
+            
+            # Generate final report from all results
+            session_data = {
+                "session_id": final_state.session_id,
+                "topic": final_state.topic,
+            }
+            report = researcher.generate_report(session_data, final_state.all_results)
+        else:
+            # Classic single-pass mode (backward compatible)
+            # --depth is interpreted as URLs per step
+            print(f"   Mode: Classic (urls_per_step={args.depth})")
+            
+            session = researcher.create_plan(args.topic)
+            print(f"\n📋 Plan:\n{json.dumps(session['plan'], indent=2, ensure_ascii=False)}")
 
-        results = researcher.execute_plan(session, max_urls_per_step=args.depth)
+            results = researcher.execute_plan(session, max_urls_per_step=args.depth)
 
-        print("\n📝 Generating report...")
-        report = researcher.generate_report(session, results)
+            print("\n📝 Generating report...")
+            report = researcher.generate_report(session, results)
 
         print("\n" + "=" * 60)
         print("📊 FINAL REPORT")
@@ -337,10 +573,7 @@ def main():
         print(report)
         print("=" * 60)
 
-        report_path = (
-            f"{researcher.archive.base_dir}/{session['session_id']}/final_report.md"
-        )
-        print(f"\n💾 Saved to: {report_path}")
+        print(f"\n💾 Saved to: {researcher.archive.base_dir}/")
         
     except Exception as e:
         error_handler = get_error_handler()
