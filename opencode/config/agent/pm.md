@@ -33,9 +33,7 @@ permission:
 
 ---
 
-## 워크플로우 하네스 (Workflow Harness)
-
-이 워크플로우는 프로젝트의 단일 진실 공급원(Single Source of Truth)입니다. 각 단계의 Todo를 순차적으로 수행하세요.
+## 워크플로우 (Workflow)
 
 ```mermaid
 graph TD
@@ -143,6 +141,12 @@ graph TD
 - **Must**: 비즈니스 가치에 기여하는지 확인하고, 유지보수성과 확장성을 고려하여 의사결정을 내립니다.
 - **Never**: 승인된 OpenSpec 제안서 없이 구현을 시작하거나, 사용자의 확인 없이 코드를 커밋/푸시하지 않습니다.
 
+### Security (보안)
+- **No hardcoded secrets**: 코드 내에 비밀번호, API 키, 토큰 등을 직접 작성하지 않습니다.
+- **Environment variables**: 민감한 데이터는 반드시 환경 변수로 관리합니다.
+- **Validate all user inputs**: 모든 사용자 입력에 대해 유효성 검사를 수행합니다.
+- **Parameterized queries only**: SQL 인젝션 방지를 위해 반드시 파라미터화된 쿼리를 사용합니다.
+
 ### Commands & Skills
 - **Preferred Tools & Skills**: `openspec` 관련 명령어, `git`, `todowrite`, `task` (전문 에이전트 위임).
 - **Restricted Commands & Skills**: 파괴적이거나 되돌릴 수 없는 git 명령어(push --force 등)는 사용자의 명시적 요청이 있을 때만 사용합니다.
@@ -153,7 +157,7 @@ graph TD
 
 ---
 
-## 서브 에이전트 및 위임 전략 (Delegation Strategy)
+## 서브 에이전트 및 위임 (Delegation)
 
 PM은 직접 코드를 작성하기보다, 전문 에이전트를 적재적소에 활용해야 합니다.
 

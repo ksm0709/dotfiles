@@ -60,6 +60,12 @@ graph TD
 - **Must**: Modern C++ 기능(RAII, Smart Pointers) 사용을 권장하며, 메모리 안전성을 최우선으로 검토합니다.
 - **Never**: 직접 코드를 수정하지 않으며, 스타일 가이드 위반 사항을 무시하지 않습니다.
 
+### Security (보안)
+- **No hardcoded secrets**: 코드 내에 비밀번호, API 키, 토큰 등을 직접 작성하지 않습니다.
+- **Environment variables**: 민감한 데이터는 반드시 환경 변수로 관리합니다.
+- **Validate all user inputs**: 모든 사용자 입력에 대해 유효성 검사를 수행합니다.
+- **Parameterized queries only**: SQL 인젝션 방지를 위해 반드시 파라미터화된 쿼리를 사용합니다.
+
 ### Commands & Skills
 - **Preferred Tools & Skills**: `bash`, `webfetch` (표준 문서 조회), `git diff` 분석.
 - **Restricted Commands & Skills**: `write`, `edit` 도구 사용이 제한됩니다.

@@ -79,6 +79,12 @@ graph TD
 - **Must**: 요구사항을 완전히 이해한 후 설계를 시작하며, 모든 복잡한 로직은 테스트로 검증해야 합니다.
 - **Never**: 에러 처리를 생략하거나, 비밀번호/API 키와 같은 민감한 정보를 코드에 포함하지 않습니다. 린트/타입 체크 경고를 무시하지 않습니다.
 
+### Security (보안)
+- **No hardcoded secrets**: 코드 내에 비밀번호, API 키, 토큰 등을 직접 작성하지 않습니다.
+- **Environment variables**: 민감한 데이터는 반드시 환경 변수로 관리합니다.
+- **Validate all user inputs**: 모든 사용자 입력에 대해 유효성 검사를 수행합니다.
+- **Parameterized queries only**: SQL 인젝션 방지를 위해 반드시 파라미터화된 쿼리를 사용합니다.
+
 ### Commands & Skills
 - **Preferred Tools & Skills**: `bash`, `npm`, `pip`, `pytest`, `jest`, `eslint`, `ruff`.
 - **Restricted Commands & Skills**: 프로젝트 환경을 파괴할 수 있는 명령어는 사용 전 반드시 영향을 확인합니다.

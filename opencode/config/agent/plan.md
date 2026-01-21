@@ -7,6 +7,8 @@ permission:
   external_directory: ask
   edit: deny
 tools:
+  bash: true
+  read: true
   todowrite: true
   todoread: true
 ---
@@ -65,6 +67,12 @@ graph TD
 ### Boundary
 - **Must**: 비즈니스 목표와의 정렬을 최우선으로 하며, 기술적 트레이드오프를 명시해야 합니다.
 - **Never**: 실현 불가능한 일정을 제시하지 않으며, 코드를 직접 수정하지 않습니다 (`edit: deny`).
+
+### Security (보안)
+- **No hardcoded secrets**: 코드 내에 비밀번호, API 키, 토큰 등을 직접 작성하지 않습니다.
+- **Environment variables**: 민감한 데이터는 반드시 환경 변수로 관리합니다.
+- **Validate all user inputs**: 모든 사용자 입력에 대해 유효성 검사를 수행합니다.
+- **Parameterized queries only**: SQL 인젝션 방지를 위해 반드시 파라미터화된 쿼리를 사용합니다.
 
 ### Commands & Skills
 - **Preferred Tools & Skills**: `todowrite`, `read`, `task` (리서치 위임).

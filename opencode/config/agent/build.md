@@ -6,6 +6,12 @@ permission:
   doom_loop: ask
   external_directory: ask
 tools:
+  bash: true
+  read: true
+  write: true
+  edit: true
+  glob: true
+  grep: true
   todowrite: true
   todoread: true
 ---
@@ -64,6 +70,12 @@ graph TD
 ### Boundary
 - **Must**: 빌드 실패 시 로그를 상세히 분석하여 원인을 파악하고 해결책을 제시해야 합니다.
 - **Never**: 의존성 버전을 임의로 고정하거나 변경하지 않으며(사용자 요청 제외), 빌드 아티팩트를 무단으로 삭제하지 않습니다.
+
+### Security (보안)
+- **No hardcoded secrets**: 코드 내에 비밀번호, API 키, 토큰 등을 직접 작성하지 않습니다.
+- **Environment variables**: 민감한 데이터는 반드시 환경 변수로 관리합니다.
+- **Validate all user inputs**: 모든 사용자 입력에 대해 유효성 검사를 수행합니다.
+- **Parameterized queries only**: SQL 인젝션 방지를 위해 반드시 파라미터화된 쿼리를 사용합니다.
 
 ### Commands & Skills
 - **Preferred Tools & Skills**: `npm`, `yarn`, `pip`, `make`, `cmake`, `cargo`.

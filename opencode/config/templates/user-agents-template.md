@@ -26,10 +26,10 @@
 
 사용자의 작업 스타일과 선호도 설정입니다.
 
-- **Preferred Language**: Python, TypeScript
-- **Editor**: VS Code
-- **Communication Style**: 명확하고 간결하게, 필요한 경우 예시 제공
-- **Code Style**: PEP8 (Python), ESLint/Prettier (TypeScript)
+- **Preferred Language**: [선호하는 프로그래밍 언어 (예: Python, TypeScript)]
+- **Editor**: [사용하는 에디터 (예: VS Code, Vim)]
+- **Communication Style**: [선호하는 소통 방식 (예: 간결하게, 상세하게, 예시 위주)]
+- **Code Style**: [선호하는 코드 스타일 (예: 함수형, 객체지향)]
 
 ---
 
@@ -57,57 +57,23 @@
 
 ### 📋 Project Manager (PM)
 - **File**: `.config/opencode/agent/pm.md`
-- **Role**: 개발 PM (Project Manager)
-- **Description**: 프로젝트 총괄, 기술적 의사결정, 스펙 정의(OpenSpec), 일정 관리.
-- **Trigger**: 새로운 기능 개발, 복잡한 요구사항 분석, 프로젝트 구조 변경 시.
+- **Role**: 개발 PM
+- **Trigger**: 복잡한 기획, 스펙 정의 필요 시
 
 ### 👨‍💻 Senior SW Engineer (Dev)
 - **File**: `.config/opencode/agent/senior-sw-engineer.md`
-- **Role**: Senior Software Engineer
-- **Description**: 실제 코드 구현, 리팩토링, 테스트 작성 (다국어 지원).
-- **Trigger**: 구체적인 기능 구현, 버그 수정, 단위 테스트 작성 시.
+- **Role**: 시니어 개발자
+- **Trigger**: 코드 구현, 리팩토링, 테스트 작성 시
 
 ### 🐍 Py Code Reviewer
 - **File**: `.config/opencode/agent/py-code-reviewer.md`
-- **Role**: Py Code Reviewer
-- **Description**: Python 코드 품질, PEP 표준, 보안 취약점 검토.
-- **Trigger**: Python 코드 구현 완료 후 PR 생성 전.
-
-### ➕ C++ Code Reviewer
-- **File**: `.config/opencode/agent/cpp-review.md`
-- **Role**: C++ Code Reviewer
-- **Description**: C++ 코드 품질, 메모리 안전성, 성능 검토.
-- **Trigger**: C++ 코드 리뷰 요청 시.
-
-### 🏗️ Build Agent
-- **File**: `.config/opencode/agent/build.md`
-- **Role**: Build Agent
-- **Description**: 프로젝트 빌드, 의존성 관리, 환경 설정.
-- **Trigger**: 빌드 오류 해결, 패키지 설치, 환경 구성 시.
-
-### 📅 Planner
-- **File**: `.config/opencode/agent/plan.md`
-- **Role**: Planner
-- **Description**: 고수준 계획, 전략 수립, 로드맵 작성 (코드 수정 불가).
-- **Trigger**: 프로젝트 초기 기획, 장기 로드맵 수립 시.
-
-### 🔎 Research Analyst
-- **File**: `.config/opencode/agent/research-analyst.md`
-- **Role**: 리서치 분석가 (Research Analyst)
-- **Description**: 심층 웹 검색 및 정보 분석, 리포트 작성.
-- **Trigger**: 복잡한 주제 연구, 최신 기술 동향 파악 시.
+- **Role**: Python 코드 리뷰어
+- **Trigger**: Python 코드 품질 검토 시
 
 ### 🛠️ Agent Creator
 - **File**: `.config/opencode/agent/agent-creator.md`
-- **Role**: 에이전트 크리에이터 (Agent Creator)
-- **Description**: 새로운 에이전트 설정 파일 생성.
-- **Trigger**: 새로운 역할의 에이전트가 필요할 때.
-
-### 🌐 General Agent
-- **File**: `.config/opencode/agent/general.md`
-- **Role**: General Agent
-- **Description**: 범용 작업 처리 및 다단계 태스크 실행.
-- **Trigger**: 특정 카테고리에 속하지 않는 복잡한 작업 시.
+- **Role**: 에이전트 크리에이터
+- **Trigger**: 새로운 에이전트 생성 시 (`/create-agent`)
 
 ---
 
