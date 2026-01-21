@@ -162,6 +162,11 @@ export OPENAI_API_KEY="your-api-key"
   --output-dir DIR   리서치 결과 저장 디렉토리
   --check-only       시스템 준비 상태만 확인
   --setup            실행 전 venv 재설정
+  
+  # Phase 2 옵션
+  --parallel         병렬 스크래핑 활성화 (5-10배 속도 향상)
+  --token-budget N   토큰 예산 제한 (기본: 100000)
+  --min-trust N      최소 소스 신뢰도 (0.0-1.0, 기본: 0.3)
 ```
 
 ### 실행 모드
@@ -210,6 +215,12 @@ flowchart TD
 # 기본 리서치 (iterative 모드, depth=2)
 ./scripts/run_research.sh "Climate change solutions"
 
+# 고성능 리서치 (병렬 처리 + 신뢰도 필터)
+./scripts/run_research.sh "Quantum computing" --parallel --min-trust 0.7
+
+# 예산 제한 리서치
+./scripts/run_research.sh "AI ethics" --token-budget 50000
+
 # Classic 모드 (단일 패스, 5개 URL)
 ./scripts/run_research.sh "Quantum computing advances" --depth 5
 
@@ -257,10 +268,11 @@ report = researcher.generate_report(
 ## 의존성
 
 ```
-ddgs>=8.0.0             # DuckDuckGo 검색 (NEW: replaced duckduckgo-search)
+ddgs>=8.0.0             # DuckDuckGo 검색
 beautifulsoup4>=4.12.0
 requests>=2.31.0
-google-genai>=1.0.0     # Gemini (NEW: replaced google-generativeai)
+aiohttp>=3.9.0          # 비동기 HTTP (Phase 2)
+google-genai>=1.0.0     # Gemini
 openai>=1.0.0           # OpenAI (선택)
 ```
 

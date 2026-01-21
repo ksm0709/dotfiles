@@ -52,6 +52,53 @@ DEFAULT_BREADTH = 5  # Default URLs per step
 CONFIDENCE_THRESHOLD = 0.7  # Minimum confidence for early exit
 MAX_LEARNINGS = 20  # Maximum learnings to keep
 
+# Phase 2 constants
+DEFAULT_TOKEN_BUDGET = 100000  # Default token budget
+DEFAULT_MIN_TRUST = 0.3  # Default minimum source trust
+
+
+@dataclass
+class TokenBudget:
+    """Token budget management for LLM calls.
+    
+    Tracks token usage and enforces budget limits to control costs.
+    """
+    total_limit: int = DEFAULT_TOKEN_BUDGET
+    used: int = 0
+    per_call_limit: int = 10000
+    
+    def add_usage(self, tokens: int) -> None:
+        """Add token usage.
+        
+        Args:
+            tokens: Number of tokens used
+        """
+        self.used += tokens
+    
+    def can_continue(self) -> bool:
+        """Check if budget allows continuation.
+        
+        Returns:
+            True if under budget, False otherwise
+        """
+        return self.used < self.total_limit
+    
+    def remaining(self) -> int:
+        """Get remaining token budget.
+        
+        Returns:
+            Remaining tokens
+        """
+        return max(0, self.total_limit - self.used)
+    
+    def usage_percent(self) -> float:
+        """Get usage as percentage.
+        
+        Returns:
+            Usage percentage (0-100)
+        """
+        return (self.used / self.total_limit) * 100 if self.total_limit > 0 else 100
+
 
 @dataclass
 class ResearchState:
@@ -68,6 +115,7 @@ class ResearchState:
     directions: List[str] = field(default_factory=list)
     visited_urls: Set[str] = field(default_factory=set)
     all_results: List[Dict] = field(default_factory=list)
+    token_budget: Optional[TokenBudget] = None  # Phase 2: Token budget tracking
 
 
 @dataclass
@@ -114,6 +162,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help="Custom output directory for research cache")
     parser.add_argument("--check-only", action="store_true",
                         help="Only check system readiness without running research")
+    
+    # Phase 2 options
+    parser.add_argument("--parallel", action="store_true",
+                        help="Enable parallel URL scraping (faster)")
+    parser.add_argument("--token-budget", type=int, default=DEFAULT_TOKEN_BUDGET,
+                        help=f"Token budget limit (default: {DEFAULT_TOKEN_BUDGET})")
+    parser.add_argument("--min-trust", type=float, default=DEFAULT_MIN_TRUST,
+                        help=f"Minimum source trust score (default: {DEFAULT_MIN_TRUST})")
+    
     return parser
 
 

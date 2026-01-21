@@ -12,3 +12,7 @@ openai>=1.0.0
 
 # Utility
 packaging>=23.0
+
+# Phase 2 Enhancements
+aiohttp>=3.9.0  # Parallel scraping
+rich>=13.0.0    # Progress UI (optional but recommended)
