@@ -11,9 +11,15 @@
 #
 # Options:
 #   --depth N         URLs to fetch per step (default: 3)
+#   --breadth N       URLs per step (enables iterative mode)
 #   --output-dir DIR  Custom output directory
 #   --check-only      Only verify system readiness
 #   --setup           Setup venv before running
+#
+#   # Phase 2 Options
+#   --parallel        Enable parallel scraping (5-10x faster)
+#   --token-budget N  Set token budget limit (default: 100000)
+#   --min-trust N     Minimum source trust score (0.0-1.0, default: 0.3)
 #
 # Examples:
 #   ./run_research.sh "AI trends in 2026"

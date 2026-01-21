@@ -49,8 +49,8 @@ from source_evaluator import SourceEvaluator  # noqa: E402
 
 # Constants for iterative research
 MAX_DEPTH = 5  # Maximum recursion depth
-DEFAULT_DEPTH = 2  # Default recursion depth
-DEFAULT_BREADTH = 5  # Default URLs per step
+DEFAULT_DEPTH = 5  # Default recursion depth (increased from 3)
+DEFAULT_BREADTH = 20  # Default URLs per step (increased from 7)
 CONFIDENCE_THRESHOLD = 0.7  # Minimum confidence for early exit
 MAX_LEARNINGS = 20  # Maximum learnings to keep
 

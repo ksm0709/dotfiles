@@ -157,8 +157,8 @@ export OPENAI_API_KEY="your-api-key"
 ./scripts/run_research.sh "주제" [옵션]
 
 옵션:
-  --breadth N        각 단계당 수집할 URL 수 (기본값: 5)
-  --depth N          재귀 탐색 깊이 (기본값: 2, 최대: 5)
+  --breadth N        각 단계당 수집할 URL 수 (기본값: 20)
+  --depth N          재귀 탐색 깊이 (기본값: 5, 최대: 5)
   --output-dir DIR   리서치 결과 저장 디렉토리
   --check-only       시스템 준비 상태만 확인
   --setup            실행 전 venv 재설정
