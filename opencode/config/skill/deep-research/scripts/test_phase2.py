@@ -284,13 +284,66 @@ class TestIntegrationPhase2(unittest.TestCase):
 
     def test_parallel_scraping_integration(self):
         """병렬 스크래핑이 DeepResearch와 통합되어야 한다."""
-        # This test will be implemented after core components
-        self.skipTest("Integration test - implement after core components")
+        from run import DeepResearch
+        
+        # Mock dependencies
+        mock_llm = MagicMock(return_value="{}")
+        researcher = DeepResearch(llm_callback=mock_llm)
+        
+        # Mock archive to avoid file system operations
+        researcher.archive.save_content = MagicMock()
+        
+        # Mock engine and scraper
+        researcher.engine.search = MagicMock(return_value=[
+            {"href": "https://example.com/1", "title": "Title 1"},
+            {"href": "https://example.com/2", "title": "Title 2"},
+        ])
+        
+        # Mock parallel fetch
+        with patch('run.fetch_urls_parallel') as mock_fetch:
+            mock_fetch.return_value = [
+                {"url": "https://example.com/1", "content": "Content 1", "success": True},
+                {"url": "https://example.com/2", "content": "Content 2", "success": True},
+            ]
+            
+            session_data = {
+                "session_id": "test",
+                "plan": {"steps": [{"query": "test", "rationale": "test"}]}
+            }
+            
+            results = researcher.execute_plan(session_data, parallel=True)
+            
+            # Verify parallel fetch was called
+            mock_fetch.assert_called_once()
+            self.assertEqual(len(results[0]["snippets"]), 2)
+            # Verify content was saved
+            self.assertEqual(researcher.archive.save_content.call_count, 2)
 
     def test_token_budget_integration(self):
         """토큰 예산이 deep_research와 통합되어야 한다."""
-        # This test will be implemented after core components
-        self.skipTest("Integration test - implement after core components")
+        from run import DeepResearch, ResearchState, TokenBudget
+        
+        mock_llm = MagicMock(return_value="{}")
+        researcher = DeepResearch(llm_callback=mock_llm)
+        
+        # Create state with exhausted budget
+        budget = TokenBudget(total_limit=100)
+        budget.add_usage(150)
+        
+        state = ResearchState(
+            topic="test",
+            session_id="test",
+            depth=3,
+            breadth=3,
+            token_budget=budget
+        )
+        
+        # Should exit immediately
+        final_state = researcher.deep_research(state)
+        
+        # Verify no execution happened (mock_llm not called)
+        mock_llm.assert_not_called()
+        self.assertEqual(final_state.depth, 3)  # Depth unchanged
 
 
 def run_phase2_tests():

@@ -43,6 +43,8 @@ from llm_client import llm_complete  # noqa: E402
 from env_manager import get_env_manager  # noqa: E402
 from dependency_checker import get_dependency_checker  # noqa: E402
 from error_handler import get_error_handler  # noqa: E402
+from async_scraper import fetch_urls_parallel  # noqa: E402
+from source_evaluator import SourceEvaluator  # noqa: E402
 
 
 # Constants for iterative research
@@ -243,6 +245,7 @@ class DeepResearch:
         self.engine = SearchEngine()
         self.scraper = WebScraper()
         self.archive = ResearchArchive(base_dir)
+        self.source_evaluator = SourceEvaluator()  # Phase 2: Source evaluation
 
     def create_plan(self, topic: str) -> Dict[str, Any]:
         """Generate a research plan."""
@@ -289,14 +292,27 @@ class DeepResearch:
         return {"session_id": session_id, "topic": topic, "plan": plan_data}
 
     def execute_plan(
-        self, session_data: Dict[str, Any], max_urls_per_step: int = 3
+        self,
+        session_data: Dict[str, Any],
+        max_urls_per_step: int = 3,
+        parallel: bool = False,
+        min_trust: float = 0.0,
     ) -> List[Dict]:
-        """Execute the research plan."""
+        """Execute the research plan.
+        
+        Args:
+            session_data: Session information and plan
+            max_urls_per_step: Maximum URLs to fetch per step
+            parallel: Whether to use parallel scraping (Phase 2)
+            min_trust: Minimum source trust score (Phase 2)
+        """
         session_id = session_data["session_id"]
         steps = session_data["plan"]["steps"]
         results = []
 
         print(f"\n🔬 Executing research for session: {session_id}")
+        if parallel:
+            print("   Mode: Parallel scraping enabled 🚀")
 
         for i, step in enumerate(steps, 1):
             query = step.get("query", "")
@@ -306,23 +322,62 @@ class DeepResearch:
             print(f"Rationale: {rationale}")
 
             # Search
-            search_results = self.engine.search(query, max_results=max_urls_per_step)
+            # Fetch more results initially to allow for filtering
+            search_limit = max_urls_per_step * 2 if min_trust > 0 else max_urls_per_step
+            search_results = self.engine.search(query, max_results=search_limit)
             logger.info(f"Found {len(search_results)} links")
 
-            step_content = []
-
-            # Scrape
+            # Filter by trust score (Phase 2)
+            urls_to_fetch = []
+            titles = {}
+            
             for res in search_results:
                 url = res["href"]
                 title = res["title"]
+                
+                if min_trust > 0:
+                    score = self.source_evaluator.evaluate(url)
+                    if score < min_trust:
+                        logger.info(f"Skipping low trust source ({score:.2f}): {url}")
+                        continue
+                
+                urls_to_fetch.append(url)
+                titles[url] = title
+                
+                if len(urls_to_fetch) >= max_urls_per_step:
+                    break
+            
+            print(f"   Selected {len(urls_to_fetch)} URLs for processing")
 
-                print(f"  > Fetching: {title[:50]}...")
-                content = self.scraper.fetch_content(url)
+            step_content = []
 
-                if content:
-                    self.archive.save_content(session_id, url, content, title)
-                    step_content.append(f"Source: {title} ({url})\n{content[:2000]}...")
-                    time.sleep(1)  # Polite delay
+            # Scrape (Parallel or Sequential)
+            if parallel and urls_to_fetch:
+                # Phase 2: Parallel scraping
+                print(f"  > Parallel fetching {len(urls_to_fetch)} URLs...")
+                fetch_results = fetch_urls_parallel(urls_to_fetch)
+                
+                for res in fetch_results:
+                    url = res["url"]
+                    content = res["content"]
+                    title = titles.get(url, "Unknown")
+                    
+                    if res["success"] and content:
+                        self.archive.save_content(session_id, url, content, title)
+                        step_content.append(f"Source: {title} ({url})\n{content[:2000]}...")
+                    elif res.get("error"):
+                        print(f"    Failed: {url} ({res['error']})")
+            else:
+                # Phase 1: Sequential scraping
+                for url in urls_to_fetch:
+                    title = titles.get(url, "Unknown")
+                    print(f"  > Fetching: {title[:50]}...")
+                    content = self.scraper.fetch_content(url)
+
+                    if content:
+                        self.archive.save_content(session_id, url, content, title)
+                        step_content.append(f"Source: {title} ({url})\n{content[:2000]}...")
+                        time.sleep(1)  # Polite delay
 
             results.append(
                 {
@@ -449,7 +504,12 @@ class DeepResearch:
             return None
         return directions[0]
 
-    def deep_research(self, state: ResearchState) -> ResearchState:
+    def deep_research(
+        self,
+        state: ResearchState,
+        parallel: bool = False,
+        min_trust: float = 0.0
+    ) -> ResearchState:
         """Execute iterative deep research.
         
         Recursively explores the topic, accumulating learnings and
@@ -457,10 +517,17 @@ class DeepResearch:
         
         Args:
             state: Current research state
+            parallel: Whether to use parallel scraping
+            min_trust: Minimum source trust score
             
         Returns:
             Updated research state with accumulated results
         """
+        # Check token budget (Phase 2)
+        if state.token_budget and not state.token_budget.can_continue():
+            logger.warning("Token budget exhausted, stopping research early")
+            return state
+
         # Enforce maximum depth
         effective_depth = min(state.depth, MAX_DEPTH)
         
@@ -469,6 +536,8 @@ class DeepResearch:
             return state
         
         print(f"\n🔄 Iterative research - Depth remaining: {effective_depth}")
+        if state.token_budget:
+            print(f"   Token Budget: {state.token_budget.usage_percent():.1f}% used")
         
         # Create and execute plan
         if not state.session_id or state.session_id == "":
@@ -485,8 +554,13 @@ class DeepResearch:
                 ]}
             }
         
-        # Execute research
-        results = self.execute_plan(session_data, max_urls_per_step=state.breadth)
+        # Execute research with Phase 2 parameters
+        results = self.execute_plan(
+            session_data,
+            max_urls_per_step=state.breadth,
+            parallel=parallel,
+            min_trust=min_trust
+        )
         state.all_results.extend(results)
         
         # Analyze results
@@ -510,7 +584,7 @@ class DeepResearch:
         if next_direction:
             state.directions = [next_direction] + analysis.directions[1:]
             state.depth = effective_depth - 1
-            return self.deep_research(state)
+            return self.deep_research(state, parallel=parallel, min_trust=min_trust)
         
         logger.info("No more directions to explore")
         return state
@@ -593,15 +667,27 @@ def main():
         if args.breadth is not None:
             # Iterative mode with explicit breadth
             print(f"   Mode: Iterative (breadth={args.breadth}, depth={args.depth})")
+            if args.parallel:
+                print("   Feature: Parallel scraping enabled 🚀")
+            if args.token_budget != DEFAULT_TOKEN_BUDGET:
+                print(f"   Feature: Token budget set to {args.token_budget}")
+            
+            # Initialize token budget
+            token_budget = TokenBudget(total_limit=args.token_budget)
             
             state = ResearchState(
                 topic=args.topic,
                 session_id="",
                 depth=args.depth,
                 breadth=args.breadth,
+                token_budget=token_budget,
             )
             
-            final_state = researcher.deep_research(state)
+            final_state = researcher.deep_research(
+                state,
+                parallel=args.parallel,
+                min_trust=args.min_trust
+            )
             
             print(f"\n📚 Accumulated {len(final_state.learnings)} learnings")
             
@@ -619,7 +705,13 @@ def main():
             session = researcher.create_plan(args.topic)
             print(f"\n📋 Plan:\n{json.dumps(session['plan'], indent=2, ensure_ascii=False)}")
 
-            results = researcher.execute_plan(session, max_urls_per_step=args.depth)
+            # Pass Phase 2 params even in classic mode if requested
+            results = researcher.execute_plan(
+                session,
+                max_urls_per_step=args.depth,
+                parallel=args.parallel,
+                min_trust=args.min_trust
+            )
 
             print("\n📝 Generating report...")
             report = researcher.generate_report(session, results)
