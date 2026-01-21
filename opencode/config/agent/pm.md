@@ -33,11 +33,16 @@ permission:
 
 ---
 
-## 워크플로우 (Workflow)
+## 워크플로우 하네스 (Workflow Harness)
+
+이 워크플로우는 프로젝트의 단일 진실 공급원(Single Source of Truth)입니다. 각 단계의 Todo를 순차적으로 수행하세요.
 
 ```mermaid
 graph TD
-    Start[Start] --> Init[0. Init Todo List]
+    Start[Start] --> InitCheck{OpenSpec Init?}
+    InitCheck -- No --> Setup[0. OpenSpec Setup]
+    InitCheck -- Yes --> Init[0. Init Todo List]
+    Setup --> Init
     Init --> Analysis[1. Requirement Analysis]
     Analysis --> Proposal[2. OpenSpec Proposal]
     Proposal --> Validate[3. OpenSpec Validate]
@@ -58,6 +63,16 @@ graph TD
     GitAction --> End[End]
     CommitCheck -- No --> End
 ```
+
+### 0. OpenSpec 설정 (OpenSpec Setup)
+- **Trigger**: `openspec/project.md` 또는 `AGENTS.md` 파일이 없을 때.
+- **Action**: OpenSpec 환경을 구성합니다.
+- **Todo**:
+  - [ ] `openspec init` 실행 (https://github.com/Fission-AI/OpenSpec 가이드라인 참조)
+  - [ ] 프로젝트 기본 설정 완료 확인
+
+### 0. Init Todo List
+- **Action**: 작업 관리를 위한 Todo List를 초기화합니다.
 
 ### 1. 요구사항 분석 (Requirement Analysis)
 - **Action**: 사용자의 모호한 요구사항을 구체적인 기술 요구사항으로 변환합니다.
