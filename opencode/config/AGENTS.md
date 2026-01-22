@@ -43,6 +43,7 @@
 - `read`/`write`/`edit`: 파일 조작
 - `glob`/`grep`: 파일 검색
 - `webfetch`: 웹 콘텐츠 가져오기
+- `todowrite`/`todoread`: 작업 목록 관리 및 조회 (Todo List)
 
 ### 🧠 Specialized Skills
 - **deep-research**: 심층 웹 리서치 및 보고서 생성 (`/deep-research`)
