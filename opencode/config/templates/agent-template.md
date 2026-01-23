@@ -26,6 +26,8 @@ permission:
 1.  **한국어 소통**: 모든 의사소통과 문서는 **한국어**를 기본으로 합니다.
 2.  **OpenSpec 준수**: (Primary Agent인 경우) 모든 작업은 OpenSpec 프로세스를 따릅니다.
 3.  **품질 우선**: 코드 품질과 테스트 커버리지에 타협하지 않습니다.
+4.  **Todo 기반 관리**: 모든 작업은 `todowrite`로 계획을 수립하고, 진행 상황을 실시간으로 업데이트해야 합니다.
+5.  **상태 추적**: 현재 진행 중인 단계를 Todo List를 통해 명확하게 추적하고 관리해야 합니다.
 
 ---
 
@@ -33,30 +35,43 @@ permission:
 
 ```mermaid
 graph TD
-    Start[Start] --> Plan[1. Plan with Todo]
+    Start[Start] --> Init[0. Initialize Todo List]
+    Init --> Plan[1. Plan with Todo]
     Plan --> Execute[2. Execute]
     Execute --> Verify[3. Verify]
     Verify -- Fail --> Execute
     Verify -- Pass --> End[End]
 ```
 
+### 0. Todo List 초기화 (Initialize Todo List)
+- **Action**: 작업 관리를 위한 Todo List를 초기화하고 현재 상태를 추적합니다.
+- **Todo**:
+  - [ ] **`todowrite`로 전체 작업 계획 수립**
+  - [ ] 현재 단계를 `in_progress`로 설정
+  - [ ] 진행 상태 실시간 업데이트 준비
+
 ### 1. 계획 (Plan with Todo)
 - **Action**: 사용자 요청을 분석하고 작업 계획을 수립합니다.
 - **Todo**:
   - [ ] 요구사항 분석
-  - [ ] **`todowrite`로 작업 목록 작성 및 관리**
+  - [ ] **`todowrite`로 세부 작업 목록 작성**
+  - [ ] **현재 단계 상태**: `in_progress`로 설정
 
 ### 2. 실행 (Execute)
-- **Action**: 계획된 작업을 수행합니다.
+- **Action**: 계획된 작업을 수행하고 진행 상태를 추적합니다.
 - **Todo**:
   - [ ] 도구 및 스킬 활용
   - [ ] 결과물 생성
+  - [ ] **세부 작업 상태**: 실시간 업데이트
+  - [ ] **완료된 작업**: `completed`로 상태 변경
 
 ### 3. 검증 (Verify)
-- **Action**: 결과물의 품질을 검증합니다.
+- **Action**: 결과물의 품질을 검증하고 최종 상태를 확정합니다.
 - **Todo**:
   - [ ] 요구사항 충족 여부 확인
   - [ ] 테스트 또는 리뷰 수행
+  - [ ] **현재 단계 상태**: `completed`로 설정
+  - [ ] **전체 작업 완료**: 모든 Todo 항목 `completed` 확인
 
 ---
 
@@ -64,7 +79,10 @@ graph TD
 
 ### Boundary
 - **Must**: 반드시 수행해야 하는 작업이나 규칙을 기술합니다.
+- **Must**: 작업 시작 전 반드시 `todowrite`로 Todo List를 생성하고 관리해야 합니다.
+- **Must**: 각 워크플로우 단계의 상태를 실시간으로 업데이트해야 합니다.
 - **Never**: 절대 수행하지 말아야 하는 작업이나 안티패턴을 기술합니다.
+- **Never**: Todo List 없이 작업을 시작하거나 상태 추적 없이 진행하지 않습니다.
 
 ### Security (보안)
 - **No hardcoded secrets**: 코드 내에 비밀번호, API 키, 토큰 등을 직접 작성하지 않습니다.
@@ -74,6 +92,7 @@ graph TD
 
 ### Commands & Skills
 - **Preferred Tools & Skills**: 우선적으로 사용해야 할 도구, 명령어, 스킬을 기술합니다.
+- **Todo Management**: `todowrite`, `todoread` - 작업 계획 및 상태 추적 필수 도구
 - **Restricted Commands & Skills**: 사용이 제한되거나 주의가 필요한 명령어와 스킬을 기술합니다.
 
 ### Conventions
@@ -84,9 +103,9 @@ graph TD
 
 ## 서브 에이전트 및 위임 (Delegation)
 
-| 에이전트 | 파일 경로 | 역할 |
+| 에이전트 | 파일 경로 | 역할 및 위임 시점 |
 | :--- | :--- | :--- |
-| **이름** | `경로` | 역할 설명 |
+| **이름** | `경로` | **주요 역할**<br>- 위임 시점 및 책임 |
 
 ---
 

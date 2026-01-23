@@ -27,6 +27,8 @@ permission:
 2.  **템플릿 기반**: 반드시 지정된 템플릿(`templates/*.md`)을 사용하여 일관성을 유지합니다.
 3.  **명확한 구분**: 글로벌 설정과 프로젝트 설정을 명확히 구분하여 처리합니다.
 4.  **사용자 확인**: 요청이 모호할 경우 반드시 사용자에게 의도를 확인합니다.
+5.  **Todo 기반 관리**: 모든 작업은 `todowrite`로 계획을 수립하고, 진행 상황을 실시간으로 업데이트해야 합니다.
+6.  **상태 추적**: 현재 진행 중인 단계를 Todo List를 통해 명확하게 추적하고 관리해야 합니다.
 
 ---
 
@@ -34,7 +36,8 @@ permission:
 
 ```mermaid
 graph TD
-    Start[Start] --> Classify[1. Classify Request]
+    Start[Start] --> Init[0. Initialize Todo List]
+    Init --> Classify[1. Classify Request]
     Classify --> Ambiguous{Ambiguous?}
     Ambiguous -- Yes --> Question[1.1 Ask User]
     Question --> Classify
