@@ -62,14 +62,16 @@ graph TD
     TestCode --> Implement[8. Implement & Verify]
     Implement --> Verify[Run Tests & CI Checks]
     Verify -- Fail --> Implement
-    Verify -- Pass --> CodeReview[9. Code Review & Archive]
-    CodeReview -- Request Changes --> Implement
-    CodeReview -- Approved --> QA[10. QA Verification]
+    Verify -- Pass --> CodeReview[9. Code Review]
+    CodeReview --> ReviewResult{Review Result?}
+    ReviewResult -- REJECT --> Refine[10. Code Refinement]
+    ReviewResult -- APPROVE --> QA[11. QA Verification]
+    Refine --> Implement
     QA --> QAResult{QA Result?}
-    QAResult -- FAIL --> Reimplement[11. Reimplementation]
-    QAResult -- PASS --> FinalArchive[12. Final Archive]
+    QAResult -- FAIL --> Reimplement[12. Reimplementation]
+    QAResult -- PASS --> FinalArchive[13. Final Archive]
     Reimplement --> Implement
-    FinalArchive --> CommitCheck{13. Commit & Push?}
+    FinalArchive --> CommitCheck{14. Commit & Push?}
     CommitCheck -- Yes --> GitAction[Git Commit & Push]
     GitAction --> End[End]
     CommitCheck -- No --> End
@@ -160,15 +162,25 @@ graph TD
     - **타입 체크 및 정적 분석 수행**
   - [ ] 모든 테스트 및 CI 체크 통과 확인
 
-### 9. 코드 리뷰 및 아카이빙 (Code Review & Archive)
+### 9. 코드 리뷰 (Code Review) **[CRITICAL GATE]**
 - **Delegation**: **`#py-code-reviewer.md`** (Python) 또는 **`#senior-sw-engineer.md`**
-- **Action**: 코드 품질을 검토하고 기술적 리뷰를 수행합니다.
+- **Action**: 코드 품질을 검토하고 approve/reject 결정을 받습니다.
 - **Todo**:
-  - [ ] **서브 에이전트 호출**: 코드 리뷰 (보안, 성능, 가독성)
+  - [ ] **서브 에이전트 호출**: 코드 리뷰 및 approve/reject 결정 요청
   - [ ] `openspec validate --strict` 실행 (무결성 검증)
-  - [ ] 코드 리뷰 결과 보고
+  - [ ] **코드 리뷰 결과 수신**:
+    - **APPROVE**: QA 단계로 진행
+    - **REJECT**: 코드 보완 필요
 
-### 10. QA 검증 (QA Verification) **[CRITICAL GATE]**
+### 10. 코드 보완 (Code Refinement) **[REJECT 시에만]**
+- **Delegation**: **`#senior-sw-engineer.md`**
+- **Action**: 코드 리뷰어의 지적사항을 기반으로 코드를 보완합니다.
+- **Todo**:
+  - [ ] 코드 리뷰 REJECT 리포트 분석
+  - [ ] **`#senior-sw-engineer.md` 호출**: 보완 구현 요청
+  - [ ] 보완 후 Step 8 (구현 및 검증)으로 복귀
+
+### 11. QA 검증 (QA Verification) **[CRITICAL GATE]**
 - **Delegation**: **`#qa.md`**
 - **Action**: 오픈스펙 기반의 엄밀한 기능 검증을 수행합니다.
 - **Todo**:
@@ -178,7 +190,7 @@ graph TD
     - **PASS**: 모든 기능 구현 완료 → 최종 아카이빙 진행
     - **FAIL**: 구현 미흡 → SW 엔지니어에게 재구현 요청
 
-### 11. 재구현 (Reimplementation) **[FAIL 시에만]**
+### 12. 재구현 (Reimplementation) **[FAIL 시에만]**
 - **Delegation**: **`#senior-sw-engineer.md`**
 - **Action**: QA 지적사항을 기반으로 재구현을 수행합니다.
 - **Todo**:
@@ -186,14 +198,14 @@ graph TD
   - [ ] **`#senior-sw-engineer.md` 호출**: 재구현 요청
   - [ ] 재구현 후 Step 8 (구현 및 검증)으로 복귀
 
-### 12. 최종 아카이빙 (Final Archive) **[PASS 시에만]**
+### 13. 최종 아카이빙 (Final Archive) **[PASS 시에만]**
 - **Action**: 모든 검증이 완료된 변경 사항을 아카이빙합니다.
 - **Todo**:
   - [ ] `openspec-archive <id>` 실행
   - [ ] 최종 QA 리포트 첨부
   - [ ] 사용자에게 작업 완료 보고
 
-### 13. 배포 및 종료 (Finalize & Delivery)
+### 14. 배포 및 종료 (Finalize & Delivery)
 - **Action**: 작업 내용을 저장소에 반영합니다.
 - **Todo**:
   - [ ] `git status`, `git diff`로 최종 변경 확인
@@ -357,10 +369,10 @@ PM은 직접 코드를 작성하기보다, 전문 에이전트를 적재적소�
 
 | 에이전트 | 파일 경로 | 역할 및 위임 시점 |
 | :--- | :--- | :--- |
-| **Senior SW Engineer** | `#senior-sw-engineer.md` | **주력 구현 담당**<br>- 테스트 코드 작성 (Step 7)<br>- 기능 구현 및 리팩토링 (Step 8)<br>- 재구현 (Step 11) |
-| **Py Code Reviewer** | `#py-code-reviewer.md` | **Python 특화 리뷰어**<br>- Python 프로젝트의 코드 리뷰 (Step 9)<br>- 보안 취약점 및 성능 병목 분석 |
+| **Senior SW Engineer** | `#senior-sw-engineer.md` | **주력 구현 담당**<br>- 테스트 코드 작성 (Step 7)<br>- 기능 구현 및 리팩토링 (Step 8)<br>- 코드 보완 (Step 10)<br>- 재구현 (Step 12) |
+| **Py Code Reviewer** | `#py-code-reviewer.md` | **Python 특화 리뷰어**<br>- Python 프로젝트 코드 리뷰 (Step 9)<br>- approve/reject 결정 반환<br>- 보안 취약점 및 성능 병목 분석 |
 | **Research Analyst** | `#research-analyst.md` | **리서치 분석가**<br>- 요구사항 분석 시 시장/기술 조사 (Step 1)<br>- 기술 결정 시 베스트 프랙티스 리서치<br>- 아키텍처 설계 시 참조 자료 연구 |
-| **QA Specialist** | `#qa.md` | **QA 전문가**<br>- 오픈스펙 기반 기능 검증 (Step 10)<br>- 엄밀한 품질 보증 및 결과 판단<br>- 최종 작업 완료 여부 결정 |
+| **QA Specialist** | `#qa.md` | **QA 전문가**<br>- 오픈스펙 기반 기능 검증 (Step 11)<br>- 엄밀한 품질 보증 및 결과 판단<br>- 최종 작업 완료 여부 결정 |
 
 ---
 
