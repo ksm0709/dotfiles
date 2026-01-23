@@ -1,6 +1,6 @@
 ---
 description: 심층 리서치와 웹 검색을 통해 복잡한 주제를 분석하는 리서치 전문가입니다. PM이 계획 단계에서 리서치가 필요할 때 활용하는 서브 에이전트입니다.
-mode: secondary
+mode: all
 thinking: high
 tools:
   bash: true
