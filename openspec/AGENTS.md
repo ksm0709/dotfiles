@@ -1,4 +1,105 @@
-# OpenSpec Instructions
+# OpenSpec Agent Configuration (AGENTS.md)
+
+이 파일은 **OpenSpec** 사양 관리 시스템의 AI 에이전트 설정을 정의합니다. 기술 사양, 변경 제안, 프로젝트 관리에 대한 문맥, 구조, 규칙을 명시합니다.
+
+---
+
+## 1. Project Context (프로젝트 문맥)
+
+### Overview (개요)
+- **Description**: OpenSpec 기술 사양 관리 및 변경 제안 시스템
+- **Goals**: 체계적인 사양 관리, 기술적 의사결정, 변경 추적
+- **Architecture**: 사양 중심의 프로젝트 관리 구조
+- **Domain Knowledge**: 기술 사양, 변경 관리, 프로젝트 거버넌스, 문서화
+
+### Tech Stack (기술 스택)
+- **Language**: Markdown
+- **Framework**: OpenSpec 표준 프로세스
+- **Documentation**: 정형화된 사양 문서
+- **Infrastructure**: Git 기반의 버전 관리 및 추적
+
+---
+
+## 2. Folder Structure (폴더 구조)
+
+```
+[openspec]/
+├── project.md             # 프로젝트 기본 사양
+├── AGENTS.md               # 이 파일
+├── changes/                # 변경 제안 관리
+│   └── [change-name]/     # 개별 변경 항목
+├── specs/                  # 기술 사양 문서
+│   └── [spec-name]/       # 개별 사양 항목
+└── templates/              # 사양 템플릿
+```
+
+---
+
+## 3. Rules & Guidelines (규칙 및 가이드라인)
+
+### Coding Standards (코딩 표준)
+- **Style Guide**: OpenSpec 표준 문서 형식
+- **Naming Convention**: 
+  - 사양 디렉토리: kebab-case (예: api-specification)
+  - 파일명: 소문자 및 하이픈 (예: project.md)
+- **Formatting**: 정형화된 사양 문서 구조
+- **Linting**: OpenSpec 검증 도구 사용
+
+### Security (보안)
+- **Authentication**: N/A (문서 관리 시스템)
+- **Input Validation**: 모든 사양 변경은 기술적 타당성 검증 필요
+- **Secrets**: 민감한 기술 정보는 문서에 직접 포함하지 않음
+- **No hardcoded secrets**: 코드 내에 비밀번호, API 키, 토큰 등을 직접 작성하지 않습니다.
+- **Environment variables**: 민감한 데이터는 반드시 환경 변수로 관리합니다.
+- **Validate all user inputs**: 모든 사용자 입력에 대해 유효성 검사를 수행합니다.
+
+---
+
+## 4. Guardrails (가드레일)
+
+- **Input Safety**: 사양 문서 주입 공격 방지를 위해 사용자 입력을 검증합니다.
+- **Output Safety**: 프로젝트의 민감한 기술 정보나 내부 데이터를 무분별하게 출력하지 않습니다.
+- **Hallucination**: 기술 사양에 대한 사실이 아닌 정보를 생성하지 않도록 주의합니다.
+- **Destructive Actions**: 프로젝트 사양이나 표준에 영향을 주는 변경은 신중하게 처리하고 검토를 거칩니다.
+
+---
+
+## 5. Workflows (워크플로우)
+
+### Specification Workflow
+1. **Proposal**: 사양 변경 제안
+2. **Review**: 기술적 타당성 검토
+3. **Specification**: 상세 사양 작성
+4. **Validation**: 사양 검증 및 승인
+5. **Implementation**: 사양 기반 구현
+6. **Documentation**: 사양 문서화
+
+### Change Management Workflow
+1. **Initiation**: 변경 필요성 인지
+2. **Analysis**: 영향 분석 및 평가
+3. **Proposal**: 변경 제안서 작성
+4. **Review**: 이해관계자 검토
+5. **Approval**: 변경 승인
+6. **Implementation**: 변경 실행
+7. **Verification**: 결과 검증
+
+---
+
+## 6. Environment Variables (환경 변수)
+
+- `OPENSPEC_ROOT`: OpenSpec 루트 디렉토리
+- `SPEC_VALIDATION_ENABLED`: 사양 검증 활성화 여부
+- `CHANGE_REVIEW_REQUIRED`: 변경 검토 필수 여부
+
+---
+
+## 7. Agent Registry (에이전트 명부)
+
+현재 프로젝트 전용 에이전트가 없습니다. 글로벌 에이전트를 사용하세요.
+
+---
+
+## 8. OpenSpec Instructions (상세 지침)
 
 Instructions for AI coding assistants using OpenSpec for spec-driven development.
 
