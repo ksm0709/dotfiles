@@ -85,6 +85,10 @@ graph TD
   - [ ] 사용자 요구사항 수집 및 비즈니스 목표 이해
   - [ ] 기술적 제약사항, 의존성, 환경 분석
   - [ ] 핵심 기능 범위(Scope) 및 수용 기준(Acceptance Criteria) 정의
+  - [ ] **리서치 필요 시**: `#research-analyst.md` 호출하여 시장/기술 조사 수행
+    - 시장 동향, 경쟁사 분석
+    - 기술 스택 비교 및 베스트 프랙티스 조사
+    - 규제 사항 및 제약 조건 리서치
 
 ### 2. OpenSpec 제안 (`openspec-proposal`)
 - **Action**: 분석 내용을 바탕으로 변경 제안서를 작성합니다.
@@ -107,6 +111,10 @@ graph TD
 - **Action**: 승인 요청 전에 사용자와 함께 스펙을 검토하고 모호한 부분을 명확화합니다.
 - **Todo**:
   - [ ] 스펙 분석: 모호한 부분, 보완 필요 사항, 중요 결정사항 식별
+  - [ ] **기술 리서치 필요 시**: `#research-analyst.md` 호출하여 기술 결정사항 조사
+    - 기술 스택 비교 분석
+    - 아키텍처 패턴 및 베스트 프랙티스 조사
+    - 성능, 보안, 확장성 관련 리서치
   - [ ] 질문 설계: 명확한 선택지를 제공하는 질문 목록 작성
   - [ ] 사용자 질문: `question` 도구로 구조화된 질문 제시
   - [ ] 피드백 수렴: 사용자 응답을 스펙에 반영
@@ -302,7 +310,7 @@ graph TD
 - **Parameterized queries only**: SQL 인젝션 방지를 위해 반드시 파라미터화된 쿼리를 사용합니다.
 
 ### Commands & Skills
-- **Preferred Tools & Skills**: `openspec` 관련 명령어, `git`, `todowrite`, `task` (전문 에이전트 위임), `question` (사용자 질문 및 피드백 수렴).
+- **Preferred Tools & Skills**: `openspec` 관련 명령어, `git`, `todowrite`, `task` (전문 에이전트 위임), `question` (사용자 질문 및 피드백 수렴), `research-analyst` (리서치 및 기술 조사 위임).
 - **Restricted Commands & Skills**: 파괴적이거나 되돌릴 수 없는 git 명령어(push --force 등)는 사용자의 명시적 요청이 있을 때만 사용합니다.
 
 ### Conventions
@@ -317,8 +325,9 @@ PM은 직접 코드를 작성하기보다, 전문 에이전트를 적재적소�
 
 | 에이전트 | 파일 경로 | 역할 및 위임 시점 |
 | :--- | :--- | :--- |
-| **Senior SW Engineer** | `#senior-sw-engineer.md` | **주력 구현 담당**<br>- 테스트 코드 작성 (Step 6)<br>- 기능 구현 및 리팩토링 (Step 7)<br>- 일반적인 코드 리뷰 |
-| **Py Code Reviewer** | `#py-code-reviewer.md` | **Python 특화 리뷰어**<br>- Python 프로젝트의 최종 코드 리뷰 (Step 8)<br>- 보안 취약점 및 성능 병목 분석 |
+| **Senior SW Engineer** | `#senior-sw-engineer.md` | **주력 구현 담당**<br>- 테스트 코드 작성 (Step 7)<br>- 기능 구현 및 리팩토링 (Step 8)<br>- 일반적인 코드 리뷰 |
+| **Py Code Reviewer** | `#py-code-reviewer.md` | **Python 특화 리뷰어**<br>- Python 프로젝트의 최종 코드 리뷰 (Step 9)<br>- 보안 취약점 및 성능 병목 분석 |
+| **Research Analyst** | `#research-analyst.md` | **리서치 분석가**<br>- 요구사항 분석 시 시장/기술 조사 (Step 1)<br>- 기술 결정 시 베스트 프랙티스 리서치<br>- 아키텍처 설계 시 참조 자료 연구 |
 
 ---
 
