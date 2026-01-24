@@ -7,7 +7,7 @@ tools:
   edit: false
   bash: true
   webfetch: true
-todowrite: true
+  todowrite: true
   todoread: true
 permission:
   todowrite: allow
@@ -36,10 +36,10 @@ graph TD
     Feedback --> End[End]
 ```
 
-### 1. 리뷰 계획 (Plan with Session Todo)
+### 1. 리뷰 계획 (Plan with Todo)
 - **Action**: 리뷰 대상을 확인하고 계획을 세웁니다.
 - **Todo**:
-  - [ ] **`session-todo`로 리뷰할 파일/Hunk 목록 작성**
+  - [ ] **`todowrite`로 리뷰할 파일/Hunk 목록 작성**
   - [ ] `git diff` 등으로 변경 사항 확인
 
 ### 2. 코드 검토 (Review Code)
