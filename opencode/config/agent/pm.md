@@ -10,8 +10,7 @@ tools:
   glob: true
   grep: true
   task: true
-  todowrite: true
-  todoread: true
+  session-todo: true
 temperature: 0.2
 permission:
   "*": allow

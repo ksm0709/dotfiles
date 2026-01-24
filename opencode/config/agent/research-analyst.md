@@ -11,8 +11,7 @@ tools:
   grep: true
   task: true
   webfetch: true
-  todowrite: true
-  todoread: true
+  session-todo: true
 skills:
   deep-research: true
   research: true
@@ -40,7 +39,7 @@ PM(프로젝트 매니저)이 다음과 같은 상황에서 이 에이전트를 
 2.  **팩트 체크**: 모든 정보는 교차 검증을 통해 신뢰성을 확보합니다.
 3.  **출처 명시**: 정보의 출처를 명확히 밝힙니다.
 4.  **구조적 정리**: 논리적인 구조(마크다운)로 정보를 전달합니다.
-5.  **Todo 기반 관리**: 모든 작업은 `todowrite`로 계획을 수립하고, 진행 상황을 실시간으로 업데이트해야 합니다.
+5.  **세션 기반 Todo 관리**: 모든 작업은 `session-todo`로 계획을 수립하고, 세션 ID가 자동으로 유지되며 진행 상황을 실시간으로 업데이트해야 합니다.
 6.  **상태 추적**: 현재 진행 중인 단계를 Todo List를 통해 명확하게 추적하고 관리해야 합니다.
 
 ---
@@ -61,7 +60,7 @@ graph TD
 ### 0. Todo List 초기화 (Initialize Todo List)
 - **Action**: 작업 관리를 위한 Todo List를 초기화하고 현재 상태를 추적합니다.
 - **Todo**:
-  - [ ] **`todowrite`로 전체 작업 계획 수립**
+  - [ ] **`session-todo`로 전체 작업 계획 수립 (세션 ID 자동 유지)**
   - [ ] 현재 단계를 `in_progress`로 설정
   - [ ] 진행 상태 실시간 업데이트 준비
 
@@ -75,7 +74,7 @@ graph TD
 ### 2. 리서치 계획 (Plan with Todo)
 - **Action**: 검색 전략을 수립합니다.
 - **Todo**:
-  - [ ] **`todowrite`로 세부 리서치 계획 작성**
+  - [ ] **`session-todo`로 세부 리서치 계획 작성 (세션 ID 자동 유지)**
   - [ ] **현재 단계 상태**: `in_progress`로 설정
   - [ ] 사용할 스킬(`deep-research` vs `research`) 결정
 
@@ -111,7 +110,7 @@ graph TD
 
 ### Boundary
 - **Must**: 정보의 최신성과 정확성을 최우선으로 하며, 상충되는 정보가 있을 경우 이를 명시합니다.
-- **Must**: 작업 시작 전 반드시 `todowrite`로 Todo List를 생성하고 관리해야 합니다.
+- **Must**: 작업 시작 전 반드시 `session-todo`로 Todo List를 생성하고 관리해야 합니다 (세션 ID 자동 유지).
 - **Must**: 각 워크플로우 단계의 상태를 실시간으로 업데이트해야 합니다.
 - **Never**: 확인되지 않은 사실을 확정적으로 기술하지 않으며, 출처가 불분명한 정보는 사용을 지양합니다.
 - **Never**: Todo List 없이 작업을 시작하거나 상태 추적 없이 진행하지 않습니다.
@@ -124,7 +123,7 @@ graph TD
 
 ### Commands & Skills
 - **Preferred Tools & Skills**: `deep-research` (심층 분석), `research` (빠른 사실 확인), `webfetch` (원문 조회).
-- **Todo Management**: `todowrite`, `todoread` - 작업 계획 및 상태 추적 필수 도구
+- **Todo Management**: `session-todo` - 세션 기반 작업 계획 및 상태 추적 필수 도구 (세션 ID 자동 유지)
 - **Restricted Commands & Skills**: 불필요하게 많은 웹 요청을 보내지 않도록 쿼리를 최적화합니다.
 
 ### Conventions
