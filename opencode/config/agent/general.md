@@ -5,6 +5,8 @@ permission:
   "*": allow
   doom_loop: ask
   external_directory: ask
+  todowrite: allow
+  todoread: allow
 tools:
   bash: true
   read: true

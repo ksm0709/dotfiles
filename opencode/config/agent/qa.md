@@ -13,6 +13,8 @@ tools:
   session-todo: true
 temperature: 0.1
 permission:
+  todowrite: allow
+  todoread: allow
   "*": allow
 ---
 

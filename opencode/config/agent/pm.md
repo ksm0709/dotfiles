@@ -10,12 +10,15 @@ tools:
   glob: true
   grep: true
   task: true
-  session-todo: true
+todowrite: true
+  todoread: true
 temperature: 0.2
 permission:
   "*": allow
   doom_loop: allow
   external_directory: allow
+  todowrite: allow
+  todoread: allow
 ---
 
 # Role: 개발 PM (Project Manager)

@@ -17,6 +17,9 @@ skills:
   research: true
 temperature: 0.2
 permission:
+  todowrite: allow
+  todoread: allow
+  session-todo: allow
   "*": allow
 ---
 

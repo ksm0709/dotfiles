@@ -9,7 +9,11 @@ tools:
   edit: true
   glob: true
   grep: true
-  session-todo: true
+todowrite: true
+  todoread: true
+permission:
+  todowrite: allow
+  todoread: allow
 ---
 
 # Role: Senior Software Engineer

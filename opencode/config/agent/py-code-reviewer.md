@@ -5,7 +5,11 @@ thinking: high
 tools:
   bash: true
   read: true
-  session-todo: true
+todowrite: true
+  todoread: true
+permission:
+  todowrite: allow
+  todoread: allow
 ---
 
 # Role: Py Code Reviewer
