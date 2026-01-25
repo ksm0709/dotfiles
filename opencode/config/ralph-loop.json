@@ -1,0 +1,6 @@
+{
+  "promiseWord": "DONE",
+  "maxRetries": 5,
+  "summaryPath": "./.opencode/sessions/",
+  "autoRestart": true
+}

@@ -20,6 +20,35 @@ export const RalphLoopPlugin: Plugin = async ({ directory, client }) => {
   let config = ConfigSchema.parse({});
   const sessionRegistry = new Map<string, SessionState>();
 
+  // ralph-loop.json 파일에서 설정을 로드합니다.
+  const loadConfig = async () => {
+    const configPaths = [
+      path.join(directory, ".opencode", "ralph-loop.json"),
+      path.join(process.env.HOME || "", ".config", "opencode", "ralph-loop.json"),
+      path.join(
+        process.env.HOME || "",
+        ".config",
+        "opencode",
+        "plugin",
+        "ralph-loop",
+        "ralph-loop.json",
+      ),
+    ];
+
+    for (const configPath of configPaths) {
+      try {
+        const configContent = await fs.readFile(configPath, "utf8");
+        const parsed = JSON.parse(configContent);
+        config = ConfigSchema.parse(parsed);
+        return; // 첫 번째로 발견된 설정 파일을 사용하고 종료
+      } catch {
+        continue;
+      }
+    }
+  };
+
+  await loadConfig();
+
   const getOrInitState = (sessionId: string): SessionState => {
     if (!sessionRegistry.has(sessionId)) {
       sessionRegistry.set(sessionId, { retryCount: 0, messageCount: 0 });
