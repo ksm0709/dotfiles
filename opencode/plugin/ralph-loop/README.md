@@ -18,28 +18,25 @@ cd opencode/plugin/ralph-loop
 ./install.sh
 ```
 
+설치 후 별도의 `opencode.json` 수정 없이 오픈코드를 실행하면 플러그인이 자동으로 로드됩니다.
+
 ## 설정 방법
 
-`~/.config/opencode/opencode.json` 파일의 `plugin` 섹션에 플러그인 경로를 추가합니다. `install.sh`를 통해 설치했다면 다음과 같이 **상대 경로**로 설정할 수 있습니다.
+플러그인은 **`ralph-loop.json`** 파일을 통해 설정을 관리합니다. 설정 파일은 다음 우선순위로 로드됩니다:
+
+1.  **프로젝트 루트**: 현재 작업 중인 디렉토리의 `ralph-loop.json`
+2.  **전역 설정**: `~/.config/opencode/plugin/ralph-loop/ralph-loop.json`
+
+### 설정 예시 (`ralph-loop.json`)
 
 ```json
 {
-  "logLevel": "WARN",
-  "plugin": [
-    "./plugin/ralph-loop/src/index.ts"
-  ],
-  "ralph-loop": {
-    "promiseWord": "DONE",
-    "maxRetries": 5,
-    "summaryPath": "./.opencode/sessions/",
-    "autoRestart": true
-  }
+  "promiseWord": "DONE",
+  "maxRetries": 5,
+  "summaryPath": "./.opencode/sessions/",
+  "autoRestart": true
 }
 ```
-
-> **Tip**: 오픈코드 시작 시 나타나는 `INFO` 로그를 숨기려면 위 예시와 같이 `"logLevel": "WARN"` 설정을 추가하세요.
-
-> **참고**: 경로는 `opencode.json` 파일의 위치를 기준으로 합니다. 글로벌 설정 파일(`~/.config/opencode/opencode.json`)을 사용한다면 위와 같이 `./plugin/...` 형식을 사용할 수 있습니다.
 
 ### 설정 항목 설명
 

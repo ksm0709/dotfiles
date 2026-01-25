@@ -20,21 +20,27 @@ cp "$SOURCE_DIR/tsconfig.json" "$TARGET_DIR/"
 [ -f "$SOURCE_DIR/eslint.config.mjs" ] && cp "$SOURCE_DIR/eslint.config.mjs" "$TARGET_DIR/"
 [ -f "$SOURCE_DIR/.prettierrc" ] && cp "$SOURCE_DIR/.prettierrc" "$TARGET_DIR/"
 
-# 3. 의존성 설치
+# 3. 기본 설정 파일 생성 (없을 경우에만)
+if [ ! -f "$TARGET_DIR/ralph-loop.json" ]; then
+    echo "📝 Creating default ralph-loop.json..."
+    cat <<EOF > "$TARGET_DIR/ralph-loop.json"
+{
+  "promiseWord": "DONE",
+  "maxRetries": 5,
+  "summaryPath": "./.opencode/sessions/",
+  "autoRestart": true
+}
+EOF
+fi
+
+# 4. 의존성 설치
 echo "📥 Installing dependencies..."
 cd "$TARGET_DIR"
 npm install --production
 
 echo ""
 echo "✅ Installation complete!"
-echo "🚀 To enable the plugin, add the following to your ~/.config/opencode/opencode.json:"
-echo ""
-echo "{"
-echo "  \"plugin\": ["
-echo "    \"./plugin/$PLUGIN_NAME/src/index.ts\""
-echo "  ],"
-echo "  \"$PLUGIN_NAME\": {"
-echo "    \"promiseWord\": \"DONE\","
-echo "    \"maxRetries\": 5"
-echo "  }"
-echo "}"
+echo "🚀 The plugin is installed in the standard OpenCode plugin directory."
+echo "💡 No need to add it to opencode.json. It will be loaded automatically."
+echo "⚙️  You can customize settings in $TARGET_DIR/ralph-loop.json"
+echo "   or create a ralph-loop.json in your project root for project-specific settings."
