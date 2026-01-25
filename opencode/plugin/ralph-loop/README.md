@@ -24,6 +24,7 @@ cd opencode/plugin/ralph-loop
 
 ```json
 {
+  "logLevel": "WARN",
   "plugin": [
     "./plugin/ralph-loop/src/index.ts"
   ],
@@ -35,6 +36,8 @@ cd opencode/plugin/ralph-loop
   }
 }
 ```
+
+> **Tip**: 오픈코드 시작 시 나타나는 `INFO` 로그를 숨기려면 위 예시와 같이 `"logLevel": "WARN"` 설정을 추가하세요.
 
 > **참고**: 경로는 `opencode.json` 파일의 위치를 기준으로 합니다. 글로벌 설정 파일(`~/.config/opencode/opencode.json`)을 사용한다면 위와 같이 `./plugin/...` 형식을 사용할 수 있습니다.
 
