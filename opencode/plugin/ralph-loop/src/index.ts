@@ -3,24 +3,6 @@ import { z } from "zod";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 
-// 오픈코드 시작 시 발생하는 특정 INFO 로그(models.dev refreshing)를 억제합니다.
-const suppressSpecificLogs = () => {
-  const streams = [process.stdout, process.stderr];
-  for (const stream of streams) {
-    const originalWrite = stream.write;
-    stream.write = function (chunk: any, ...args: any[]) {
-      const str = chunk.toString();
-      if (str.includes("service=models.dev") && str.includes("refreshing")) {
-        return true;
-      }
-      return originalWrite.apply(this, [chunk, ...args]);
-    } as any;
-  }
-};
-
-// 플러그인 로드 시 즉시 실행
-suppressSpecificLogs();
-
 const ConfigSchema = z.object({
   promiseWord: z.string().default("DONE"),
   maxRetries: z.number().default(5),
