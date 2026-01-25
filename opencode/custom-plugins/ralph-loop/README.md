@@ -11,12 +11,22 @@
 
 ## 설치 방법
 
-제공된 `install.sh` 스크립트를 사용하면 오픈코드 표준 설정 디렉토리(`~/.config/opencode/plugin/`)에 자동으로 설치됩니다.
+제공된 `install.sh` 스크립트를 사용하면 오픈코드 표준 설정 디렉토리에 자동으로 설치됩니다.
 
 ```bash
 cd opencode/plugin/ralph-loop
 ./install.sh
 ```
+
+### 설치 위치 (OpenCode 공식 문서 기준)
+
+| 항목 | 경로 |
+| :--- | :--- |
+| **플러그인 파일** | `~/.config/opencode/plugins/ralph-loop.ts` |
+| **의존성** | `~/.config/opencode/package.json` |
+| **설정 파일** | `~/.config/opencode/ralph-loop.json` |
+
+> **참고**: OpenCode는 `~/.config/opencode/plugins/` 디렉토리(복수형)에서 `.ts`, `.js` 파일을 자동으로 로드합니다.
 
 설치 후 별도의 `opencode.json` 수정 없이 오픈코드를 실행하면 플러그인이 자동으로 로드됩니다.
 
@@ -26,7 +36,6 @@ cd opencode/plugin/ralph-loop
 
 1.  **프로젝트별 설정**: `{project-dir}/.opencode/ralph-loop.json`
 2.  **사용자 전역 설정**: `~/.config/opencode/ralph-loop.json`
-3.  **플러그인 기본 설정**: `~/.config/opencode/plugin/ralph-loop/ralph-loop.json`
 
 ### 설정 예시 (`ralph-loop.json`)
 
@@ -64,3 +73,27 @@ npm test
 # CI 파이프라인 실행 (포맷팅, 린팅, 테스트)
 npm run ci
 ```
+
+## 트러블슈팅
+
+### 플러그인이 로드되지 않는 경우
+
+1. **디렉토리 확인**: `~/.config/opencode/plugins/` (복수형)에 `ralph-loop.ts`가 있는지 확인
+   ```bash
+   ls -la ~/.config/opencode/plugins/
+   ```
+
+2. **의존성 확인**: `~/.config/opencode/package.json`에 `zod` 의존성이 있는지 확인
+   ```bash
+   cat ~/.config/opencode/package.json
+   ```
+
+3. **기존 설치 정리**: 이전 버전이 잘못된 위치에 설치되었다면 재설치
+   ```bash
+   rm -rf ~/.config/opencode/plugin/ralph-loop  # 구버전 정리
+   ./install.sh  # 재설치
+   ```
+
+## 라이선스
+
+ISC
