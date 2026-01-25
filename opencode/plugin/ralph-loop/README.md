@@ -24,8 +24,9 @@ cd opencode/plugin/ralph-loop
 
 플러그인은 **`ralph-loop.json`** 파일을 통해 설정을 관리합니다. 설정 파일은 다음 우선순위로 로드됩니다:
 
-1.  **프로젝트 루트**: 현재 작업 중인 디렉토리의 `ralph-loop.json`
-2.  **전역 설정**: `~/.config/opencode/plugin/ralph-loop/ralph-loop.json`
+1.  **프로젝트별 설정**: `{project-dir}/.opencode/ralph-loop.json`
+2.  **사용자 전역 설정**: `~/.config/opencode/ralph-loop.json`
+3.  **플러그인 기본 설정**: `~/.config/opencode/plugin/ralph-loop/ralph-loop.json`
 
 ### 설정 예시 (`ralph-loop.json`)
 

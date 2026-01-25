@@ -22,30 +22,28 @@ export const RalphLoopPlugin: Plugin = async ({ directory, client }) => {
 
   // ralph-loop.json 파일에서 설정을 로드합니다.
   const loadConfig = async () => {
-    try {
-      // 1. 프로젝트 루트 확인
-      const projectConfigPath = path.join(directory, "ralph-loop.json");
-      // 2. 플러그인 설치 경로 확인 (전역 설정용)
-      const globalConfigPath = path.join(
+    const configPaths = [
+      path.join(directory, ".opencode", "ralph-loop.json"),
+      path.join(process.env.HOME || "", ".config", "opencode", "ralph-loop.json"),
+      path.join(
         process.env.HOME || "",
-        ".config/opencode/plugin/ralph-loop/ralph-loop.json",
-      );
+        ".config",
+        "opencode",
+        "plugin",
+        "ralph-loop",
+        "ralph-loop.json",
+      ),
+    ];
 
-      let configContent = "{}";
+    for (const configPath of configPaths) {
       try {
-        configContent = await fs.readFile(projectConfigPath, "utf8");
+        const configContent = await fs.readFile(configPath, "utf8");
+        const parsed = JSON.parse(configContent);
+        config = ConfigSchema.parse(parsed);
+        return; // 첫 번째로 발견된 설정 파일을 사용하고 종료
       } catch {
-        try {
-          configContent = await fs.readFile(globalConfigPath, "utf8");
-        } catch {
-          // 설정 파일이 없으면 기본값 사용
-        }
+        continue;
       }
-
-      const parsed = JSON.parse(configContent);
-      config = ConfigSchema.parse(parsed);
-    } catch {
-      // 파싱 에러 시 기본값 사용
     }
   };
 
