@@ -1,0 +1,11 @@
+{
+  "todos": [
+    {"id": 1, "task": "요구사항 및 스펙 분석 (proposal.md, index.ts)", "status": "completed"},
+    {"id": 2, "task": "테스트 환경 및 Mock 설정 (SDK/Client)", "status": "completed"},
+    {"id": 3, "task": "시나리오 기반 테스트 케이스 작성 (ralph-loop.test.ts)", "status": "completed"},
+    {"id": 4, "task": "테스트 실행 및 실패(Red) 결과 확인", "status": "completed"},
+    {"id": 5, "task": "chat.message 훅 수정 및 첫 번째 메시지 판별 로직 추가", "status": "completed"},
+    {"id": 6, "task": "client.session API 적용 및 파일 저장 방식 변경 (fs 사용)", "status": "completed"},
+    {"id": 7, "task": "테스트 코드 수정 및 검증", "status": "completed"}
+  ]
+}
