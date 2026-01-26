@@ -141,7 +141,7 @@ export const RalphLoopPlugin: Plugin = async (ctx) => {
       state.messageCount++;
 
       // 사용자 입력 메시지에서 'ralph' 키워드 확인 (대소문자 무관)
-      const userInputText = (typeof input === 'string' ? input : String(input)).toLowerCase();
+      const userInputText = typeof input === 'string' ? input.toLowerCase() : '';
       const containsRalphKeyword = userInputText.includes('ralph');
 
       // 프롬프트 인젝션 조건:
