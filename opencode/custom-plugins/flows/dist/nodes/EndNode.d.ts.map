@@ -1,0 +1,1 @@
+{"version":3,"file":"EndNode.d.ts","sourceRoot":"","sources":["../../src/nodes/EndNode.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH,OAAO,EAAE,QAAQ,EAAE,MAAM,YAAY,CAAC;AACtC,OAAO,KAAK,EAAE,UAAU,EAAiB,MAAM,kBAAkB,CAAC;AAElE,qBAAa,OAAQ,SAAQ,QAAQ;IAC7B,OAAO,CAAC,UAAU,EAAE,MAAM,GAAG,OAAO,CAAC,UAAU,CAAC;CAavD"}

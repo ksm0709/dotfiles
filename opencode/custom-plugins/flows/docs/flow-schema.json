@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://opencode.ai/flows/v1/schema.json",
+  "title": "OpenCode Flow Definition",
+  "description": "멀티 에이전트 워크플로우 정의 스키마 (개선된 가독성 버전)",
+  "type": "object",
+  "required": ["name", "version", "start", "nodes"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "플로우 식별자 (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "시맨틱 버전",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "플로우 설명"
+    },
+    "config": {
+      "type": "object",
+      "description": "글로벌 설정",
+      "properties": {
+        "timeout": {
+          "type": "integer",
+          "description": "노드 타임아웃 (ms)",
+          "default": 300000
+        },
+        "max_retries": {
+          "type": "integer",
+          "description": "최대 재시도 횟수",
+          "default": 3
+        },
+        "retry_delay": {
+          "type": "integer",
+          "description": "재시도 간격 (ms)",
+          "default": 1000
+        }
+      }
+    },
+    "start": {
+      "type": "string",
+      "description": "시작 노드 이름"
+    },
+    "nodes": {
+      "type": "object",
+      "description": "노드 정의 맵",
+      "additionalProperties": {
+        "$ref": "#/definitions/node"
+      }
+    }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "description": "노드 정의 (단축 문법 지원)",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["agent", "tool", "command", "skill", "conditional", "parallel", "delay", "loop", "retry", "sub-flow", "end"],
+          "description": "명시적 노드 타입 (단축 문법 사용 시 생략 가능)"
+        },
+        
+        "agent": {
+          "type": "string",
+          "description": "에이전트 타입 (단축 문법)",
+          "enum": ["general", "senior-sw-engineer", "py-code-reviewer", "cpp-review", "research-analyst", "qa", "plan", "build"]
+        },
+        "prompt": {
+          "type": "string",
+          "description": "에이전트/스킬에 전달할 프롬프트"
+        },
+        "results": {
+          "type": "object",
+          "description": "가능한 결과 (name: description)",
+          "additionalProperties": { "type": "string" }
+        },
+        
+        "run": {
+          "type": "string",
+          "description": "실행할 쉘 명령어 (단축 문법)"
+        },
+        "workdir": {
+          "type": "string",
+          "description": "작업 디렉토리"
+        },
+        "expect": {
+          "type": "integer",
+          "description": "기대하는 종료 코드"
+        },
+        
+        "read": {
+          "type": "string",
+          "description": "읽을 파일 경로 (단축 문법)"
+        },
+        "write": {
+          "type": "object",
+          "description": "파일 쓰기 설정",
+          "properties": {
+            "path": { "type": "string" },
+            "content": { "type": "string" }
+          }
+        },
+        "glob": {
+          "type": "string",
+          "description": "glob 패턴 (단축 문법)"
+        },
+        
+        "if": {
+          "type": "object",
+          "description": "조건 분기 (field: expectedValue)",
+          "additionalProperties": true
+        },
+        
+        "wait": {
+          "type": "integer",
+          "description": "대기 시간 (ms, 단축 문법)"
+        },
+        
+        "loop": {
+          "type": "object",
+          "description": "반복 설정",
+          "properties": {
+            "max": { "type": "integer", "default": 10 },
+            "while": { "type": "object" },
+            "body": { "type": "string" }
+          }
+        },
+        
+        "end": {
+          "oneOf": [
+            { "type": "boolean" },
+            {
+              "type": "object",
+              "properties": {
+                "status": { "type": "string", "enum": ["success", "failed"] },
+                "message": { "type": "string" }
+              }
+            }
+          ],
+          "description": "종료 설정 (true = success)"
+        },
+        
+        "on": {
+          "type": "object",
+          "description": "결과별 라우팅",
+          "additionalProperties": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    },
+    
+    "routeMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "null"]
+      },
+      "description": "결과별 다음 노드 매핑"
+    }
+  }
+}

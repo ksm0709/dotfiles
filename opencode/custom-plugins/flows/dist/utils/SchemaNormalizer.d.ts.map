@@ -1,0 +1,1 @@
+{"version":3,"file":"SchemaNormalizer.d.ts","sourceRoot":"","sources":["../../src/utils/SchemaNormalizer.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,cAAc,EAKf,MAAM,kBAAkB,CAAC;AAE1B;;;GAGG;AACH,qBAAa,gBAAgB;IAC3B;;;;OAIG;IACH,MAAM,CAAC,SAAS,CAAC,KAAK,EAAE,GAAG,GAAG,cAAc;IA2B5C;;OAEG;IACH,OAAO,CAAC,MAAM,CAAC,aAAa;CAqF7B"}

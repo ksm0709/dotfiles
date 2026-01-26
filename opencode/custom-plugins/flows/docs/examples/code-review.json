@@ -1,0 +1,88 @@
+{
+  "$schema": "https://opencode.ai/flows/v1/schema.json",
+  "name": "code-review",
+  "version": "1.0.0",
+  "description": "자동 코드 리뷰 워크플로우",
+  
+  "config": {
+    "timeout": 300000,
+    "max_retries": 3
+  },
+  
+  "start": "analyze",
+  
+  "nodes": {
+    "analyze": {
+      "agent": "general",
+      "prompt": "다음 요청에 따라 코드를 분석하세요:\n\n${prompt}\n\n[지시사항]\n- 분석이 완료되면 [RESULT:success]를 출력하세요\n- 추가 파일이 필요하면 [RESULT:needs_context]와 함께 [DATA:requested_file=파일경로]를 출력하세요\n\n예시: [RESULT:needs_context] [DATA:requested_file=/src/utils/helper.ts]",
+      
+      "results": {
+        "success": "분석 완료, 리뷰 준비됨",
+        "needs_context": "추가 컨텍스트 필요",
+        "failed": "분석 실패"
+      },
+      
+      "on": {
+        "success": "review",
+        "needs_context": "gather_context",
+        "failed": "error_handler"
+      }
+    },
+    
+    "gather_context": {
+      "read": "${history.analyze.data.requested_file}",
+      
+      "on": {
+        "success": "analyze",
+        "failed": "error_handler"
+      }
+    },
+    
+    "review": {
+      "agent": "py-code-reviewer",
+      "prompt": "이전 분석 결과를 바탕으로 코드 리뷰를 수행하세요:\n\n${history.analyze}",
+      
+      "results": {
+        "approved": "코드 승인 - 수정 불필요",
+        "rejected": "수정 필요 - 문제점 발견"
+      },
+      
+      "on": {
+        "approved": "success_end",
+        "rejected": "request_changes"
+      }
+    },
+    
+    "request_changes": {
+      "agent": "senior-sw-engineer",
+      "prompt": "다음 리뷰 의견을 바탕으로 코드를 수정하세요:\n\n${history.review}",
+      
+      "on": {
+        "success": "review",
+        "failed": "error_handler"
+      }
+    },
+    
+    "error_handler": {
+      "agent": "general",
+      "prompt": "오류가 발생했습니다. 복구를 시도하세요.\n\n현재 상태: ${_current_state}",
+      
+      "on": {
+        "success": "analyze",
+        "failed": "failed_end"
+      }
+    },
+    
+    "success_end": {
+      "end": true,
+      "status": "success",
+      "message": "✅ 코드 리뷰가 완료되어 승인되었습니다."
+    },
+    
+    "failed_end": {
+      "end": true,
+      "status": "failed",
+      "message": "❌ 워크플로우가 실패했습니다. 수동 개입이 필요합니다."
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/flows/v1/schema.json",
+  "name": "simple-task",
+  "version": "1.0.0",
+  "description": "간단한 작업 수행 예제",
+  
+  "start": "execute",
+  
+  "nodes": {
+    "execute": {
+      "agent": "general",
+      "prompt": "${prompt}",
+      
+      "on": {
+        "success": "done",
+        "failed": "done"
+      }
+    },
+    
+    "done": {
+      "end": true,
+      "message": "작업이 완료되었습니다."
+    }
+  }
+}

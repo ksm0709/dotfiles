@@ -1,0 +1,42 @@
+{
+  "name": "flows",
+  "version": "0.1.0",
+  "description": "OpenCode 멀티 에이전트 워크플로우 관리 플러그인",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint src",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "ci": "npm run format && npm run lint && npm run test",
+    "build": "tsc"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "workflow",
+    "fsm",
+    "multi-agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.1.35",
+    "@opencode-ai/sdk": "^1.1.35",
+    "glob": "^11.0.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0"
+  }
+}

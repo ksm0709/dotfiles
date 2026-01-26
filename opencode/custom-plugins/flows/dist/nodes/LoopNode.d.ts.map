@@ -1,0 +1,1 @@
+{"version":3,"file":"LoopNode.d.ts","sourceRoot":"","sources":["../../src/nodes/LoopNode.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH,OAAO,EAAE,QAAQ,EAAE,MAAM,YAAY,CAAC;AACtC,OAAO,KAAK,EAAE,UAAU,EAA6B,MAAM,kBAAkB,CAAC;AAE9E,qBAAa,QAAS,SAAQ,QAAQ;IAC9B,OAAO,CAAC,UAAU,EAAE,MAAM,GAAG,OAAO,CAAC,UAAU,CAAC;IAmCtD;;OAEG;IACH,OAAO,CAAC,iBAAiB;CAoB1B"}
