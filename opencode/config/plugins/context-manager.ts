@@ -32,7 +32,7 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
   const homeDir = os.homedir();
   const globalConfigDir = path.join(homeDir, ".config/opencode");
 
-  // Path resolution logic (reflecting global/local structure differences)
+  // Path resolution logic (using shared opencode-memory package)
   const getPaths = () => {
     // 1. Check local project structure
     const localScript = path.join(directory, ".opencode/shared/context/context_server.py");
@@ -41,17 +41,23 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
       return { script: localScript, python: localVenv };
     }
 
-    // 2. Check global config structure (Global doesn't have .opencode prefix for shared)
-    const globalScript = path.join(globalConfigDir, "shared/context/context_server.py");
-    const globalVenv = path.join(globalConfigDir, "venv/bin/python");
-    if (fs.existsSync(globalScript) && fs.existsSync(globalVenv)) {
-      return { script: globalScript, python: globalVenv };
+    // 2. Check global shared opencode-memory package structure
+    const sharedScript = path.join(globalConfigDir, "shared/opencode-memory/src/opencode_memory/server.py");
+    const sharedVenv = path.join(globalConfigDir, "venv/bin/python");
+    if (fs.existsSync(sharedScript) && fs.existsSync(sharedVenv)) {
+      return { script: sharedScript, python: sharedVenv };
     }
 
-    // 3. Fallback for nested structure (just in case)
+    // 3. Check legacy global config structure
+    const globalScript = path.join(globalConfigDir, "shared/context/context_server.py");
+    if (fs.existsSync(globalScript) && fs.existsSync(sharedVenv)) {
+      return { script: globalScript, python: sharedVenv };
+    }
+
+    // 4. Fallback for nested structure (just in case)
     const nestedScript = path.join(globalConfigDir, "shared/context/context/context_server.py");
-    if (fs.existsSync(nestedScript) && fs.existsSync(globalVenv)) {
-      return { script: nestedScript, python: globalVenv };
+    if (fs.existsSync(nestedScript) && fs.existsSync(sharedVenv)) {
+      return { script: nestedScript, python: sharedVenv };
     }
 
     return null;
@@ -68,7 +74,12 @@ export const ContextManagerPlugin: Plugin = async ({ $, directory, client }) => 
     }
     
     try {
-      const result = await $`PYTHONPATH=${directory} ${paths.python} ${paths.script} ${[...args]}`
+      // Use shared package path if available, otherwise use directory
+      const pythonPath = paths.script.includes("shared/opencode-memory") 
+        ? path.join(globalConfigDir, "shared/opencode-memory/src")
+        : directory;
+      
+      const result = await $`PYTHONPATH=${pythonPath} ${paths.python} ${paths.script} ${[...args]}`
         .cwd(directory)
         .quiet()
         .nothrow();
