@@ -16,8 +16,9 @@ interface SessionState {
   skipInstruction?: boolean;
 }
 
-export const RalphLoopPlugin: Plugin = async ({ directory, client }) => {
+export const RalphLoopPlugin: Plugin = async (ctx) => {
   let config = ConfigSchema.parse({});
+  const { directory, client } = ctx;
   const sessionRegistry = new Map<string, SessionState>();
 
   // ralph-loop.json 파일에서 설정을 로드합니다.
@@ -63,15 +64,19 @@ export const RalphLoopPlugin: Plugin = async ({ directory, client }) => {
     event: async ({ event }) => {
       if (event.type !== "session.idle") return;
 
-      const sessionId = event.data.sessionId;
+      const sessionId = (event as any).sessionId;
       const state = getOrInitState(sessionId);
       const { promiseWord, maxRetries, summaryPath } = config;
 
       // 1. 마지막 메시지 확인
-      const messages = await client.session.messages(sessionId);
+      const messagesResponse = await client.session.messages({ path: { id: sessionId } });
+      
+      if (messagesResponse.error || !messagesResponse.data) return;
+
+      const messages = messagesResponse.data;
       const lastMessage = messages[messages.length - 1];
 
-      if (!lastMessage || lastMessage.role !== "assistant") return;
+      if (!lastMessage) return;
 
       const lastContent = lastMessage.parts.find((p) => p.type === "text")?.text || "";
 
@@ -83,9 +88,8 @@ export const RalphLoopPlugin: Plugin = async ({ directory, client }) => {
 
       // 2. 재시도 횟수 확인
       if (state.retryCount >= maxRetries) {
-        await client.toast(
-          `[Ralph Loop] 최대 재시도 횟수에 도달했습니다 (${maxRetries}). 루프를 중단합니다.`,
-        );
+        // Toast 기능이 없을 경우 콘솔 출력으로 대체
+        console.warn(`[Ralph Loop] 최대 재시도 횟수에 도달했습니다 (${maxRetries}). 루프를 중단합니다.`);
         sessionRegistry.delete(sessionId);
         return;
       }
@@ -94,19 +98,24 @@ export const RalphLoopPlugin: Plugin = async ({ directory, client }) => {
       state.retryCount++;
 
       // 요약 생성
-      const summary = await client.session.summarize(sessionId);
+      const summaryResponse = await client.session.summarize({ path: { id: sessionId } });
+      
+      if (summaryResponse.error || !summaryResponse.data) return;
+      const summary = summaryResponse.data;
 
       // 요약 저장 (디렉토리 생성 포함)
-      // directory는 문자열 경로이므로 fs를 사용하여 저장
       const sessionSummaryDir = path.join(directory, summaryPath, sessionId);
       await fs.mkdir(sessionSummaryDir, { recursive: true });
       const filePath = path.join(sessionSummaryDir, "ralph_summary.md");
 
-      await fs.writeFile(filePath, summary, "utf8");
+      await fs.writeFile(filePath, typeof summary === 'string' ? summary : String(summary), "utf8");
 
       // 세션 재시작
-      await client.session.delete(sessionId);
-      const newSession = await client.session.create();
+      await client.session.delete({ path: { id: sessionId } });
+      const newSessionResponse = await client.session.create({});
+
+      if (newSessionResponse.error || !newSessionResponse.data) return;
+      const newSession = newSessionResponse.data;
 
       // 상태 이관 (retryCount 승계, 중복 주입 방지 플래그 설정)
       sessionRegistry.set(newSession.id, {
@@ -116,23 +125,42 @@ export const RalphLoopPlugin: Plugin = async ({ directory, client }) => {
       });
       sessionRegistry.delete(sessionId);
 
-      const restartPrompt = `이전 세션의 요약 내용입니다:\n\n${summary}\n\n위 내용을 바탕으로 작업을 계속해 주세요.\n(중요: 모든 작업이 완료되면 반드시 "${promiseWord}"를 출력하세요.)`;
+      const restartPrompt = `이전 세션의 요약 내용입니다:\n\n${summary}\n\n위 내용을 바탕으로 작업을 계속해 주세요.\n\n[Ralph Loop 플러그인] 모든 작업이 완료되면 반드시 "${promiseWord}"를 출력하세요.`;
 
-      await client.session.prompt(newSession.id, restartPrompt);
+      await client.session.prompt({
+        path: { id: newSession.id },
+        body: { parts: [{ type: "text", text: restartPrompt }] }
+      });
     },
     "chat.message": async (input, output) => {
-      const sessionId = output.sessionId;
+      const sessionId = (output as any).sessionId || (output as any).message?.sessionID;
+      if (!sessionId) return;
+      
       const state = getOrInitState(sessionId);
 
       state.messageCount++;
 
-      // 첫 번째 메시지이고 지시사항 건너뛰기 플래그가 없을 때만 지시사항 추가
-      if (state.messageCount === 1 && !state.skipInstruction) {
-        const instruction = `\n\n(중요: 모든 작업이 완료되면 반드시 '${config.promiseWord}'을 출력하세요.)`;
+      // 사용자 입력 메시지에서 'ralph' 키워드 확인 (대소문자 무관)
+      const userInputText = (typeof input === 'string' ? input : String(input)).toLowerCase();
+      const containsRalphKeyword = userInputText.includes('ralph');
+
+      // 프롬프트 인젝션 조건:
+      // 1. 첫 번째 메시지이고 지시사항 건너뛰기 플래그가 없을 때
+      // 2. 또는 메시지에 'ralph' 키워드가 포함되어 있을 때
+      const shouldInjectInstruction = (
+        (state.messageCount === 1 && !state.skipInstruction) || 
+        containsRalphKeyword
+      );
+
+      if (shouldInjectInstruction) {
+        const instruction = `\n\n[Ralph Loop 플러그인] 모든 작업이 완료되면 반드시 '${config.promiseWord}'을 출력하세요.`;
         output.parts.push({
           type: "text",
           text: instruction,
-        });
+          id: `instruction-${Date.now()}`,
+          sessionID: sessionId,
+          messageID: (output as any).message?.id || 'unknown',
+        } as any);
       }
     },
   };
