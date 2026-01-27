@@ -41,7 +41,7 @@ describe("Ralph Loop Plugin Scenarios", () => {
     })) as any;
   });
 
-  it("최초 프롬프트 인젝션 (chat.message 훅)", async () => {
+  it("첫 메시지에서는 프롬프트 인젝션 미발생 (키워드 없음)", async () => {
     const input = "프로젝트 구조 분석해줘";
     const output = {
       sessionId: "sess_123",
@@ -50,17 +50,17 @@ describe("Ralph Loop Plugin Scenarios", () => {
 
     await pluginInstance["chat.message"](input, output);
 
-    expect(output.parts.length).toBe(1);
-    expect(output.parts[0].text).toContain(
-      "[Ralph Loop 플러그인] 모든 작업이 완료되면 반드시 'DONE'을 출력하세요.",
-    );
-
-    // 두 번째 메시지에서는 추가되지 않아야 함
-    await pluginInstance["chat.message"](input, output);
-    expect(output.parts.length).toBe(1);
+    // 키워드가 없으므로 인젝션되지 않아야 함
+    expect(output.parts.length).toBe(0);
   });
 
-  it("Promise Word 감지 시 루프 종료", async () => {
+  it("Promise Word 감지 시 루프 종료 (활성화된 세션)", async () => {
+    // 먼저 ralph 키워드로 세션 활성화
+    await pluginInstance["chat.message"]("ralph에게 작업 요청", {
+      sessionId: "sess_123",
+      parts: [],
+    });
+
     // 마지막 메시지에 DONE 포함
     mockClient.session.messages.mockResolvedValue({
       data: [
@@ -85,6 +85,12 @@ describe("Ralph Loop Plugin Scenarios", () => {
   });
 
   it("Promise Word 부재 시 루프 실행 (summarize, delete, create, prompt 호출)", async () => {
+    // 먼저 ralph 키워드로 세션 활성화
+    await pluginInstance["chat.message"]("ralph에게 작업 요청", {
+      sessionId: "sess_123",
+      parts: [],
+    });
+
     // 마지막 메시지에 DONE 없음
     mockClient.session.messages.mockResolvedValue({
       data: [
@@ -127,6 +133,12 @@ describe("Ralph Loop Plugin Scenarios", () => {
   });
 
   it("최대 반복 횟수 도달 시 중단 및 로그 출력", async () => {
+    // 세션 활성화
+    await pluginInstance["chat.message"]("ralph에게 작업 요청", {
+      sessionId: "sess_retry",
+      parts: [],
+    });
+
     mockClient.session.messages.mockResolvedValue({
       data: [
         {
@@ -160,6 +172,12 @@ describe("Ralph Loop Plugin Scenarios", () => {
   });
 
   it("세션 ID가 변경되어도 retryCount가 유지되어야 함 (QA 결함 1 재현)", async () => {
+    // 세션 활성화
+    await pluginInstance["chat.message"]("ralph에게 작업 요청", {
+      sessionId: "sess_1",
+      parts: [],
+    });
+
     mockClient.session.messages.mockResolvedValue({
       data: [
         { role: "assistant", parts: [{ type: "text", text: "작업 중..." }] },
@@ -197,41 +215,23 @@ describe("Ralph Loop Plugin Scenarios", () => {
     );
   });
 
-  it("새 세션의 첫 메시지에서 지시사항 중복 주입 방지 (QA 결함 2 재현)", async () => {
-    // 세션 재생성 시나리오
+  it("비활성화된 세션에서는 이벤트 무시", async () => {
     mockClient.session.messages.mockResolvedValue({
       data: [
-        { role: "assistant", parts: [{ type: "text", text: "계속..." }] },
+        { role: "assistant", parts: [{ type: "text", text: "작업 완료..." }] },
       ],
       error: undefined,
     });
-    mockClient.session.create.mockResolvedValue({
-      data: { id: "sess_new" },
-      error: undefined,
-    });
 
-    // 1. 루프 발생 (sess_old -> sess_new)
+    // ralph 키워드 없이 세션 시작 (비활성화 상태)
     await pluginInstance.event({
-      event: { type: "session.idle", sessionId: "sess_old" },
+      event: { type: "session.idle", sessionId: "sess_inactive" },
     });
 
-    // 2. sess_new에 대한 첫 메시지(사용자 또는 시스템 프롬프트) 발생 시 chat.message 훅 동작
-    const output = {
-      sessionId: "sess_new",
-      parts: [{ type: "text", text: "이전 세션 요약..." }], // 이미 프롬프트에 지시사항이 포함되어 있을 수 있음
-    };
-
-    await pluginInstance["chat.message"]("입력", output);
-
-    // 새 세션의 첫 프롬프트에 이미 지시사항이 포함되어 있다면, chat.message에서 또 추가하면 안 됨.
-    // 현재 코드(src/index.ts)는 restartPrompt에 지시사항을 포함하고(라인 79),
-    // chat.message에서도 messageCount === 1이면 추가함(라인 90).
-    // 만약 client.session.prompt 호출이 chat.message 훅을 트리거한다면 중복 발생.
-    // (이 테스트는 chat.message 훅 단독으로도 이미 이관된 상태를 인지해야 함을 검증)
-
-    // 중복 주입 방지 로직이 없다면 output.parts에 지시사항이 추가되어 길이가 2가 됨.
-    // 결함 수정 후에는 추가되지 않아야 함.
-    expect(output.parts.length).toBe(1);
+    // 비활성화된 세션에서는 아무 작업도 실행되지 않아야 함
+    expect(mockClient.session.summarize).not.toHaveBeenCalled();
+    expect(mockClient.session.create).not.toHaveBeenCalled();
+    expect(mockClient.session.delete).not.toHaveBeenCalled();
   });
 
   it("사용자 메시지에 'ralph' 키워드가 포함되면 프롬프트 인젝션 발생", async () => {

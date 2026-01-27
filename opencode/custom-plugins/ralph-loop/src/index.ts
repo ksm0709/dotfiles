@@ -14,6 +14,7 @@ interface SessionState {
   retryCount: number;
   messageCount: number;
   skipInstruction?: boolean;
+  isActive: boolean; // ralph-loop이 이 세션에서 활성화되었는지 여부
 }
 
 export const RalphLoopPlugin: Plugin = async (ctx) => {
@@ -52,7 +53,7 @@ export const RalphLoopPlugin: Plugin = async (ctx) => {
 
   const getOrInitState = (sessionId: string): SessionState => {
     if (!sessionRegistry.has(sessionId)) {
-      sessionRegistry.set(sessionId, { retryCount: 0, messageCount: 0 });
+      sessionRegistry.set(sessionId, { retryCount: 0, messageCount: 0, isActive: false });
     }
     return sessionRegistry.get(sessionId)!;
   };
@@ -66,6 +67,10 @@ export const RalphLoopPlugin: Plugin = async (ctx) => {
 
       const sessionId = (event as any).sessionId;
       const state = getOrInitState(sessionId);
+      
+      // ralph-loop이 활성화되지 않은 세션은 무시
+      if (!state.isActive) return;
+      
       const { promiseWord, maxRetries, summaryPath } = config;
 
       // 1. 마지막 메시지 확인
@@ -117,11 +122,12 @@ export const RalphLoopPlugin: Plugin = async (ctx) => {
       if (newSessionResponse.error || !newSessionResponse.data) return;
       const newSession = newSessionResponse.data;
 
-      // 상태 이관 (retryCount 승계, 중복 주입 방지 플래그 설정)
+      // 상태 이관 (retryCount 승계, 활성화 상태 유지)
       sessionRegistry.set(newSession.id, {
         retryCount: state.retryCount,
         messageCount: 0,
         skipInstruction: true,
+        isActive: true, // 새 세션에서도 ralph-loop 활성화 상태 유지
       });
       sessionRegistry.delete(sessionId);
 
@@ -144,15 +150,10 @@ export const RalphLoopPlugin: Plugin = async (ctx) => {
       const userInputText = (typeof input === 'string' ? input : String(input)).toLowerCase();
       const containsRalphKeyword = userInputText.includes('ralph');
 
-      // 프롬프트 인젝션 조건:
-      // 1. 첫 번째 메시지이고 지시사항 건너뛰기 플래그가 없을 때
-      // 2. 또는 메시지에 'ralph' 키워드가 포함되어 있을 때
-      const shouldInjectInstruction = (
-        (state.messageCount === 1 && !state.skipInstruction) || 
-        containsRalphKeyword
-      );
-
-      if (shouldInjectInstruction) {
+      // 오직 'ralph' 키워드가 포함되어 있을 때만 프롬프트 인젝션 및 세션 활성화
+      if (containsRalphKeyword) {
+        // 이 세션에서 ralph-loop을 활성화
+        state.isActive = true;
         const instruction = `\n\n[Ralph Loop 플러그인] 모든 작업이 완료되면 반드시 '${config.promiseWord}'을 출력하세요.`;
         output.parts.push({
           type: "text",
