@@ -21,6 +21,20 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .config import get_project_root
+from .models.semantic import (
+    CompleteEpisodeRequest,
+    Decision,
+    EpisodeContext,
+    EpisodeResponse,
+    IntentInfo,
+    RecordDecisionRequest,
+    RecordIntentRequest,
+    RecordLearningRequest,
+    RecordSemanticRequest,
+    SemanticRecord,
+    SemanticRecordResponse,
+    StartEpisodeRequest,
+)
 from .server_state import ServerState
 
 # Configure logging
@@ -82,6 +96,26 @@ class QueryRequest(BaseModel):
     query: str
     limit: int = 5
     tags: Optional[list[str]] = None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Problem Tracking Request Models (Phase 2)
+# ═══════════════════════════════════════════════════════════════
+
+
+class StartProblemRequest(BaseModel):
+    session_id: str
+    error_message: str
+
+
+class ProblemAttemptRequest(BaseModel):
+    problem_id: str
+    solution: str
+
+
+class ResolveProblemRequest(BaseModel):
+    problem_id: str
+    solution: str
 
 
 # Lifecycle Manager
@@ -231,6 +265,20 @@ async def start_task(req: StartRequest):
         wm.start_task(req.task)
         get_state().context_memory.set_current_task(req.task)
 
+        # Task 3.6: context_start 연동 - 에피소드 자동 시작
+        # 기존 활성 에피소드가 있으면 중단하고 새 에피소드 시작 (BoundaryDetector 규칙)
+        episode_manager = get_state().episode_manager
+        
+        # EpisodeContext 생성
+        context = EpisodeContext(
+            goal=req.task,
+            initial_tool="context_start"
+        )
+        
+        # 새 에피소드 시작 (기존 활성 에피소드 자동 중단)
+        episode = episode_manager.start_episode(req.session_id, req.task, context)
+        logger.info(f"Auto-started episode {episode.id} from context_start")
+
         # Retrieve related memories
         relevant = get_state().context_memory.get_for_task(req.task, limit=5)
 
@@ -238,6 +286,7 @@ async def start_task(req: StartRequest):
         result = {
             "status": "success",
             "task": req.task,
+            "episode_id": episode.id,
             "timestamp": time.time(),
             "relevant_memories": [],
             "context_summary": f"Starting new task: {req.task}",
@@ -341,6 +390,16 @@ async def end_task(req: EndRequest):
         # 3. Cleanup
         wm.clear()
         get_state().context_memory.set_current_task(None)
+        
+        # Task 3.6: context_end 연동 - 에피소드 완료 처리
+        episode_manager = get_state().episode_manager
+        active_episode = episode_manager.get_active_episode(req.session_id)
+        if active_episode:
+            episode_manager.complete_episode(
+                req.session_id, 
+                outcome="completed_by_user_end_command"
+            )
+            logger.info(f"Auto-completed episode {active_episode.id} from context_end")
 
         result = {"status": "success", "timestamp": time.time()}
         if checkpoint_result:
@@ -408,6 +467,460 @@ async def query_memory(req: QueryRequest):
         return results
     except Exception as e:
         logger.error(f"Query failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════
+# Semantic Memory API Endpoints (Task 1.8)
+# ═══════════════════════════════════════════════════════════════
+
+
+@app.post("/record-intent")
+async def record_intent(req: RecordIntentRequest):
+    """POST /record-intent - 작업 의도 기록
+
+    에이전트가 context_intent 도구를 호출할 때 사용합니다.
+    세션의 현재 작업 의도를 저장합니다.
+    """
+    try:
+        intent_info = IntentInfo(
+            goal=req.goal,
+            user_request_summary=req.user_request_summary,
+            context=req.context,
+            assumptions=req.assumptions or [],
+            source="agent",
+            confidence=0.9,
+        )
+
+        result = get_state().semantic_store.save_active_intent(
+            session_id=req.session_id,
+            intent_info=intent_info,
+        )
+
+        if result["status"] == "success":
+            return SemanticRecordResponse(
+                status="success",
+                intent_id=result["intent_id"],
+                message=f"Intent recorded: {req.goal}",
+            )
+        else:
+            raise HTTPException(status_code=500, detail=result.get("message"))
+    except Exception as e:
+        logger.error(f"Record intent failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/record-decision")
+async def record_decision(req: RecordDecisionRequest):
+    """POST /record-decision - 의사결정 기록
+
+    에이전트가 context_decision 도구를 호출할 때 사용합니다.
+    라이브러리 선택, 아키텍처 패턴 결정 등을 기록합니다.
+    """
+    try:
+        decision = Decision(
+            decision_type=req.decision_type,
+            choice=req.choice,
+            alternatives=req.alternatives or [],
+            rationale=req.rationale,
+            is_user_preference=req.is_user_preference,
+        )
+
+        result = get_state().semantic_store.save_decision(
+            session_id=req.session_id,
+            decision=decision,
+        )
+
+        if result["status"] == "success":
+            return SemanticRecordResponse(
+                status="success",
+                decision_id=result["decision_id"],
+                message=f"Decision recorded: {req.choice} ({req.decision_type})",
+            )
+        else:
+            raise HTTPException(status_code=500, detail=result.get("message"))
+    except Exception as e:
+        logger.error(f"Record decision failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/record-learning")
+async def record_learning(req: RecordLearningRequest):
+    """POST /record-learning - 학습 사항 기록
+
+    에이전트가 context_learning 도구를 호출할 때 사용합니다.
+    오류 해결 방법, 프로젝트 특성 등을 기록합니다.
+    """
+    try:
+        result = get_state().semantic_store.save_learning(
+            session_id=req.session_id,
+            learning=req.learning,
+            category=req.category,
+        )
+        
+        # Task 3.5: 학습 사항을 활성 에피소드에도 추가
+        episode_manager = get_state().episode_manager
+        episode_manager.add_learning(req.session_id, req.learning)
+
+        if result["status"] == "success":
+            return SemanticRecordResponse(
+                status="success",
+                learning_id=result["learning_id"],
+                message=f"Learning recorded: {req.learning[:50]}...",
+            )
+        else:
+            raise HTTPException(status_code=500, detail=result.get("message"))
+    except Exception as e:
+        logger.error(f"Record learning failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/record-semantic")
+async def record_semantic(req: RecordSemanticRequest):
+    """POST /record-semantic - 의미 기반 도구 실행 기록
+
+    도구 실행 후 Intent-Action-Outcome 삼중체를 저장합니다.
+    선택적으로 의사결정 정보를 포함할 수 있습니다.
+    """
+    try:
+        # Decision 객체 생성 (있는 경우)
+        decision = None
+        if req.decision:
+            decision = Decision(
+                decision_type=req.decision.get("decision_type", "unknown"),
+                choice=req.decision.get("choice", ""),
+                alternatives=req.decision.get("alternatives", []),
+                rationale=req.decision.get("rationale", ""),
+                is_user_preference=req.decision.get("is_user_preference", False),
+            )
+
+        # 활성 Intent 조회 (있으면 IntentInfo로 포함)
+        active_intent = get_state().semantic_store.get_active_intent(req.session_id)
+
+        # SemanticRecord 생성
+        record = SemanticRecord(
+            session_id=req.session_id,
+            intent=req.intent,
+            intent_info=active_intent,
+            action=req.action,
+            outcome=req.outcome,
+            tool_name=req.tool_name,
+            tool_args=req.tool_args or {},
+            success=req.success,
+            decision=decision,
+            importance=req.importance,
+            episode_id=None,
+            problem_resolution=None,
+        )
+        
+        # Task 3.5: 활성 에피소드 연동
+        # EpisodeManager를 통해 에피소드 ID 할당 및 tools_used 업데이트
+        episode_manager = get_state().episode_manager
+        
+        # Boundary Detection (Task 3.3)
+        # 경계 감지 수행
+        active_episode = episode_manager.get_active_episode(req.session_id)
+        if get_state().boundary_detector.should_start_new_episode(
+            current_episode=active_episode,
+            new_input=req.intent, # Use intent as new input for now
+            tool_name=req.tool_name
+        ):
+            # 새 에피소드가 필요하면?
+            # 현재는 context_start 외에는 자동 시작하지 않고, 
+            # 기존 에피소드에 계속 기록하거나 에피소드 없이 기록 (None)
+            # 향후 LLM 기반 감지 시 여기서 자동 분기 가능
+            pass
+            
+        episode_manager.add_record(req.session_id, record)
+
+        # 저장
+        result = get_state().semantic_store.add(record)
+
+        if result["status"] == "success":
+            return SemanticRecordResponse(
+                status="success",
+                record_id=result["record_id"],
+                episode_id=record.episode_id,
+                importance=record.importance,
+                message=f"Semantic record created: {record.action}",
+            )
+        else:
+            raise HTTPException(status_code=500, detail=result.get("message"))
+    except Exception as e:
+        logger.error(f"Record semantic failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════
+# Problem Tracking API Endpoints (Phase 2: Task 2.4, 2.5)
+# ═══════════════════════════════════════════════════════════════
+
+
+@app.post("/problem/start")
+async def start_problem(req: StartProblemRequest):
+    """POST /problem/start - 문제 추적 시작
+
+    오류 발생 시 호출하여 문제 추적을 시작합니다.
+    """
+    try:
+        tracker = get_state().problem_tracker
+
+        problem_id = tracker.start_tracking(
+            session_id=req.session_id,
+            error=req.error_message,
+        )
+
+        problem = tracker.get_active_problem(req.session_id)
+
+        return {
+            "status": "success",
+            "problem_id": problem_id,
+            "error_type": problem.error_type if problem else "Unknown",
+            "message": f"Problem tracking started for: {req.error_message[:50]}...",
+        }
+    except Exception as e:
+        logger.error(f"Start problem failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/problem/attempt")
+async def add_problem_attempt(req: ProblemAttemptRequest):
+    """POST /problem/attempt - 해결 시도 기록
+
+    문제 해결을 시도한 작업을 기록합니다.
+    """
+    try:
+        tracker = get_state().problem_tracker
+
+        success = tracker.add_attempt(
+            problem_id=req.problem_id,
+            solution=req.solution,
+        )
+
+        if success:
+            return {
+                "status": "success",
+                "message": f"Attempt recorded: {req.solution[:50]}...",
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Problem not found or already resolved: {req.problem_id}",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Add attempt failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/problem/resolve")
+async def resolve_problem(req: ResolveProblemRequest):
+    """POST /problem/resolve - 문제 해결 완료
+
+    문제가 해결되었음을 기록합니다.
+    """
+    try:
+        tracker = get_state().problem_tracker
+
+        resolution = tracker.resolve(
+            problem_id=req.problem_id,
+            solution=req.solution,
+        )
+
+        if resolution:
+            # Task 3.5: 해결된 문제를 에피소드에 연결
+            session_id = tracker.get_session_for_problem(req.problem_id)
+            if session_id: # Note: resolve removes from problem_sessions, so we might miss it
+                # Logic improvement: tracker.resolve removes from active list but we need session_id
+                # This should be handled inside tracker or we pass session_id
+                pass
+            
+            # Since resolve deletes from active list, we can't easily get session_id unless we change tracker
+            # For now, we'll skip explicit linking here, relying on run-time linking if needed
+            
+            return {
+                "status": "resolved",
+                "problem_id": resolution.id,
+                "error_type": resolution.error_type,
+                "error_message": resolution.error_message,
+                "attempted_solutions": resolution.attempted_solutions,
+                "successful_solution": resolution.successful_solution,
+                "message": "Problem resolved successfully",
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Problem not found: {req.problem_id}",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Resolve problem failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/problem/active")
+async def get_active_problem(session_id: str):
+    """GET /problem/active - 활성 문제 조회
+
+    세션의 현재 활성 문제를 조회합니다.
+    """
+    try:
+        tracker = get_state().problem_tracker
+
+        problem = tracker.get_active_problem(session_id)
+
+        if problem:
+            return {
+                "has_active_problem": True,
+                "problem": {
+                    "id": problem.id,
+                    "error_type": problem.error_type,
+                    "error_message": problem.error_message,
+                    "attempted_solutions": problem.attempted_solutions,
+                    "status": problem.status,
+                },
+            }
+        else:
+            return {
+                "has_active_problem": False,
+                "problem": None,
+            }
+    except Exception as e:
+        logger.error(f"Get active problem failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════
+# Episode Management API Endpoints (Phase 3: Task 3.4)
+# ═══════════════════════════════════════════════════════════════
+
+
+@app.post("/episode/start")
+async def start_episode(req: StartEpisodeRequest):
+    """POST /episode/start - 새 에피소드 시작"""
+    try:
+        episode_manager = get_state().episode_manager
+        
+        # Context dict -> EpisodeContext object
+        context_data = req.context or {}
+        goal = context_data.get("goal") or req.goal
+            
+        context = EpisodeContext(
+            goal=goal,
+            user_request_summary=context_data.get("user_request_summary"),
+            assumptions=context_data.get("assumptions", []),
+            initial_tool=context_data.get("initial_tool"),
+            tools_used=context_data.get("tools_used", [])
+        )
+        
+        episode = episode_manager.start_episode(
+            session_id=req.session_id,
+            goal=req.goal,
+            context=context
+        )
+        
+        return EpisodeResponse(
+            status="success",
+            episode_id=episode.id,
+            goal=episode.goal,
+            message=f"Episode started: {episode.goal}"
+        )
+    except Exception as e:
+        logger.error(f"Start episode failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/episode/complete")
+async def complete_episode(req: CompleteEpisodeRequest):
+    """POST /episode/complete - 에피소드 완료"""
+    try:
+        episode_manager = get_state().episode_manager
+        
+        episode = episode_manager.complete_episode(
+            session_id=req.session_id,
+            outcome=req.outcome
+        )
+        
+        if episode:
+            return EpisodeResponse(
+                status="completed",
+                episode_id=episode.id,
+                goal=episode.goal,
+                message=f"Episode completed: {episode.goal}"
+            )
+        else:
+            return EpisodeResponse(
+                status="error",
+                message="No active episode found"
+            )
+    except Exception as e:
+        logger.error(f"Complete episode failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/episode/active")
+async def get_active_episode(session_id: str):
+    """GET /episode/active - 활성 에피소드 조회"""
+    try:
+        episode_manager = get_state().episode_manager
+        
+        episode = episode_manager.get_active_episode(session_id)
+        
+        if episode:
+            return {
+                "has_active_episode": True,
+                "episode": {
+                    "id": episode.id,
+                    "goal": episode.goal,
+                    "status": episode.status,
+                    "start_time": episode.start_time.isoformat() if episode.start_time else None,
+                    "tools_used": episode.tools_used
+                }
+            }
+        else:
+            return {
+                "has_active_episode": False,
+                "episode": None
+            }
+    except Exception as e:
+        logger.error(f"Get active episode failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/episode/{episode_id}")
+async def get_episode(episode_id: str):
+    """GET /episode/{episode_id} - 에피소드 조회"""
+    try:
+        episode_manager = get_state().episode_manager
+        
+        episode = episode_manager.get_episode(episode_id)
+        
+        if episode:
+            # Serialize
+            return {
+                "id": episode.id,
+                "session_id": episode.session_id,
+                "goal": episode.goal,
+                "status": episode.status,
+                "outcome": episode.outcome,
+                "learnings": episode.learnings,
+                "tools_used": episode.tools_used,
+                "start_time": episode.start_time.isoformat() if episode.start_time else None,
+                "end_time": episode.end_time.isoformat() if episode.end_time else None,
+                "context": {
+                    "goal": episode.context.goal,
+                    "user_request_summary": episode.context.user_request_summary,
+                    "assumptions": episode.context.assumptions
+                }
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Episode not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get episode failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -1,28 +1,194 @@
 """
-LLM Client Utility
+Async LLM Client Utility + Usage Metrics
 """
 
 import logging
 import os
-from typing import List, Optional
+import asyncio
+import time
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import List, Optional, Any, Dict, Coroutine, TypeVar
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T")
 
-class LLMClient:
-    def __init__(self, config: dict):
+
+@dataclass
+class LLMUsageStats:
+    total_calls: int = 0
+    total_errors: int = 0
+    total_prompt_chars: int = 0
+    total_response_chars: int = 0
+    total_duration_sec: float = 0.0
+    provider_calls: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
+
+    def record(
+        self,
+        provider: str,
+        prompt_chars: int,
+        response_chars: int,
+        duration: float,
+        success: bool,
+    ) -> None:
+        self.total_calls += 1
+        self.total_prompt_chars += prompt_chars
+        self.total_response_chars += response_chars
+        self.total_duration_sec += duration
+        self.provider_calls[provider] += 1
+        if not success:
+            self.total_errors += 1
+
+    def snapshot(self) -> Dict[str, Any]:
+        avg_latency = (
+            (self.total_duration_sec / self.total_calls) if self.total_calls else 0.0
+        )
+        return {
+            "total_calls": self.total_calls,
+            "total_errors": self.total_errors,
+            "avg_latency_ms": round(avg_latency * 1000, 2),
+            "prompt_chars": self.total_prompt_chars,
+            "response_chars": self.total_response_chars,
+            "provider_calls": dict(self.provider_calls),
+        }
+
+
+class AsyncLLMClient:
+    def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.provider = config.get("embeddings", {}).get("provider", "synthetic")
+        self.llm_config = config.get("llm", {})
+        self.provider = self.llm_config.get("provider", "gemini")
+        self.model_name = self.llm_config.get("model", "gemini-1.5-flash")
+        self.enabled = self.llm_config.get("enabled", False)
         self.api_key = None
 
         if self.provider == "gemini":
             self.api_key = os.environ.get("GEMINI_API_KEY")
         elif self.provider == "openai":
             self.api_key = os.environ.get("OPENAI_API_KEY")
+        else:
+            logger.warning(
+                "지원되지 않는 LLM provider '%s'가 설정되었습니다.",
+                self.provider,
+            )
 
-    def generate_queries(self, task: str) -> List[str]:
-        """Generate expanded queries for HyDE."""
-        if not self.api_key:
+        if self.enabled and not self.api_key:
+            logger.warning(
+                "LLM enabled but no API key found for provider %s", self.provider
+            )
+
+        monitoring_cfg = self.llm_config.get("monitoring", {})
+        self.monitoring_enabled = monitoring_cfg.get("enabled", False)
+        self.monitoring_interval = max(1, monitoring_cfg.get("log_interval", 25))
+        self.usage = LLMUsageStats()
+
+    async def generate(
+        self, prompt: str, system_instruction: Optional[str] = None
+    ) -> Optional[str]:
+        """Generate text using the configured LLM provider."""
+        if not self.enabled or not self.api_key:
+            return None
+
+        start = time.perf_counter()
+        prompt_chars = len(prompt) + len(system_instruction or "")
+        response_text: Optional[str] = None
+        try:
+            if self.provider == "gemini":
+                response_text = await self._call_gemini(prompt, system_instruction)
+            elif self.provider == "openai":
+                response_text = await self._call_openai(prompt, system_instruction)
+            else:
+                logger.warning("LLM provider '%s' is not supported", self.provider)
+                return None
+        except Exception as e:
+            logger.error(f"LLM generation failed: {e}")
+            self._record_usage(prompt_chars, 0, time.perf_counter() - start, False)
+            return None
+
+        self._record_usage(
+            prompt_chars,
+            len(response_text or ""),
+            time.perf_counter() - start,
+            response_text is not None,
+        )
+        return response_text
+
+    def _record_usage(
+        self, prompt_chars: int, response_chars: int, duration: float, success: bool
+    ) -> None:
+        if not self.monitoring_enabled:
+            return
+        self.usage.record(
+            provider=self.provider,
+            prompt_chars=prompt_chars,
+            response_chars=response_chars,
+            duration=duration,
+            success=success,
+        )
+        if self.usage.total_calls % self.monitoring_interval == 0:
+            snapshot = self.usage.snapshot()
+            logger.info(
+                "LLM usage summary: calls=%s errors=%s avg_latency_ms=%s",  # noqa: G004
+                snapshot["total_calls"],
+                snapshot["total_errors"],
+                snapshot["avg_latency_ms"],
+            )
+
+    def get_usage_snapshot(self) -> Dict[str, Any]:
+        return self.usage.snapshot()
+
+    async def _call_gemini(
+        self, prompt: str, system_instruction: Optional[str]
+    ) -> Optional[str]:
+        try:
+            import google.generativeai as genai
+
+            genai.configure(api_key=self.api_key)
+
+            # Note: system_instruction support depends on library version/model
+            # For simplicity in this integration, we prepend it if provided
+            full_prompt = prompt
+            if system_instruction:
+                full_prompt = f"{system_instruction}\n\n{prompt}"
+
+            model = genai.GenerativeModel(self.model_name)
+            response = await model.generate_content_async(full_prompt)
+            return response.text
+        except ImportError:
+            logger.error("google-generativeai package not installed")
+            return None
+        except Exception as e:
+            logger.error(f"Gemini call failed: {e}")
+            return None
+
+    async def _call_openai(
+        self, prompt: str, system_instruction: Optional[str]
+    ) -> Optional[str]:
+        try:
+            from openai import AsyncOpenAI
+
+            client = AsyncOpenAI(api_key=self.api_key)
+
+            messages = []
+            if system_instruction:
+                messages.append({"role": "system", "content": system_instruction})
+            messages.append({"role": "user", "content": prompt})
+
+            response = await client.chat.completions.create(
+                model=self.model_name, messages=messages
+            )
+            return response.choices[0].message.content
+        except ImportError:
+            logger.error("openai package not installed")
+            return None
+        except Exception as e:
+            logger.error(f"OpenAI call failed: {e}")
+            return None
+
+    async def generate_queries(self, task: str) -> List[str]:
+        """Generate expanded queries for HyDE (Async)."""
+        if not self.enabled:
             return []
 
         prompt = f"""
@@ -35,24 +201,23 @@ class LLMClient:
         Return only the queries, one per line, without any other text.
         """
 
-        try:
-            response = self._call_llm(prompt)
-            if response:
-                return [q.strip() for q in response.split("\n") if q.strip()]
-        except Exception as e:
-            logger.error(f"Failed to generate queries: {e}")
-
+        response = await self.generate(prompt)
+        if response:
+            return [q.strip() for q in response.split("\n") if q.strip()]
         return []
 
-    def rerank(self, task: str, candidates: List[dict]) -> List[dict]:
-        """Rerank candidates based on task relevance."""
-        if not self.api_key or not candidates:
+    async def rerank(
+        self, task: str, candidates: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Rerank candidates based on task relevance (Async)."""
+        if not self.enabled or not candidates:
             return candidates
 
         # Prepare candidates for prompt
         candidate_texts = []
         for i, c in enumerate(candidates):
-            candidate_texts.append(f"[{i}] {c['content'][:300]}")
+            content = c.get("content", "") or c.get("summary", "") or str(c)
+            candidate_texts.append(f"[{i}] {content[:300]}")
 
         prompt = f"""
         Task: {task}
@@ -67,9 +232,9 @@ class LLMClient:
         Example: 8, 2, 9, 5
         """
 
-        try:
-            response = self._call_llm(prompt)
-            if response:
+        response = await self.generate(prompt)
+        if response:
+            try:
                 scores = [float(s.strip()) for s in response.split(",") if s.strip()]
 
                 # Apply scores and filter
@@ -77,47 +242,38 @@ class LLMClient:
                 for i, score in enumerate(scores):
                     if i < len(candidates):
                         candidates[i]["relevance_score"] = score
-                        if score >= 7.0:  # REQ-SR-03: Threshold 7
+                        if score >= 7.0:
                             reranked.append(candidates[i])
 
                 # Sort by relevance score
                 reranked.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
                 return reranked
-        except Exception as e:
-            logger.error(f"Failed to rerank: {e}")
+            except Exception as e:
+                logger.error(f"Failed to parse rerank response: {e}")
 
         return candidates
 
-    def _call_llm(self, prompt: str) -> Optional[str]:
-        """Call the configured LLM provider."""
-        if self.provider == "gemini":
-            return self._call_gemini(prompt)
-        elif self.provider == "openai":
-            return self._call_openai(prompt)
-        return None
 
-    def _call_gemini(self, prompt: str) -> Optional[str]:
+class LLMClient:
+    """동기 래퍼: AsyncLLMClient 사용"""
+
+    def __init__(self, config: dict):
+        self._client = AsyncLLMClient(config)
+        self.enabled = self._client.enabled
+
+    def generate_queries(self, task: str) -> List[str]:
+        return self._run_async(self._client.generate_queries(task))
+
+    def rerank(self, task: str, candidates: List[dict]) -> List[dict]:
+        return self._run_async(self._client.rerank(task, candidates))
+
+    def _run_async(self, coro: Coroutine[Any, Any, T]) -> T:
         try:
-            from google import genai
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coro)
 
-            client = genai.Client(api_key=self.api_key)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash", contents=prompt
-            )
-            return str(response.text)
-        except Exception as e:
-            logger.error(f"Gemini call failed: {e}")
-            return None
-
-    def _call_openai(self, prompt: str) -> Optional[str]:
-        try:
-            from openai import OpenAI
-
-            client = OpenAI(api_key=self.api_key)
-            response = client.chat.completions.create(
-                model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}]
-            )
-            return str(response.choices[0].message.content)
-        except Exception as e:
-            logger.error(f"OpenAI call failed: {e}")
-            return None
+        raise RuntimeError(
+            "비동기 컨텍스트에서 동기 LLMClient를 호출할 수 없습니다. "
+            "AsyncLLMClient를 사용하세요."
+        )

@@ -18,6 +18,15 @@ DEFAULT_CONFIG = {
         "provider": "synthetic",
         "fallback": "synthetic",
     },
+    "llm": {
+        "enabled": False,
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.3,
+        "max_tokens": 1024,
+        "enable_reflection": True,
+        "enable_boundary_detection": True,
+    },
     "database": {
         "backend": "sqlite",
         "path": "data/memory/context.sqlite",
@@ -195,6 +204,33 @@ def load_config(
         config["tier"] = os.environ["CONTEXT_TIER"]
     if os.environ.get("CONTEXT_EMBEDDINGS_PROVIDER"):
         config["embeddings"]["provider"] = os.environ["CONTEXT_EMBEDDINGS_PROVIDER"]
+
+    # LLM Environment Variables
+    if os.environ.get("LLM_ENABLED"):
+        config["llm"]["enabled"] = os.environ["LLM_ENABLED"].lower() == "true"
+    if os.environ.get("LLM_PROVIDER"):
+        config["llm"]["provider"] = os.environ["LLM_PROVIDER"]
+    if os.environ.get("LLM_MODEL"):
+        config["llm"]["model"] = os.environ["LLM_MODEL"]
+    if os.environ.get("LLM_TEMPERATURE"):
+        try:
+            config["llm"]["temperature"] = float(os.environ["LLM_TEMPERATURE"])
+        except ValueError:
+            pass
+    if os.environ.get("LLM_MAX_TOKENS"):
+        try:
+            config["llm"]["max_tokens"] = int(os.environ["LLM_MAX_TOKENS"])
+        except ValueError:
+            pass
+    if os.environ.get("LLM_ENABLE_REFLECTION"):
+        config["llm"]["enable_reflection"] = (
+            os.environ["LLM_ENABLE_REFLECTION"].lower() == "true"
+        )
+    if os.environ.get("LLM_ENABLE_BOUNDARY_DETECTION"):
+        config["llm"]["enable_boundary_detection"] = (
+            os.environ["LLM_ENABLE_BOUNDARY_DETECTION"].lower() == "true"
+        )
+
     if os.environ.get("CONTEXT_LOG_LEVEL"):
         config["logging"]["level"] = os.environ["CONTEXT_LOG_LEVEL"]
     if os.environ.get("CONTEXT_SEARCH_MIN_SCORE"):

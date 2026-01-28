@@ -90,7 +90,7 @@ class ContextAPIClient:
         try:
             # Use shorter timeout for health check
             res = cast(Dict[str, Any], self._request("GET", "/health", timeout=1))
-            return res.get("status") == "ok"
+            return bool(res.get("status") == "ok")
         except Exception:
             return False
 
@@ -129,3 +129,77 @@ class ContextAPIClient:
         if session_id:
             endpoint += f"?session_id={session_id}"
         return cast(Dict[str, Any], self._request("GET", endpoint))
+
+    def record_intent(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Record intent."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/record-intent", payload)
+        )
+
+    def record_decision(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Record decision."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/record-decision", payload)
+        )
+
+    def record_learning(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Record learning."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/record-learning", payload)
+        )
+
+    def record_semantic(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Record semantic memory."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/record-semantic", payload)
+        )
+
+    # ═══════════════════════════════════════════════════════════════
+    # Problem Tracking (Phase 2: Task 2.4, 2.5)
+    # ═══════════════════════════════════════════════════════════════
+
+    def problem_start(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Start problem tracking."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/problem/start", payload)
+        )
+
+    def problem_attempt(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Record problem attempt."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/problem/attempt", payload)
+        )
+
+    def problem_resolve(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Resolve problem."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/problem/resolve", payload)
+        )
+
+    # ═══════════════════════════════════════════════════════════════
+    # Episode Management (Phase 3: Task 3.4)
+    # ═══════════════════════════════════════════════════════════════
+
+    def episode_start(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Start new episode."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/episode/start", payload)
+        )
+
+    def episode_complete(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Complete episode."""
+        return cast(
+            Dict[str, Any], self._request("POST", "/episode/complete", payload)
+        )
+
+    def episode_active(self, session_id: str) -> Dict[str, Any]:
+        """Get active episode."""
+        return cast(
+            Dict[str, Any], self._request("GET", f"/episode/active?session_id={session_id}")
+        )
+
+    def episode_get(self, episode_id: str) -> Dict[str, Any]:
+        """Get episode details."""
+        return cast(
+            Dict[str, Any], self._request("GET", f"/episode/{episode_id}")
+        )

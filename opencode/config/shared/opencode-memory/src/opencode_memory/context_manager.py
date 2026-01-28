@@ -8,6 +8,7 @@ Handles server discovery, auto-bootstrapping, and API communication.
 import fcntl
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -116,30 +117,41 @@ class ContextManager:
                         return
 
                     # Otherwise, do a quick health check
-                    if client.health_check():
-                        logger.info(f"Connected to existing server on port {port}")
-                        self.client = client
-                        return
-                    else:
-                        # Retry once before giving up
-                        logger.warning(
-                            "Existing server unresponsive. Retrying in 0.5s..."
-                        )
-                        time.sleep(0.5)
+                    # Robust retry logic (REQ-LC-02)
+                    max_retries = 3
+                    for attempt in range(max_retries):
                         if client.health_check():
-                            logger.info(
-                                f"Connected to existing server on port {port} (after retry)"
-                            )
+                            logger.info(f"Connected to existing server on port {port}")
                             self.client = client
                             return
+                        if attempt < max_retries - 1:
+                            logger.warning(
+                                f"Existing server unresponsive (attempt {attempt+1}/{max_retries}). Retrying in 0.5s..."
+                            )
+                            time.sleep(0.5)
 
-                        logger.warning(
-                            "Existing server is unresponsive. Removing registry."
-                        )
+                    logger.warning(
+                        "Existing server is unresponsive after retries. Cleaning up..."
+                    )
+
+                    # REQ-LC-01: Terminate zombie process
+                    if pid:
                         try:
-                            registry_path.unlink()
-                        except Exception:
+                            # Check if process is alive
+                            os.kill(pid, 0)
+                            logger.warning(f"Killing unresponsive server process (PID: {pid})")
+                            os.kill(pid, signal.SIGTERM)
+                            # Give it a moment to die
+                            time.sleep(0.5)
+                        except OSError:
+                            # Process already dead or access denied
                             pass
+
+                    try:
+                        registry_path.unlink()
+                        logger.info("Removed stale server registry")
+                    except Exception:
+                        pass
             except Exception as e:
                 logger.warning(f"Failed to read registry: {e}")
 
@@ -332,17 +344,20 @@ class ContextManager:
             return {"status": "error", "message": "Client not initialized"}
         try:
             # Use shorter timeout for recording to avoid freezing TUI
-            return self.client._request(
-                "POST",
-                "/record",
-                {
-                    "session_id": self.session_id,
-                    "type": type,
-                    "content": content,
-                    "importance": importance,
-                    "metadata": metadata,
-                },
-                timeout=1,
+            return cast(
+                dict,
+                self.client._request(
+                    "POST",
+                    "/record",
+                    {
+                        "session_id": self.session_id,
+                        "type": type,
+                        "content": content,
+                        "importance": importance,
+                        "metadata": metadata,
+                    },
+                    timeout=1,
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to record {type}: {e}")
@@ -354,10 +369,8 @@ class ContextManager:
     def record_fix(self, content: str, metadata: dict | None = None) -> dict:
         return self._record("fix", content, "high", metadata)
 
-    def record_decision(self, content: str, metadata: dict | None = None) -> dict:
-        return self._record("decision", content, "high", metadata)
-
     def record_change(self, content: str, file_path: str | None = None) -> dict:
+
         metadata = {"file": file_path} if file_path else None
         return self._record("change", content, "medium", metadata)
 
@@ -367,6 +380,88 @@ class ContextManager:
 
     def record_note(self, content: str, importance: str = "low") -> dict:
         return self._record("note", content, importance)
+
+    def record_intent(self, payload: dict) -> dict:
+        """Record intent via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.record_intent(payload)
+
+    def record_decision(self, content: str | dict, metadata: dict | None = None) -> dict:
+        """
+        Record decision via API.
+        Supports both legacy (str content) and new (dict payload) formats.
+        """
+        if isinstance(content, dict):
+            # New format: payload
+            if not self.client:
+                return {"status": "error", "message": "Client not initialized"}
+            return self.client.record_decision(content)
+        else:
+            # Legacy format: content string
+            return self._record("decision", content, "high", metadata)
+
+    def record_learning(self, payload: dict) -> dict:
+        """Record learning via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.record_learning(payload)
+
+    def record_semantic(self, payload: dict) -> dict:
+        """Record semantic memory via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.record_semantic(payload)
+
+    # ═══════════════════════════════════════════════════════════════
+    # Problem Tracking (Phase 2: Task 2.4, 2.5)
+    # ═══════════════════════════════════════════════════════════════
+
+    def problem_start(self, payload: dict) -> dict:
+        """Start problem tracking via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.problem_start(payload)
+
+    def problem_attempt(self, payload: dict) -> dict:
+        """Record problem attempt via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.problem_attempt(payload)
+
+    def problem_resolve(self, payload: dict) -> dict:
+        """Resolve problem via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.problem_resolve(payload)
+
+    # ═══════════════════════════════════════════════════════════════
+    # Episode Management (Phase 3: Task 3.4)
+    # ═══════════════════════════════════════════════════════════════
+
+    def episode_start(self, payload: dict) -> dict:
+        """Start episode via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.episode_start(payload)
+
+    def episode_complete(self, payload: dict) -> dict:
+        """Complete episode via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.episode_complete(payload)
+
+    def episode_active(self, session_id: str) -> dict:
+        """Get active episode via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.episode_active(session_id)
+
+    def episode_get(self, episode_id: str) -> dict:
+        """Get episode via API."""
+        if not self.client:
+            return {"status": "error", "message": "Client not initialized"}
+        return self.client.episode_get(episode_id)
 
     def get_compaction_context(self) -> str:
         """Return context for compaction."""
@@ -379,7 +474,7 @@ class ContextManager:
             logger.info(
                 f"Successfully retrieved compaction context ({len(context)} chars)"
             )
-            return context
+            return str(context)
         except Exception as e:
             logger.error(f"Failed to get compaction context: {e}")
             return f"## Preserved Context\n(Error: {e})"
