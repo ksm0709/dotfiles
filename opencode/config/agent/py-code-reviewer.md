@@ -1,7 +1,6 @@
 ---
 description: Python 코드 품질 및 표준 검토 전문가입니다. PM이 코드 리뷰 단계에서 approve/reject 결과를 반환하는 서브 에이전트입니다.
 mode: subagent
-thinking: high
 tools:
   bash: true
   read: true

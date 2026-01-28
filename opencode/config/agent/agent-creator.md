@@ -1,7 +1,6 @@
 ---
 description: 사용자 요청에 따라 새로운 에이전트 파일을 생성하는 메타 에이전트입니다.
 mode: all
-thinking: high
 tools:
   bash: true
   write: true

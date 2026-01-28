@@ -1,7 +1,6 @@
 ---
 description: 오픈스펙 기반의 엄밀한 기능 검증 및 품질 보증 전문가입니다. PM이 코드 리뷰 후 최종 품질 검증을 위해 위임하는 서브 에이전트입니다.
 mode: subagent
-thinking: high
 tools:
   bash: true
   write: true
