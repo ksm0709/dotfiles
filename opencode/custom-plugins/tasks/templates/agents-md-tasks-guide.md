@@ -10,20 +10,52 @@ Tasks Plugin은 에이전트가 작업을 체계적으로 관리할 수 있도�
 Tasks Plugin은 `tasks_*` 와일드카드로 모든 작업 관리 도구를 제공합니다.
 
 **주요 도구:**
-- **`tasks_init(agent, title, file)`**: 작업 목록 초기화
-- **`tasks_list(agent, format)`**: 작업 목록 조회
-- **`tasks_update(agent, id, status)`**: 작업 상태 업데이트
-- **`tasks_complete(agent, id)`**: 작업 완료 처리
-- **`tasks_add(agent, title, details, parent)`**: 새 작업 추가
-- **`tasks_remove(agent, id)`**: 작업 제거
-- **`tasks_status(agent)`**: 전체 진행 상황 확인
+- **`tasks_init(agent, title)`**: 작업 목록 초기화
+  - 반환값: `{ title, agent, fileName, taskIds, totalTasks }`
+- **`tasks_list(format)`**: 작업 목록 조회 (format: markdown/json/table)
+  - 반환값: `{ success, taskLists, formattedOutput, message }`
+- **`tasks_update(id, status)`**: 작업 상태 업데이트 (status: pending/in_progress/completed)
+  - 반환값: `{ success, taskId, status, message }`
+- **`tasks_complete(id)`**: 작업 완료 처리
+  - 반환값: `{ success, taskId, message }`
+- **`tasks_add(title, parent)`**: 새 작업 추가 (parent는 선택적)
+  - 반환값: `{ success, title, parent, details, message }`
+- **`tasks_remove(id)`**: 작업 제거
+  - 반환값: `{ success, taskId, taskTitle, message }`
+- **`tasks_status()`**: 전체 진행 상황 확인
+  - 반환값: `{ success, summaries, formattedOutput, message }`
 
 **사용 예시:**
+```typescript
+// 작업 목록 초기화
+const initResult = tasks_init(agent="senior-sw-engineer", title="API-구현")
+// 응답 예시:
+// ✅ Task list "API-구현" initialized successfully for agent "senior-sw-engineer"
+// 📁 File: senior-sw-engineer-api-구현.md
+// 📊 Total tasks: 0
+
+// 작업 추가
+tasks_add(title="요구사항 분석")
+tasks_add(title="설계")
+tasks_add(title="구현")
+
+// 작업 상태 업데이트
+tasks_update(id="1", status="in_progress")
+
+// 작업 완료
+tasks_complete(id="1")
+
+// 진행 상황 확인
+const statusResult = tasks_status()
+
+// 작업 목록 조회
+const listResult = tasks_list(format="markdown")
 ```
-tasks_init(agent="senior-sw-engineer", title="API-구현", file="./tasks.md")
-tasks_update(agent="senior-sw-engineer", id="task-1", status="in_progress")
-tasks_complete(agent="senior-sw-engineer", id="task-1")
-```
+
+**주요 특짱:**
+- 세션 ID는 OpenCode 컨텍스트에서 자동으로 추출됩니다 (에이전트가 입력할 필요 없음)
+- 모든 도구는 반환값을 통해 결과를 전달합니다 (TUI 깨짐 없음)
+- 작업 파일은 `~/.local/share/opencode/tasks/{session-id}/`에 저장됩니다
 
 #### 에이전트 설정
 

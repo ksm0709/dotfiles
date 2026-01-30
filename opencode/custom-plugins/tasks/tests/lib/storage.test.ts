@@ -1,29 +1,46 @@
-import { Storage } from '../../src/lib/storage';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 
+// Storage will be imported dynamically to handle env var changes
 describe('Storage', () => {
-  let storage: Storage;
+  let Storage: typeof import('../../src/lib/storage').Storage;
+  let storage: InstanceType<typeof Storage>;
   let tempDir: string;
   let originalHome: string | undefined;
+  let originalXdgDataHome: string | undefined;
 
   beforeEach(async () => {
     // Create temporary directory for testing
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tasks-test-'));
     
-    // Mock HOME environment variable
+    // Mock environment variables BEFORE importing Storage
     originalHome = process.env.HOME;
+    originalXdgDataHome = process.env.XDG_DATA_HOME;
+    delete process.env.XDG_DATA_HOME;  // Force fallback to HOME/.local/share
     process.env.HOME = tempDir;
     
-    // Create storage instance - this now reads HOME at construction time
+    // Clear module cache and re-import to pick up new env vars
+    jest.resetModules();
+    const storageModule = await import('../../src/lib/storage');
+    Storage = storageModule.Storage;
+    
+    // Create storage instance
     storage = new Storage();
   });
 
   afterEach(async () => {
-    // Restore original HOME
+    // Restore environment variables
     if (originalHome !== undefined) {
       process.env.HOME = originalHome;
+    } else {
+      delete process.env.HOME;
+    }
+    
+    if (originalXdgDataHome !== undefined) {
+      process.env.XDG_DATA_HOME = originalXdgDataHome;
+    } else {
+      delete process.env.XDG_DATA_HOME;
     }
     
     // Clean up temp directory
@@ -34,24 +51,24 @@ describe('Storage', () => {
     }
   });
 
-  describe('ensureAgentDir', () => {
-    it('should create agent directory if it does not exist', async () => {
-      const agentDir = await storage.ensureAgentDir('test-agent');
+  describe('ensureSessionDir', () => {
+    it('should create session directory if it does not exist', async () => {
+      const sessionDir = await storage.ensureSessionDir('test-session');
       
-      const expectedDir = path.join(tempDir, '.config', 'opencode', 'tasks', 'test-agent');
-      expect(agentDir).toBe(expectedDir);
+      const expectedDir = path.join(tempDir, '.local', 'share', 'opencode', 'tasks', 'test-session');
+      expect(sessionDir).toBe(expectedDir);
       
       // Verify directory was created
-      const stats = await fs.stat(agentDir);
+      const stats = await fs.stat(sessionDir);
       expect(stats.isDirectory()).toBe(true);
     });
 
     it('should return existing directory without error', async () => {
       // Create directory first
-      const firstDir = await storage.ensureAgentDir('test-agent');
+      const firstDir = await storage.ensureSessionDir('test-session');
       
       // Call again - should not throw
-      const secondDir = await storage.ensureAgentDir('test-agent');
+      const secondDir = await storage.ensureSessionDir('test-session');
       
       expect(secondDir).toBe(firstDir);
     });
@@ -59,36 +76,36 @@ describe('Storage', () => {
 
   describe('saveTaskList and readTaskList', () => {
     it('should save and read task list content', async () => {
-      const agent = 'test-agent';
+      const sessionId = 'test-session';
       const title = 'Test Task List';
-      const content = '# Task List: Test\n\n**에이전트**: test-agent';
+      const content = '# Task List: Test\n\n**세션**: test-session';
       
-      await storage.saveTaskList(agent, title, content);
+      await storage.saveTaskList(sessionId, title, content);
       
-      const readContent = await storage.readTaskList(agent, title);
+      const readContent = await storage.readTaskList(sessionId, title);
       expect(readContent).toBe(content);
     });
 
     it('should sanitize file names with special characters', async () => {
-      const agent = 'test-agent';
+      const sessionId = 'test-session';
       const title = 'Test @#$%^&*() Task !!!';
       const content = 'Test content';
       
-      await storage.saveTaskList(agent, title, content);
+      await storage.saveTaskList(sessionId, title, content);
       
       // Should be readable with original title
-      const readContent = await storage.readTaskList(agent, title);
+      const readContent = await storage.readTaskList(sessionId, title);
       expect(readContent).toBe(content);
     });
 
     it('should handle Korean characters in file names', async () => {
-      const agent = 'test-agent';
+      const sessionId = 'test-session';
       const title = '한국어 테스트';
       const content = 'Test content';
       
-      await storage.saveTaskList(agent, title, content);
+      await storage.saveTaskList(sessionId, title, content);
       
-      const readContent = await storage.readTaskList(agent, title);
+      const readContent = await storage.readTaskList(sessionId, title);
       expect(readContent).toBe(content);
     });
 
@@ -98,51 +115,51 @@ describe('Storage', () => {
     });
 
     it('should truncate long file names', async () => {
-      const agent = 'test-agent';
+      const sessionId = 'test-session';
       const title = 'a'.repeat(100);
       const content = 'Test content';
       
-      await storage.saveTaskList(agent, title, content);
+      await storage.saveTaskList(sessionId, title, content);
       
-      const readContent = await storage.readTaskList(agent, title);
+      const readContent = await storage.readTaskList(sessionId, title);
       expect(readContent).toBe(content);
     });
 
     it('should throw error if read fails with non-ENOENT error', async () => {
       // Create a directory with the same name as the file to cause EISDIR error
-      const agent = 'test-agent-read-error';
+      const sessionId = 'test-session-read-error';
       const title = 'test-title';
       
-      await storage.ensureAgentDir(agent);
+      await storage.ensureSessionDir(sessionId);
       
       // Create a directory instead of a file
-      const agentDir = path.join(tempDir, '.config', 'opencode', 'tasks', agent);
+      const sessionDir = path.join(tempDir, '.local', 'share', 'opencode', 'tasks', sessionId);
       const fileName = title.toLowerCase().replace(/[^a-z0-9가-힣\s-]/g, '').replace(/\s+/g, '-').substring(0, 50) + '.md';
-      await fs.mkdir(path.join(agentDir, fileName));
+      await fs.mkdir(path.join(sessionDir, fileName));
       
-      await expect(storage.readTaskList(agent, title)).rejects.toThrow();
+      await expect(storage.readTaskList(sessionId, title)).rejects.toThrow();
     });
   });
 
   describe('listTaskFiles', () => {
-    it('should return empty array for non-existent agent', async () => {
-      const files = await storage.listTaskFiles('non-existent-agent');
+    it('should return empty array for non-existent session', async () => {
+      const files = await storage.listTaskFiles('non-existent-session');
       expect(files).toEqual([]);
     });
 
     it('should list only markdown files', async () => {
-      const agent = 'test-agent-md-files';
+      const sessionId = 'test-session-md-files';
       
       // Create task lists
-      await storage.saveTaskList(agent, 'Task 1', 'Content 1');
-      await storage.saveTaskList(agent, 'Task 2', 'Content 2');
+      await storage.saveTaskList(sessionId, 'Task 1', 'Content 1');
+      await storage.saveTaskList(sessionId, 'Task 2', 'Content 2');
       
       // Create a non-markdown file directly
-      const agentDir = path.join(tempDir, '.config', 'opencode', 'tasks', agent);
-      await fs.mkdir(agentDir, { recursive: true });
-      await fs.writeFile(path.join(agentDir, 'other.txt'), 'not a task');
+      const sessionDir = path.join(tempDir, '.local', 'share', 'opencode', 'tasks', sessionId);
+      await fs.mkdir(sessionDir, { recursive: true });
+      await fs.writeFile(path.join(sessionDir, 'other.txt'), 'not a task');
       
-      const files = await storage.listTaskFiles(agent);
+      const files = await storage.listTaskFiles(sessionId);
       expect(files).toHaveLength(2);
       expect(files.every((f: string) => f.endsWith('.md'))).toBe(true);
     });
@@ -160,12 +177,12 @@ describe('Storage', () => {
 
     it('should throw error if readdir fails with non-ENOENT error', async () => {
       // Create a file instead of a directory to cause ENOTDIR error
-      const agent = 'test-agent-notdir';
-      const baseDir = path.join(tempDir, '.config', 'opencode', 'tasks');
+      const sessionId = 'test-session-notdir';
+      const baseDir = path.join(tempDir, '.local', 'share', 'opencode', 'tasks');
       await fs.mkdir(baseDir, { recursive: true });
-      await fs.writeFile(path.join(baseDir, agent), 'not a directory');
+      await fs.writeFile(path.join(baseDir, sessionId), 'not a directory');
       
-      await expect(storage.listTaskFiles(agent)).rejects.toThrow();
+      await expect(storage.listTaskFiles(sessionId)).rejects.toThrow();
     });
   });
 

@@ -6,26 +6,40 @@ import { Formatter } from '../lib/formatter';
 import { TaskStatusSummary, TaskDetail, TaskStatus } from '../types';
 
 export interface StatusArgs {
-  agent: string;
+  sessionId: string;    // 세션 ID (필수)
 }
 
-export async function statusCommand(args: StatusArgs): Promise<void> {
+export interface StatusResult {
+  success: boolean;
+  summaries: TaskStatusSummary[];
+  formattedOutput: string;
+  message: string;
+}
+
+export async function statusCommand(args: StatusArgs): Promise<StatusResult> {
   const storage = new Storage();
   const parser = new Parser();
   const formatter = new Formatter();
 
   try {
-    const files = await storage.listTaskFiles(args.agent);
+    const files = await storage.listTaskFiles(args.sessionId);
     
     if (files.length === 0) {
-      console.log(`ℹ️ No task lists found for agent: ${args.agent}`);
-      return;
+      return {
+        success: true,
+        summaries: [],
+        formattedOutput: '',
+        message: `No task lists found for session: ${args.sessionId}`
+      };
     }
+
+    const summaries: TaskStatusSummary[] = [];
+    let formattedOutput = '';
 
     // Show status for all task lists
     for (const file of files) {
       const title = file.replace('.md', '');
-      const content = await storage.readTaskList(args.agent, title);
+      const content = await storage.readTaskList(args.sessionId, title);
       
       if (!content) continue;
 
@@ -33,7 +47,7 @@ export async function statusCommand(args: StatusArgs): Promise<void> {
       const stats = calculateStats(taskList.tasks);
 
       const summary: TaskStatusSummary = {
-        agent: args.agent,
+        agent: taskList.agent,
         title: taskList.title,
         status: stats.status,
         completionRate: stats.completionRate,
@@ -42,12 +56,18 @@ export async function statusCommand(args: StatusArgs): Promise<void> {
         currentPhase: taskList.currentPhase
       };
 
-      console.log(formatter.formatStatusSummary(summary));
-      console.log('');
+      summaries.push(summary);
+      formattedOutput += formatter.formatStatusSummary(summary) + '\n\n';
     }
+
+    return {
+      success: true,
+      summaries,
+      formattedOutput,
+      message: `Found ${summaries.length} task list(s)`
+    };
   } catch (error) {
-    console.error('❌ Failed to get status:', error);
-    process.exit(1);
+    throw error;
   }
 }
 

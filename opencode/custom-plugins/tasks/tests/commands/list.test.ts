@@ -2,32 +2,18 @@ import { listCommand, ListArgs } from '../../src/commands/list';
 import { Storage } from '../../src/lib/storage';
 import { Parser } from '../../src/lib/parser';
 import { Formatter } from '../../src/lib/formatter';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
 
 // Mocks
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-
 jest.mock('../../src/lib/storage');
 jest.mock('../../src/lib/parser');
 jest.mock('../../src/lib/formatter');
 
 describe('listCommand', () => {
-  let tempDir: string;
-  let originalHome: string | undefined;
   let mockStorage: jest.Mocked<Storage>;
   let mockParser: jest.Mocked<Parser>;
   let mockFormatter: jest.Mocked<Formatter>;
 
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tasks-list-test-'));
-    originalHome = process.env.HOME;
-    process.env.HOME = tempDir;
-
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
+  beforeEach(() => {
     jest.clearAllMocks();
 
     // Setup mocks
@@ -40,76 +26,58 @@ describe('listCommand', () => {
     (Formatter as jest.MockedClass<typeof Formatter>).mockImplementation(() => mockFormatter);
   });
 
-  afterEach(async () => {
-    if (originalHome !== undefined) {
-      process.env.HOME = originalHome;
-    }
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore
-    }
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-  });
-
-  afterAll(() => {
-    mockConsoleLog.mockRestore();
-    mockConsoleError.mockRestore();
-  });
-
   it('should list tasks in markdown format by default', async () => {
-    const args: ListArgs = { agent: 'test-agent' };
+    const args: ListArgs = { sessionId: 'test-session' };
     const taskList = {
       title: 'Test Project',
       agent: 'test-agent',
+      sessionId: 'test-session',
       createdAt: '2026-01-30',
-      sessionId: 'abc',
-      tasks: []
-    };
-    const markdownContent = '# Task List';
-
-    mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
-    mockStorage.readTaskList.mockResolvedValue(markdownContent);
-    mockParser.parseTaskList.mockReturnValue(taskList as any);
-    mockFormatter.formatAsMarkdown.mockReturnValue('Formatted Markdown');
-
-    await listCommand(args);
-
-    expect(mockStorage.listTaskFiles).toHaveBeenCalledWith('test-agent');
-    expect(mockParser.parseTaskList).toHaveBeenCalledWith(markdownContent);
-    expect(mockFormatter.formatAsMarkdown).toHaveBeenCalledWith(taskList);
-    expect(mockConsoleLog).toHaveBeenCalledWith('Formatted Markdown');
-  });
-
-  it('should list tasks in JSON format', async () => {
-    const args: ListArgs = { agent: 'test-agent', format: 'json' };
-    const taskList = {
-      title: 'Test Project',
-      agent: 'test-agent',
-      createdAt: '2026-01-30',
-      sessionId: 'abc',
       tasks: []
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue('content');
     mockParser.parseTaskList.mockReturnValue(taskList as any);
-    mockFormatter.formatAsJSON.mockReturnValue('{"title":"Test"}');
+    mockFormatter.formatAsMarkdown.mockReturnValue('Formatted Markdown');
 
-    await listCommand(args);
+    const result = await listCommand(args);
 
-    expect(mockFormatter.formatAsJSON).toHaveBeenCalledWith(taskList);
-    expect(mockConsoleLog).toHaveBeenCalledWith('{"title":"Test"}');
+    expect(mockStorage.listTaskFiles).toHaveBeenCalledWith('test-session');
+    expect(mockParser.parseTaskList).toHaveBeenCalledWith('content');
+    expect(mockFormatter.formatAsMarkdown).toHaveBeenCalledWith(taskList);
+    expect(result.success).toBe(true);
+    expect(result.formattedOutput).toContain('Formatted Markdown');
   });
 
-  it('should list tasks in table format', async () => {
-    const args: ListArgs = { agent: 'test-agent', format: 'table' };
+  it('should list tasks in json format', async () => {
+    const args: ListArgs = { sessionId: 'test-session', format: 'json' };
     const taskList = {
       title: 'Test Project',
       agent: 'test-agent',
+      sessionId: 'test-session',
       createdAt: '2026-01-30',
-      sessionId: 'abc',
+      tasks: []
+    };
+
+    mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
+    mockStorage.readTaskList.mockResolvedValue('content');
+    mockParser.parseTaskList.mockReturnValue(taskList as any);
+    mockFormatter.formatAsJSON.mockReturnValue('{"tasks":[]}');
+
+    const result = await listCommand(args);
+
+    expect(mockFormatter.formatAsJSON).toHaveBeenCalledWith(taskList);
+    expect(result.formattedOutput).toContain('{"tasks":[]}');
+  });
+
+  it('should list tasks in table format', async () => {
+    const args: ListArgs = { sessionId: 'test-session', format: 'table' };
+    const taskList = {
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
       tasks: []
     };
 
@@ -118,52 +86,68 @@ describe('listCommand', () => {
     mockParser.parseTaskList.mockReturnValue(taskList as any);
     mockFormatter.formatAsTable.mockReturnValue('Table Output');
 
-    await listCommand(args);
+    const result = await listCommand(args);
 
     expect(mockFormatter.formatAsTable).toHaveBeenCalledWith(taskList);
-    expect(mockConsoleLog).toHaveBeenCalledWith('Table Output');
+    expect(result.formattedOutput).toContain('Table Output');
   });
 
   it('should handle no task lists found', async () => {
-    const args: ListArgs = { agent: 'non-existent' };
+    const args: ListArgs = { sessionId: 'non-existent-session' };
 
     mockStorage.listTaskFiles.mockResolvedValue([]);
 
-    await listCommand(args);
+    const result = await listCommand(args);
 
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('No task lists found')
-    );
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('No task lists found');
   });
 
-  it('should handle multiple task lists', async () => {
-    const args: ListArgs = { agent: 'test-agent' };
-
-    mockStorage.listTaskFiles.mockResolvedValue(['project1.md', 'project2.md']);
-    mockStorage.readTaskList.mockResolvedValue('content');
-    mockParser.parseTaskList.mockReturnValue({
-      title: 'Test',
-      agent: 'test-agent',
-      createdAt: '2026-01-30',
-      sessionId: 'abc',
-      tasks: []
-    } as any);
-    mockFormatter.formatAsMarkdown.mockReturnValue('Formatted');
-
-    await listCommand(args);
-
-    expect(mockStorage.readTaskList).toHaveBeenCalledTimes(2);
-    expect(mockConsoleLog).toHaveBeenCalledTimes(4); // 2 formatted outputs + 2 separators
-  });
-
-  it('should skip files that cannot be read', async () => {
-    const args: ListArgs = { agent: 'test-agent' };
+  it('should handle read error gracefully', async () => {
+    const args: ListArgs = { sessionId: 'test-session' };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue(null);
 
-    await listCommand(args);
+    const result = await listCommand(args);
 
-    expect(mockParser.parseTaskList).not.toHaveBeenCalled();
+    // Should continue without throwing
+    expect(result.success).toBe(true);
+    expect(result.taskLists).toEqual([]);
+  });
+
+  it('should list multiple task lists', async () => {
+    const args: ListArgs = { sessionId: 'test-session' };
+    const taskList1 = {
+      title: 'Project 1',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
+    };
+    const taskList2 = {
+      title: 'Project 2',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
+    };
+
+    mockStorage.listTaskFiles.mockResolvedValue(['project1.md', 'project2.md']);
+    mockStorage.readTaskList
+      .mockResolvedValueOnce('content1')
+      .mockResolvedValueOnce('content2');
+    mockParser.parseTaskList
+      .mockReturnValueOnce(taskList1 as any)
+      .mockReturnValueOnce(taskList2 as any);
+    mockFormatter.formatAsMarkdown
+      .mockReturnValueOnce('Project 1 Output')
+      .mockReturnValueOnce('Project 2 Output');
+
+    const result = await listCommand(args);
+
+    expect(mockStorage.readTaskList).toHaveBeenCalledTimes(2);
+    expect(result.success).toBe(true);
+    expect(result.taskLists).toHaveLength(2);
   });
 });

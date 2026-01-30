@@ -5,9 +5,6 @@ import * as path from 'path';
 import * as os from 'os';
 
 // Mocks
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-
 jest.mock('../../src/commands/update');
 
 describe('completeCommand', () => {
@@ -20,8 +17,6 @@ describe('completeCommand', () => {
     originalHome = process.env.HOME;
     process.env.HOME = tempDir;
 
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
     jest.clearAllMocks();
 
     mockUpdateCommand = updateCommand as jest.MockedFunction<typeof updateCommand>;
@@ -36,38 +31,35 @@ describe('completeCommand', () => {
     } catch (error) {
       // Ignore
     }
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-  });
-
-  afterAll(() => {
-    mockConsoleLog.mockRestore();
-    mockConsoleError.mockRestore();
   });
 
   it('should mark task as completed', async () => {
     const args: CompleteArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '1'
     };
 
-    mockUpdateCommand.mockResolvedValue(undefined);
+    mockUpdateCommand.mockResolvedValue({
+      success: true,
+      taskId: '1',
+      status: 'completed',
+      message: 'Task 1 status updated to: completed'
+    });
 
-    await completeCommand(args);
+    const result = await completeCommand(args);
 
     expect(mockUpdateCommand).toHaveBeenCalledWith({
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '1',
       status: 'completed'
     });
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('completed')
-    );
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('completed');
   });
 
   it('should handle error from updateCommand', async () => {
     const args: CompleteArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '1'
     };
 
@@ -78,22 +70,17 @@ describe('completeCommand', () => {
 
   it('should handle non-existent task', async () => {
     const args: CompleteArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '999'
     };
 
-    // Simulate updateCommand failing
-    mockUpdateCommand.mockImplementation(() => {
-      console.error('Task not found');
-      return Promise.resolve();
+    mockUpdateCommand.mockResolvedValue({
+      success: false,
+      taskId: '999',
+      status: 'completed',
+      message: 'Task 999 not found'
     });
 
-    await completeCommand(args);
-
-    expect(mockUpdateCommand).toHaveBeenCalledWith({
-      agent: 'test-agent',
-      id: '999',
-      status: 'completed'
-    });
+    await expect(completeCommand(args)).rejects.toThrow('Task 999 not found');
   });
 });

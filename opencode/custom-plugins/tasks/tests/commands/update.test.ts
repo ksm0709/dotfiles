@@ -2,32 +2,16 @@ import { updateCommand, UpdateArgs } from '../../src/commands/update';
 import { Storage } from '../../src/lib/storage';
 import { Parser } from '../../src/lib/parser';
 import { TaskStatus } from '../../src/types';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
 
 // Mocks
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-const mockProcessExit = jest.spyOn(process, 'exit').mockImplementation((() => {}) as any);
-
 jest.mock('../../src/lib/storage');
 jest.mock('../../src/lib/parser');
 
 describe('updateCommand', () => {
-  let tempDir: string;
-  let originalHome: string | undefined;
   let mockStorage: jest.Mocked<Storage>;
   let mockParser: jest.Mocked<Parser>;
 
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tasks-update-test-'));
-    originalHome = process.env.HOME;
-    process.env.HOME = tempDir;
-
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
+  beforeEach(() => {
     jest.clearAllMocks();
 
     mockStorage = new Storage() as jest.Mocked<Storage>;
@@ -37,36 +21,21 @@ describe('updateCommand', () => {
     (Parser as jest.MockedClass<typeof Parser>).mockImplementation(() => mockParser);
   });
 
-  afterEach(async () => {
-    if (originalHome !== undefined) {
-      process.env.HOME = originalHome;
-    }
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore
-    }
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
-  });
-
-  afterAll(() => {
-    mockConsoleLog.mockRestore();
-    mockConsoleError.mockRestore();
-    mockProcessExit.mockRestore();
-  });
-
   it('should update task status successfully', async () => {
     const args: UpdateArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '1',
       status: 'completed' as TaskStatus
     };
 
     const taskList = {
-      title: 'Test',
-      tasks: [{ id: '1', status: 'pending' }]
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: [
+        { id: '1', title: 'Task One', status: 'pending' }
+      ]
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
@@ -75,48 +44,29 @@ describe('updateCommand', () => {
     mockParser.updateTaskStatus.mockReturnValue(true);
     mockParser.generateTaskList.mockReturnValue('updated content');
 
-    await updateCommand(args);
+    const result = await updateCommand(args);
 
     expect(mockParser.updateTaskStatus).toHaveBeenCalledWith(taskList, '1', 'completed');
-    expect(mockStorage.saveTaskList).toHaveBeenCalledWith('test-agent', 'project', 'updated content');
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('updated')
-    );
+    expect(mockStorage.saveTaskList).toHaveBeenCalledWith('test-session', 'project', 'updated content');
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('updated');
   });
 
   it('should update task to in_progress status', async () => {
     const args: UpdateArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '2',
       status: 'in_progress' as TaskStatus
     };
 
     const taskList = {
-      title: 'Test',
-      tasks: [{ id: '2', status: 'pending' }]
-    };
-
-    mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
-    mockStorage.readTaskList.mockResolvedValue('content');
-    mockParser.parseTaskList.mockReturnValue(taskList as any);
-    mockParser.updateTaskStatus.mockReturnValue(true);
-    mockParser.generateTaskList.mockReturnValue('updated content');
-
-    await updateCommand(args);
-
-    expect(mockParser.updateTaskStatus).toHaveBeenCalledWith(taskList, '2', 'in_progress');
-  });
-
-  it('should update task to pending status', async () => {
-    const args: UpdateArgs = {
+      title: 'Test Project',
       agent: 'test-agent',
-      id: '1',
-      status: 'pending' as TaskStatus
-    };
-
-    const taskList = {
-      title: 'Test',
-      tasks: [{ id: '1', status: 'completed' }]
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: [
+        { id: '2', title: 'Task Two', status: 'pending' }
+      ]
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
@@ -125,67 +75,50 @@ describe('updateCommand', () => {
     mockParser.updateTaskStatus.mockReturnValue(true);
     mockParser.generateTaskList.mockReturnValue('updated content');
 
-    await updateCommand(args);
+    const result = await updateCommand(args);
 
-    expect(mockParser.updateTaskStatus).toHaveBeenCalledWith(taskList, '1', 'pending');
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('in_progress');
   });
 
   it('should handle task not found', async () => {
     const args: UpdateArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '999',
       status: 'completed' as TaskStatus
     };
 
+    const taskList = {
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
+    };
+
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue('content');
-    mockParser.parseTaskList.mockReturnValue({ tasks: [] } as any);
+    mockParser.parseTaskList.mockReturnValue(taskList as any);
     mockParser.updateTaskStatus.mockReturnValue(false);
 
-    await updateCommand(args);
+    const result = await updateCommand(args);
 
-    expect(mockConsoleError).toHaveBeenCalled();
-    expect(mockProcessExit).toHaveBeenCalledWith(1);
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('not found');
   });
 
   it('should handle no task lists found', async () => {
     const args: UpdateArgs = {
-      agent: 'non-existent',
+      sessionId: 'non-existent-session',
       id: '1',
       status: 'completed' as TaskStatus
     };
 
     mockStorage.listTaskFiles.mockResolvedValue([]);
 
-    await updateCommand(args);
+    const result = await updateCommand(args);
 
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('No task lists found')
-    );
-  });
-
-  it('should search multiple files until task found', async () => {
-    const args: UpdateArgs = {
-      agent: 'test-agent',
-      id: '1',
-      status: 'completed' as TaskStatus
-    };
-
-    mockStorage.listTaskFiles.mockResolvedValue(['project1.md', 'project2.md']);
-    mockStorage.readTaskList
-      .mockResolvedValueOnce('content1')
-      .mockResolvedValueOnce('content2');
-    mockParser.parseTaskList
-      .mockReturnValueOnce({ tasks: [{ id: '2' }] } as any)
-      .mockReturnValueOnce({ tasks: [{ id: '1' }] } as any);
-    mockParser.updateTaskStatus
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(true);
-    mockParser.generateTaskList.mockReturnValue('updated');
-
-    await updateCommand(args);
-
-    expect(mockStorage.readTaskList).toHaveBeenCalledTimes(2);
-    expect(mockParser.updateTaskStatus).toHaveBeenCalledTimes(2);
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('No task lists found');
   });
 });

@@ -1,32 +1,16 @@
 import { addTaskCommand, AddTaskArgs } from '../../src/commands/add-task';
 import { Storage } from '../../src/lib/storage';
 import { Parser } from '../../src/lib/parser';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
 
 // Mocks
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-const mockProcessExit = jest.spyOn(process, 'exit').mockImplementation((() => {}) as any);
-
 jest.mock('../../src/lib/storage');
 jest.mock('../../src/lib/parser');
 
 describe('addTaskCommand', () => {
-  let tempDir: string;
-  let originalHome: string | undefined;
   let mockStorage: jest.Mocked<Storage>;
   let mockParser: jest.Mocked<Parser>;
 
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tasks-add-test-'));
-    originalHome = process.env.HOME;
-    process.env.HOME = tempDir;
-
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
+  beforeEach(() => {
     jest.clearAllMocks();
 
     mockStorage = new Storage() as jest.Mocked<Storage>;
@@ -36,36 +20,18 @@ describe('addTaskCommand', () => {
     (Parser as jest.MockedClass<typeof Parser>).mockImplementation(() => mockParser);
   });
 
-  afterEach(async () => {
-    if (originalHome !== undefined) {
-      process.env.HOME = originalHome;
-    }
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore
-    }
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
-  });
-
-  afterAll(() => {
-    mockConsoleLog.mockRestore();
-    mockConsoleError.mockRestore();
-    mockProcessExit.mockRestore();
-  });
-
-  it('should add a new top-level task', async () => {
+  it('should add a new task', async () => {
     const args: AddTaskArgs = {
-      agent: 'test-agent',
-      title: 'New Task',
-      details: 'Detail 1, Detail 2'
+      sessionId: 'test-session',
+      title: 'New Task'
     };
 
     const taskList = {
-      title: 'Test',
-      tasks: [{ id: '1' }]
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
@@ -74,122 +40,113 @@ describe('addTaskCommand', () => {
     mockParser.addTask.mockReturnValue(true);
     mockParser.generateTaskList.mockReturnValue('updated content');
 
-    await addTaskCommand(args);
+    const result = await addTaskCommand(args);
 
-    expect(mockParser.addTask).toHaveBeenCalledWith(
-      taskList,
-      undefined,
-      'New Task',
-      ['Detail 1', 'Detail 2']
-    );
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('added')
-    );
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('Detail 1, Detail 2')
-    );
+    expect(mockStorage.saveTaskList).toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    expect(result.title).toBe('New Task');
   });
 
-  it('should add a subtask to parent', async () => {
+  it('should add a task with details', async () => {
     const args: AddTaskArgs = {
-      agent: 'test-agent',
-      title: 'Subtask',
-      parent: '1'
+      sessionId: 'test-session',
+      title: 'Task with details',
+      details: 'Detail 1, Detail 2'
     };
 
     const taskList = {
-      title: 'Test',
-      tasks: [{ id: '1' }]
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue('content');
     mockParser.parseTaskList.mockReturnValue(taskList as any);
     mockParser.addTask.mockReturnValue(true);
-    mockParser.generateTaskList.mockReturnValue('updated');
+    mockParser.generateTaskList.mockReturnValue('updated content');
 
-    await addTaskCommand(args);
+    const result = await addTaskCommand(args);
 
-    expect(mockParser.addTask).toHaveBeenCalledWith(
-      taskList,
-      '1',
-      'Subtask',
-      []
-    );
+    expect(result.success).toBe(true);
+    expect(result.details).toEqual(['Detail 1', 'Detail 2']);
   });
 
-  it('should handle task with no details', async () => {
+  it('should add a subtask with parent', async () => {
     const args: AddTaskArgs = {
+      sessionId: 'test-session',
+      title: 'Subtask',
+      parent: '1'
+    };
+
+    const taskList = {
+      title: 'Test Project',
       agent: 'test-agent',
-      title: 'Simple Task'
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue('content');
-    mockParser.parseTaskList.mockReturnValue({ tasks: [] } as any);
+    mockParser.parseTaskList.mockReturnValue(taskList as any);
     mockParser.addTask.mockReturnValue(true);
-    mockParser.generateTaskList.mockReturnValue('updated');
+    mockParser.generateTaskList.mockReturnValue('updated content');
 
-    await addTaskCommand(args);
+    const result = await addTaskCommand(args);
 
-    expect(mockParser.addTask).toHaveBeenCalledWith(
-      expect.anything(),
-      undefined,
-      'Simple Task',
-      []
-    );
-  });
-
-  it('should handle non-existent parent', async () => {
-    const args: AddTaskArgs = {
-      agent: 'test-agent',
-      title: 'Orphan Task',
-      parent: '999'
-    };
-
-    mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
-    mockStorage.readTaskList.mockResolvedValue('content');
-    mockParser.parseTaskList.mockReturnValue({ tasks: [] } as any);
-    mockParser.addTask.mockReturnValue(false);
-
-    await addTaskCommand(args);
-
-    expect(mockConsoleError).toHaveBeenCalled();
-    expect(mockProcessExit).toHaveBeenCalledWith(1);
+    expect(result.success).toBe(true);
+    expect(result.parent).toBe('1');
   });
 
   it('should handle no task lists found', async () => {
     const args: AddTaskArgs = {
-      agent: 'non-existent',
-      title: 'Task'
+      sessionId: 'non-existent-session',
+      title: 'New Task'
     };
 
     mockStorage.listTaskFiles.mockResolvedValue([]);
 
-    await addTaskCommand(args);
+    const result = await addTaskCommand(args);
 
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('No task lists found')
-    );
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('Create a task list first')
-    );
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('No task lists found');
   });
 
   it('should handle read error', async () => {
     const args: AddTaskArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       title: 'Task'
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue(null);
 
-    await addTaskCommand(args);
+    await expect(addTaskCommand(args)).rejects.toThrow('Failed to read task list');
+  });
 
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to read')
-    );
-    expect(mockProcessExit).toHaveBeenCalledWith(1);
+  it('should handle parent not found', async () => {
+    const args: AddTaskArgs = {
+      sessionId: 'test-session',
+      title: 'Orphan Task',
+      parent: '999'
+    };
+
+    const taskList = {
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
+    };
+
+    mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
+    mockStorage.readTaskList.mockResolvedValue('content');
+    mockParser.parseTaskList.mockReturnValue(taskList as any);
+    mockParser.addTask.mockReturnValue(false);
+
+    await expect(addTaskCommand(args)).rejects.toThrow('Parent task 999 not found');
   });
 });

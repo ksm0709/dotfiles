@@ -3,52 +3,73 @@
 import { Storage } from '../lib/storage';
 import { Parser } from '../lib/parser';
 import { Formatter } from '../lib/formatter';
+import { TaskList } from '../types';
 
 export interface ListArgs {
-  agent: string;
+  sessionId: string;    // 세션 ID (필수)
   format?: 'markdown' | 'json' | 'table';
 }
 
-export async function listCommand(args: ListArgs): Promise<void> {
+export interface ListResult {
+  success: boolean;
+  taskLists: TaskList[];
+  formattedOutput: string;
+  message: string;
+}
+
+export async function listCommand(args: ListArgs): Promise<ListResult> {
   const storage = new Storage();
   const parser = new Parser();
   const formatter = new Formatter();
 
   try {
-    const files = await storage.listTaskFiles(args.agent);
+    const files = await storage.listTaskFiles(args.sessionId);
     
     if (files.length === 0) {
-      console.log(`ℹ️ No task lists found for agent: ${args.agent}`);
-      return;
+      return {
+        success: true,
+        taskLists: [],
+        formattedOutput: '',
+        message: `No task lists found for session: ${args.sessionId}`
+      };
     }
 
     const format = args.format || 'markdown';
+    const taskLists: TaskList[] = [];
+    let formattedOutput = '';
 
     for (const file of files) {
       const title = file.replace('.md', '');
-      const content = await storage.readTaskList(args.agent, title);
+      const content = await storage.readTaskList(args.sessionId, title);
       
       if (!content) continue;
 
       const taskList = parser.parseTaskList(content);
+      taskLists.push(taskList);
 
       switch (format) {
         case 'json':
-          console.log(formatter.formatAsJSON(taskList));
+          formattedOutput += formatter.formatAsJSON(taskList) + '\n';
           break;
         case 'table':
-          console.log(formatter.formatAsTable(taskList));
+          formattedOutput += formatter.formatAsTable(taskList) + '\n';
           break;
         case 'markdown':
         default:
-          console.log(formatter.formatAsMarkdown(taskList));
+          formattedOutput += formatter.formatAsMarkdown(taskList) + '\n';
           break;
       }
       
-      console.log('\n---\n');
+      formattedOutput += '\n---\n';
     }
+
+    return {
+      success: true,
+      taskLists,
+      formattedOutput,
+      message: `Found ${taskLists.length} task list(s)`
+    };
   } catch (error) {
-    console.error('❌ Failed to list tasks:', error);
-    process.exit(1);
+    throw error;
   }
 }

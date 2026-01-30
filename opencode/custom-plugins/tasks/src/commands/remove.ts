@@ -1,37 +1,46 @@
 // src/commands/remove.ts
 
-import * as readline from 'readline';
 import { Storage } from '../lib/storage';
 import { Parser } from '../lib/parser';
 
 export interface RemoveArgs {
-  agent: string;
-  id: string;
-  force?: boolean;
+  sessionId: string;    // 세션 ID (필수)
+  id: string;           // 작업 ID (필수)
+  force?: boolean;      // 강제 삭제 (선택)
 }
 
-export async function removeCommand(args: RemoveArgs): Promise<void> {
+export interface RemoveResult {
+  success: boolean;
+  taskId: string;
+  taskTitle?: string;
+  message: string;
+}
+
+export async function removeCommand(args: RemoveArgs): Promise<RemoveResult> {
   const storage = new Storage();
   const parser = new Parser();
 
   try {
-    const files = await storage.listTaskFiles(args.agent);
+    const files = await storage.listTaskFiles(args.sessionId);
     
     if (files.length === 0) {
-      console.log(`ℹ️ No task lists found for agent: ${args.agent}`);
-      return;
+      return {
+        success: false,
+        taskId: args.id,
+        message: `No task lists found for session: ${args.sessionId}`
+      };
     }
 
     // Try to find the task in any of the task lists
     for (const file of files) {
       const title = file.replace('.md', '');
-      const content = await storage.readTaskList(args.agent, title);
+      const content = await storage.readTaskList(args.sessionId, title);
       
       if (!content) continue;
 
       const taskList = parser.parseTaskList(content);
       
-      // Find the task to get its title for confirmation
+      // Find the task to get its title
       const findTask = (tasks: any[]): any | null => {
         for (const task of tasks) {
           if (task.id === args.id) return task;
@@ -46,46 +55,29 @@ export async function removeCommand(args: RemoveArgs): Promise<void> {
       const taskToRemove = findTask(taskList.tasks);
 
       if (taskToRemove) {
-        // Confirm if not forced
-        if (!args.force) {
-          const confirmed = await confirmRemoval(taskToRemove.title);
-          if (!confirmed) {
-            console.log('❌ Removal cancelled');
-            return;
-          }
-        }
-
         const removed = parser.removeTask(taskList, args.id);
 
         if (removed) {
           // Save updated content
           const updatedContent = parser.generateTaskList(taskList);
-          await storage.saveTaskList(args.agent, title, updatedContent);
+          await storage.saveTaskList(args.sessionId, title, updatedContent);
           
-          console.log(`✅ Task ${args.id} "${taskToRemove.title}" removed`);
-          return;
+          return {
+            success: true,
+            taskId: args.id,
+            taskTitle: taskToRemove.title,
+            message: `Task ${args.id} "${taskToRemove.title}" removed`
+          };
         }
       }
     }
 
-    console.log(`❌ Task ${args.id} not found`);
-    process.exit(1);
+    return {
+      success: false,
+      taskId: args.id,
+      message: `Task ${args.id} not found`
+    };
   } catch (error) {
-    console.error('❌ Failed to remove task:', error);
-    process.exit(1);
+    throw error;
   }
-}
-
-function confirmRemoval(taskTitle: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
-    rl.question(`⚠️ Are you sure you want to remove task "${taskTitle}"? (y/N): `, (answer) => {
-      rl.close();
-      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
-    });
-  });
 }

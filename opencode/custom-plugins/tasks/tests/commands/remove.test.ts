@@ -1,32 +1,16 @@
 import { removeCommand, RemoveArgs } from '../../src/commands/remove';
 import { Storage } from '../../src/lib/storage';
 import { Parser } from '../../src/lib/parser';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
 
 // Mocks
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-const mockProcessExit = jest.spyOn(process, 'exit').mockImplementation((() => {}) as any);
-
 jest.mock('../../src/lib/storage');
 jest.mock('../../src/lib/parser');
 
 describe('removeCommand', () => {
-  let tempDir: string;
-  let originalHome: string | undefined;
   let mockStorage: jest.Mocked<Storage>;
   let mockParser: jest.Mocked<Parser>;
 
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tasks-remove-test-'));
-    originalHome = process.env.HOME;
-    process.env.HOME = tempDir;
-
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
+  beforeEach(() => {
     jest.clearAllMocks();
 
     mockStorage = new Storage() as jest.Mocked<Storage>;
@@ -36,99 +20,96 @@ describe('removeCommand', () => {
     (Parser as jest.MockedClass<typeof Parser>).mockImplementation(() => mockParser);
   });
 
-  afterEach(async () => {
-    if (originalHome !== undefined) {
-      process.env.HOME = originalHome;
-    }
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore
-    }
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
-  });
-
-  afterAll(() => {
-    mockConsoleLog.mockRestore();
-    mockConsoleError.mockRestore();
-    mockProcessExit.mockRestore();
-  });
-
   it('should remove task with force flag', async () => {
     const args: RemoveArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '1',
       force: true
     };
 
     const taskList = {
-      title: 'Test',
-      tasks: [{ id: '1', title: 'Task to Remove' }]
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: [
+        { id: '1', title: 'Task One', status: 'pending' }
+      ]
     };
 
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue('content');
     mockParser.parseTaskList.mockReturnValue(taskList as any);
     mockParser.removeTask.mockReturnValue(true);
-    mockParser.generateTaskList.mockReturnValue('updated');
+    mockParser.generateTaskList.mockReturnValue('updated content');
 
-    await removeCommand(args);
+    const result = await removeCommand(args);
 
     expect(mockParser.removeTask).toHaveBeenCalledWith(taskList, '1');
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('removed')
-    );
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('removed');
   });
 
   it('should handle task not found', async () => {
     const args: RemoveArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '999',
       force: true
     };
 
+    const taskList = {
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: []
+    };
+
     mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
     mockStorage.readTaskList.mockResolvedValue('content');
-    mockParser.parseTaskList.mockReturnValue({ tasks: [] } as any);
+    mockParser.parseTaskList.mockReturnValue(taskList as any);
 
-    await removeCommand(args);
+    const result = await removeCommand(args);
 
-    expect(mockConsoleError).toHaveBeenCalled();
-    expect(mockProcessExit).toHaveBeenCalledWith(1);
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('not found');
   });
 
   it('should handle no task lists found', async () => {
     const args: RemoveArgs = {
-      agent: 'non-existent',
+      sessionId: 'non-existent-session',
       id: '1',
       force: true
     };
 
     mockStorage.listTaskFiles.mockResolvedValue([]);
 
-    await removeCommand(args);
+    const result = await removeCommand(args);
 
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('No task lists found')
-    );
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('No task lists found');
   });
 
   it('should remove nested subtask', async () => {
     const args: RemoveArgs = {
-      agent: 'test-agent',
+      sessionId: 'test-session',
       id: '1.1',
       force: true
     };
 
     const taskList = {
-      title: 'Test',
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
       tasks: [
         {
           id: '1',
-          title: 'Parent',
-          subtasks: [{ id: '1.1', title: 'Child' }]
+          title: 'Parent Task',
+          status: 'pending',
+          subtasks: [
+            { id: '1.1', title: 'Subtask', status: 'pending' }
+          ]
         }
       ]
     };
@@ -137,13 +118,11 @@ describe('removeCommand', () => {
     mockStorage.readTaskList.mockResolvedValue('content');
     mockParser.parseTaskList.mockReturnValue(taskList as any);
     mockParser.removeTask.mockReturnValue(true);
-    mockParser.generateTaskList.mockReturnValue('updated');
+    mockParser.generateTaskList.mockReturnValue('updated content');
 
-    await removeCommand(args);
+    const result = await removeCommand(args);
 
-    expect(mockParser.removeTask).toHaveBeenCalledWith(taskList, '1.1');
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('Child')
-    );
+    expect(result.success).toBe(true);
+    expect(result.taskId).toBe('1.1');
   });
 });

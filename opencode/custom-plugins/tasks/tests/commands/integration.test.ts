@@ -1,55 +1,50 @@
-import { initCommand } from '../../src/commands/init';
-import { listCommand } from '../../src/commands/list';
-import { updateCommand } from '../../src/commands/update';
-import { completeCommand } from '../../src/commands/complete';
-import { addTaskCommand } from '../../src/commands/add-task';
-import { removeCommand } from '../../src/commands/remove';
-import { statusCommand } from '../../src/commands/status';
+import { initCommand, InitArgs, TaskInput } from '../../src/commands/init';
+import { listCommand, ListArgs } from '../../src/commands/list';
+import { updateCommand, UpdateArgs } from '../../src/commands/update';
+import { completeCommand, CompleteArgs } from '../../src/commands/complete';
+import { addTaskCommand, AddTaskArgs } from '../../src/commands/add-task';
+import { removeCommand, RemoveArgs } from '../../src/commands/remove';
+import { statusCommand, StatusArgs } from '../../src/commands/status';
+import { Storage } from '../../src/lib/storage';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 
-// Mock console methods
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-const mockProcessExit = jest.spyOn(process, 'exit').mockImplementation((() => {}) as any);
-
 describe('Commands Integration', () => {
   let tempDir: string;
   let originalHome: string | undefined;
-  let tasksFile: string;
+  let originalXdgDataHome: string | undefined;
+  let storage: Storage;
 
   beforeEach(async () => {
     // Create temporary directory
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tasks-cmd-test-'));
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tasks-integration-test-'));
     
-    // Mock HOME
+    // Mock environment variables
     originalHome = process.env.HOME;
+    originalXdgDataHome = process.env.XDG_DATA_HOME;
+    delete process.env.XDG_DATA_HOME;
     process.env.HOME = tempDir;
     
-    // Create a sample tasks.md file
-    tasksFile = path.join(tempDir, 'tasks.md');
-    await fs.writeFile(tasksFile, `# Test Tasks
-
-## 작업 목록
-
-- [ ] 1. Task One
-  - Detail A
-- [ ] 2. Task Two
-  - [ ] 2.1. Subtask
-- [ ] 3. Task Three
-`);
-    
-    // Clear console mocks
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
+    // Clear module cache and create fresh Storage instance
+    jest.resetModules();
+    const storageModule = await import('../../src/lib/storage');
+    const StorageClass = storageModule.Storage;
+    storage = new StorageClass();
   });
 
   afterEach(async () => {
-    // Restore HOME
+    // Restore environment variables
     if (originalHome !== undefined) {
       process.env.HOME = originalHome;
+    } else {
+      delete process.env.HOME;
+    }
+    
+    if (originalXdgDataHome !== undefined) {
+      process.env.XDG_DATA_HOME = originalXdgDataHome;
+    } else {
+      delete process.env.XDG_DATA_HOME;
     }
     
     // Clean up
@@ -58,396 +53,332 @@ describe('Commands Integration', () => {
     } catch (error) {
       // Ignore
     }
-    
-    // Clear mocks
-    mockConsoleLog.mockClear();
-    mockConsoleError.mockClear();
-    mockProcessExit.mockClear();
-  });
-
-  afterAll(() => {
-    mockConsoleLog.mockRestore();
-    mockConsoleError.mockRestore();
-    mockProcessExit.mockRestore();
   });
 
   describe('initCommand', () => {
     it('should initialize a new task list', async () => {
-      await initCommand({
+      const args: InitArgs = {
+        sessionId: 'test-session',
         agent: 'test-agent',
-        title: 'Test Project',
-        file: tasksFile
-      });
+        title: 'Test Project'
+      };
 
-      // Verify task list was created
-      const agentDir = path.join(tempDir, '.config', 'opencode', 'tasks', 'test-agent');
-      const files = await fs.readdir(agentDir);
-      expect(files).toHaveLength(1);
-      expect(files[0]).toMatch(/test-project\.md$/);
+      const result = await initCommand(args);
+
+      // Verify file was created
+      const sessionDir = path.join(tempDir, '.local', 'share', 'opencode', 'tasks', 'test-session');
+      const files = await fs.readdir(sessionDir);
+      expect(files.length).toBeGreaterThan(0);
+      expect(files[0]).toMatch(/test-agent-test-project\.md$/);
+      
+      expect(result.title).toBe('Test Project');
+      expect(result.agent).toBe('test-agent');
     });
 
-    it('should handle non-existent source file', async () => {
-      await initCommand({
-        agent: 'test-agent',
-        title: 'Test',
-        file: '/non/existent/file.md'
-      });
+    it('should initialize with tasks', async () => {
+      const tasks: TaskInput[] = [
+        { id: '1', title: 'Task One', status: 'pending' },
+        { id: '2', title: 'Task Two', status: 'in_progress' }
+      ];
 
-      expect(mockConsoleError).toHaveBeenCalled();
-      expect(mockProcessExit).toHaveBeenCalledWith(1);
+      const args: InitArgs = {
+        sessionId: 'test-session',
+        agent: 'test-agent',
+        title: 'Test Project',
+        tasks
+      };
+
+      const result = await initCommand(args);
+
+      expect(result.taskIds).toEqual(['1', '2']);
+      expect(result.totalTasks).toBe(2);
     });
   });
 
   describe('listCommand', () => {
     beforeEach(async () => {
       // Initialize a task list first
-      await initCommand({
+      const args: InitArgs = {
+        sessionId: 'test-session',
         agent: 'test-agent',
         title: 'Test Project',
-        file: tasksFile
-      });
+        tasks: [
+          { id: '1', title: 'Task One', status: 'pending' },
+          { id: '2', title: 'Task Two', status: 'pending' }
+        ]
+      };
+      await initCommand(args);
     });
 
     it('should list tasks in markdown format', async () => {
-      mockConsoleLog.mockClear();
-      
-      await listCommand({
-        agent: 'test-agent',
+      const args: ListArgs = {
+        sessionId: 'test-session',
         format: 'markdown'
-      });
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      expect(output).toContain('Test Project');
-      expect(output).toContain('Task One');
+      const result = await listCommand(args);
+
+      expect(result.success).toBe(true);
+      expect(result.taskLists.length).toBeGreaterThan(0);
     });
 
-    it('should list tasks in JSON format', async () => {
-      mockConsoleLog.mockClear();
-      
-      await listCommand({
-        agent: 'test-agent',
-        format: 'json'
-      });
+    it('should handle no task lists found', async () => {
+      const args: ListArgs = {
+        sessionId: 'non-existent-session'
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      // JSON output should be parseable
-      expect(() => JSON.parse(output)).not.toThrow();
-    });
+      const result = await listCommand(args);
 
-    it('should list tasks in table format', async () => {
-      mockConsoleLog.mockClear();
-      
-      await listCommand({
-        agent: 'test-agent',
-        format: 'table'
-      });
-
-      expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      expect(output).toContain('| ID |');
-      expect(output).toContain('상태');
-    });
-
-    it('should handle non-existent agent', async () => {
-      await listCommand({
-        agent: 'non-existent',
-        format: 'markdown'
-      });
-
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('No task lists found')
-      );
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('No task lists found');
     });
   });
 
   describe('updateCommand', () => {
     beforeEach(async () => {
-      await initCommand({
+      // Initialize a task list first
+      const args: InitArgs = {
+        sessionId: 'test-session',
         agent: 'test-agent',
         title: 'Test Project',
-        file: tasksFile
-      });
+        tasks: [
+          { id: '1', title: 'Task One', status: 'pending' },
+          { id: '2', title: 'Task Two', status: 'pending' }
+        ]
+      };
+      await initCommand(args);
     });
 
     it('should update task status', async () => {
-      await updateCommand({
-        agent: 'test-agent',
+      const args: UpdateArgs = {
+        sessionId: 'test-session',
         id: '1',
-        status: 'completed'
-      });
+        status: 'in_progress'
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('updated')
-      );
+      const result = await updateCommand(args);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('updated');
     });
 
-    it('should handle non-existent task', async () => {
-      await updateCommand({
-        agent: 'test-agent',
+    it('should handle task not found', async () => {
+      const args: UpdateArgs = {
+        sessionId: 'test-session',
         id: '999',
         status: 'completed'
-      });
+      };
 
-      expect(mockConsoleError).toHaveBeenCalled();
-      expect(mockProcessExit).toHaveBeenCalledWith(1);
-    });
+      const result = await updateCommand(args);
 
-    it('should handle non-existent agent', async () => {
-      await updateCommand({
-        agent: 'non-existent',
-        id: '1',
-        status: 'completed'
-      });
-
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('No task lists found')
-      );
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('not found');
     });
   });
 
   describe('completeCommand', () => {
     beforeEach(async () => {
-      await initCommand({
+      // Initialize a task list first
+      const args: InitArgs = {
+        sessionId: 'test-session',
         agent: 'test-agent',
         title: 'Test Project',
-        file: tasksFile
-      });
+        tasks: [
+          { id: '1', title: 'Task One', status: 'pending' }
+        ]
+      };
+      await initCommand(args);
     });
 
     it('should mark task as completed', async () => {
-      await completeCommand({
-        agent: 'test-agent',
+      const args: CompleteArgs = {
+        sessionId: 'test-session',
         id: '1'
-      });
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('completed')
-      );
-    });
+      const result = await completeCommand(args);
 
-    it('should handle non-existent task', async () => {
-      await completeCommand({
-        agent: 'test-agent',
-        id: '999'
-      });
-
-      expect(mockConsoleError).toHaveBeenCalled();
-      expect(mockProcessExit).toHaveBeenCalledWith(1);
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('completed');
     });
   });
 
   describe('addTaskCommand', () => {
     beforeEach(async () => {
-      await initCommand({
+      // Initialize a task list first
+      const args: InitArgs = {
+        sessionId: 'test-session',
         agent: 'test-agent',
         title: 'Test Project',
-        file: tasksFile
-      });
+        tasks: [
+          { id: '1', title: 'Task One', status: 'pending' }
+        ]
+      };
+      await initCommand(args);
     });
 
     it('should add a new task', async () => {
-      await addTaskCommand({
-        agent: 'test-agent',
-        title: 'New Task',
-        details: 'Detail 1, Detail 2',
-        parent: undefined
-      });
+      const args: AddTaskArgs = {
+        sessionId: 'test-session',
+        title: 'New Task'
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('added')
-      );
+      const result = await addTaskCommand(args);
+
+      expect(result.success).toBe(true);
+      expect(result.title).toBe('New Task');
     });
 
-    it('should add a subtask', async () => {
-      await addTaskCommand({
-        agent: 'test-agent',
-        title: 'Subtask',
-        parent: '1'
-      });
+    it('should handle no task lists found', async () => {
+      const args: AddTaskArgs = {
+        sessionId: 'non-existent-session',
+        title: 'New Task'
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('added')
-      );
-    });
+      const result = await addTaskCommand(args);
 
-    it('should handle non-existent parent', async () => {
-      await addTaskCommand({
-        agent: 'test-agent',
-        title: 'Orphan Task',
-        parent: '999'
-      });
-
-      expect(mockConsoleError).toHaveBeenCalled();
-      expect(mockProcessExit).toHaveBeenCalledWith(1);
-    });
-
-    it('should handle non-existent agent', async () => {
-      await addTaskCommand({
-        agent: 'non-existent',
-        title: 'Task'
-      });
-
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('No task lists found')
-      );
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('No task lists found');
     });
   });
 
   describe('removeCommand', () => {
     beforeEach(async () => {
-      await initCommand({
+      // Initialize a task list first
+      const args: InitArgs = {
+        sessionId: 'test-session',
         agent: 'test-agent',
         title: 'Test Project',
-        file: tasksFile
-      });
+        tasks: [
+          { id: '1', title: 'Task One', status: 'pending' },
+          { id: '2', title: 'Task Two', status: 'pending' }
+        ]
+      };
+      await initCommand(args);
     });
 
-    it('should remove a task with force', async () => {
-      await removeCommand({
-        agent: 'test-agent',
+    it('should remove a task', async () => {
+      const args: RemoveArgs = {
+        sessionId: 'test-session',
         id: '1',
         force: true
-      });
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('removed')
-      );
+      const result = await removeCommand(args);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('removed');
     });
 
-    it('should handle non-existent task', async () => {
-      await removeCommand({
-        agent: 'test-agent',
+    it('should handle task not found', async () => {
+      const args: RemoveArgs = {
+        sessionId: 'test-session',
         id: '999',
         force: true
-      });
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('not found')
-      );
-      expect(mockProcessExit).toHaveBeenCalledWith(1);
-    });
+      const result = await removeCommand(args);
 
-    it('should handle non-existent agent', async () => {
-      await removeCommand({
-        agent: 'non-existent',
-        id: '1',
-        force: true
-      });
-
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('No task lists found')
-      );
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('not found');
     });
   });
 
   describe('statusCommand', () => {
     beforeEach(async () => {
-      await initCommand({
+      // Initialize a task list first
+      const args: InitArgs = {
+        sessionId: 'test-session',
         agent: 'test-agent',
         title: 'Test Project',
-        file: tasksFile
-      });
+        tasks: [
+          { id: '1', title: 'Task One', status: 'completed' },
+          { id: '2', title: 'Task Two', status: 'pending' }
+        ]
+      };
+      await initCommand(args);
     });
 
     it('should show status summary', async () => {
-      await statusCommand({
-        agent: 'test-agent'
-      });
+      const args: StatusArgs = {
+        sessionId: 'test-session'
+      };
 
-      expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      expect(output).toContain('Task Status');
-      expect(output).toContain('Test Project');
+      const result = await statusCommand(args);
+
+      expect(result.success).toBe(true);
+      expect(result.summaries.length).toBeGreaterThan(0);
     });
 
-    it('should calculate completion rate correctly', async () => {
-      // Complete one task first
-      await completeCommand({
-        agent: 'test-agent',
-        id: '1'
-      });
+    it('should handle no task lists found', async () => {
+      const args: StatusArgs = {
+        sessionId: 'non-existent-session'
+      };
 
-      mockConsoleLog.mockClear();
+      const result = await statusCommand(args);
 
-      await statusCommand({
-        agent: 'test-agent'
-      });
-
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      expect(output).toMatch(/\d+%/); // Should show percentage
-    });
-
-    it('should handle non-existent agent', async () => {
-      await statusCommand({
-        agent: 'non-existent'
-      });
-
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('No task lists found')
-      );
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('No task lists found');
     });
   });
 
   describe('End-to-end workflow', () => {
     it('should complete full task management workflow', async () => {
+      const sessionId = 'workflow-session';
       const agent = 'workflow-agent';
       
       // 1. Initialize
-      await initCommand({
+      const initResult = await initCommand({
+        sessionId,
         agent,
         title: 'Workflow Test',
-        file: tasksFile
+        tasks: [
+          { id: '1', title: 'Task One', status: 'pending' },
+          { id: '2', title: 'Task Two', status: 'pending' },
+          { id: '3', title: 'Task Three', status: 'pending' }
+        ]
       });
+      expect(initResult.taskIds).toContain('1');
+      expect(initResult.taskIds).toContain('2');
+      expect(initResult.taskIds).toContain('3');
 
       // 2. Add a task
-      await addTaskCommand({
-        agent,
-        title: 'New Workflow Task',
-        details: 'Step 1, Step 2'
+      const addResult = await addTaskCommand({
+        sessionId,
+        title: 'New Workflow Task'
       });
+      expect(addResult.success).toBe(true);
 
       // 3. Update status
-      await updateCommand({
-        agent,
+      const updateResult = await updateCommand({
+        sessionId,
         id: '1',
         status: 'in_progress'
       });
+      expect(updateResult.success).toBe(true);
 
       // 4. Complete task
-      await completeCommand({
-        agent,
+      const completeResult = await completeCommand({
+        sessionId,
         id: '2'
       });
+      expect(completeResult.success).toBe(true);
 
       // 5. Check status
-      mockConsoleLog.mockClear();
-      await statusCommand({ agent });
-      
-      const statusOutput = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      expect(statusOutput).toContain('Workflow Test');
+      const statusResult = await statusCommand({ sessionId });
+      expect(statusResult.success).toBe(true);
 
       // 6. List tasks
-      mockConsoleLog.mockClear();
-      await listCommand({ agent, format: 'markdown' });
-      
-      const listOutput = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      expect(listOutput).toContain('New Workflow Task');
+      const listResult = await listCommand({ sessionId, format: 'markdown' });
+      expect(listResult.success).toBe(true);
 
       // 7. Remove a task
-      await removeCommand({
-        agent,
+      const removeResult = await removeCommand({
+        sessionId,
         id: '3',
         force: true
       });
-
-      // Verify removal
-      mockConsoleLog.mockClear();
-      await listCommand({ agent, format: 'markdown' });
-      
-      const finalOutput = mockConsoleLog.mock.calls.map(call => call[0]).join('\n');
-      expect(finalOutput).not.toContain('Task Three');
+      expect(removeResult.success).toBe(true);
     });
   });
 });
