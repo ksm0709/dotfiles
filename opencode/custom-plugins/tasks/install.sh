@@ -6,6 +6,18 @@
 # 이 플러그인은 에이전트들이 작업을 체계적으로 관리할 수 있도록 하는 
 # tasks_* 도구들을 제공합니다.
 #
+# 설치 구조:
+#   ~/.config/opencode/
+#   ├── plugins/tasks/          # 실행용 TypeScript 파일
+#   │   ├── index.ts
+#   │   ├── commands/
+#   │   ├── lib/
+#   │   └── types/
+#   └── shared/tasks/           # 문서 및 가이드
+#       ├── README.md
+#       ├── docs/
+#       └── templates/
+#
 # Usage:
 #   ./install.sh                    # Install to default location (~/.config/opencode)
 #   ./install.sh --target <path>    # Install to custom location (for isolated testing)
@@ -44,10 +56,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# 색상 정의
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
 # Set target directory
 if [ -n "$TARGET_DIR" ]; then
     # Custom target directory (for isolated testing)
-    # Create .opencode subdirectory to match standard structure
     mkdir -p "$TARGET_DIR/.opencode"
     CONFIG_DIR="$(cd "$TARGET_DIR/.opencode" && pwd)"
     echo -e "${BLUE}📦 Installing $PLUGIN_NAME plugin to custom location: $CONFIG_DIR${NC}"
@@ -61,13 +79,6 @@ fi
 PLUGINS_DIR="$CONFIG_DIR/plugins"
 SHARED_DIR="$CONFIG_DIR/shared"
 
-# 색상 정의
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
 echo ""
 
 # 1. 기존 잘못 설치된 폴더 정리
@@ -79,34 +90,51 @@ fi
 
 # 2. 필요한 디렉토리 생성
 echo -e "${BLUE}📁 Creating necessary directories...${NC}"
-mkdir -p "$PLUGINS_DIR"
-mkdir -p "$SHARED_DIR"
-mkdir -p "$CONFIG_DIR/tasks"
+mkdir -p "$PLUGINS_DIR/$PLUGIN_NAME"
+mkdir -p "$SHARED_DIR/$PLUGIN_NAME/docs"
+mkdir -p "$SHARED_DIR/$PLUGIN_NAME/templates"
 
-# 3. 플러그인 파일 복사
-echo -e "${BLUE}📄 Copying plugin files...${NC}"
+# 3. 플러그인 소스 파일 복사 (plugins/tasks/)
+echo -e "${BLUE}📄 Copying plugin source files to $PLUGINS_DIR/$PLUGIN_NAME/...${NC}"
 
-# src 디렉토리 전체를 plugins/tasks/ 아래에 복사 (상대 경로 유지)
 if [ -d "$SOURCE_DIR/src" ]; then
-    # Create plugins/tasks/ subdirectory
-    mkdir -p "$PLUGINS_DIR/$PLUGIN_NAME"
-    
-    # Copy all source files except index.ts
+    # Copy all source files maintaining directory structure
     for dir in commands lib types; do
         if [ -d "$SOURCE_DIR/src/$dir" ]; then
             cp -r "$SOURCE_DIR/src/$dir" "$PLUGINS_DIR/$PLUGIN_NAME/"
+            echo -e "${GREEN}  ✓ Copied $dir/${NC}"
         fi
     done
     
-    # Copy index.ts as tasks.ts (entry point) and fix import paths
-    sed "s|from './commands/|from './tasks/commands/|g; s|from './lib/|from './tasks/lib/|g; s|from './types'|from './tasks/types'|g" "$SOURCE_DIR/src/index.ts" > "$PLUGINS_DIR/$PLUGIN_NAME.ts"
+    # Copy index.ts as entry point
+    cp "$SOURCE_DIR/src/index.ts" "$PLUGINS_DIR/$PLUGIN_NAME/"
+    echo -e "${GREEN}  ✓ Copied index.ts${NC}"
     
     echo -e "${GREEN}✓ Plugin source copied to $PLUGINS_DIR/$PLUGIN_NAME/${NC}"
-    echo -e "${GREEN}✓ Entry point: $PLUGINS_DIR/$PLUGIN_NAME.ts${NC}"
 else
     echo -e "${RED}❌ Source directory not found: $SOURCE_DIR/src${NC}"
     exit 1
 fi
+
+# 4. 문서 파일 복사 (shared/tasks/)
+echo -e "${BLUE}📖 Copying documentation to $SHARED_DIR/$PLUGIN_NAME/...${NC}"
+
+if [ -f "$SOURCE_DIR/README.md" ]; then
+    cp "$SOURCE_DIR/README.md" "$SHARED_DIR/$PLUGIN_NAME/"
+    echo -e "${GREEN}  ✓ Copied README.md${NC}"
+fi
+
+if [ -d "$SOURCE_DIR/docs" ]; then
+    cp -r "$SOURCE_DIR/docs/"* "$SHARED_DIR/$PLUGIN_NAME/docs/"
+    echo -e "${GREEN}  ✓ Copied docs/${NC}"
+fi
+
+if [ -d "$SOURCE_DIR/templates" ]; then
+    cp -r "$SOURCE_DIR/templates/"* "$SHARED_DIR/$PLUGIN_NAME/templates/"
+    echo -e "${GREEN}  ✓ Copied templates/${NC}"
+fi
+
+echo -e "${GREEN}✓ Documentation copied to $SHARED_DIR/$PLUGIN_NAME/${NC}"
 
 # 5. 의존성을 ~/.config/opencode/package.json에 추가 (기본 설치 시에만)
 PACKAGE_JSON="$CONFIG_DIR/package.json"
@@ -137,7 +165,7 @@ fi
 
 # 6. AGENTS.md 업데이트 (기본 설치 시에만)
 AGENTS_MD="$CONFIG_DIR/AGENTS.md"
-TASKS_GUIDE_TEMPLATE="$SOURCE_DIR/templates/agents-md-tasks-guide.md"
+TASKS_GUIDE_TEMPLATE="$SHARED_DIR/$PLUGIN_NAME/templates/agents-md-tasks-guide.md"
 UPDATE_SCRIPT="$SOURCE_DIR/scripts/update-agents-md.py"
 
 if [ -z "$TARGET_DIR" ]; then
@@ -159,22 +187,19 @@ else
     echo -e "${YELLOW}⚠️  Skipping AGENTS.md update (isolated test mode)${NC}"
 fi
 
-# 7. 문서 파일 복사
-echo -e "${BLUE}📖 Copying documentation...${NC}"
-if [ -d "$SOURCE_DIR/docs" ]; then
-    mkdir -p "$CONFIG_DIR/custom-plugins/$PLUGIN_NAME"
-    cp -r "$SOURCE_DIR/docs" "$CONFIG_DIR/custom-plugins/$PLUGIN_NAME/"
-    echo -e "${GREEN}✓ Documentation copied to $CONFIG_DIR/custom-plugins/$PLUGIN_NAME/docs/${NC}"
-fi
-
 echo ""
 echo -e "${GREEN}✅ Installation complete!${NC}"
 echo ""
-echo -e "${BLUE}📁 Installation Summary:${NC}"
-echo "  • Plugin file: $PLUGINS_DIR/$PLUGIN_NAME.ts"
-echo "  • Library files: $SHARED_DIR/$PLUGIN_NAME/"
-echo "  • Task storage: $CONFIG_DIR/tasks/"
-echo "  • Documentation: $CONFIG_DIR/custom-plugins/$PLUGIN_NAME/docs/"
+echo -e "${BLUE}📁 Installation Structure:${NC}"
+echo "  • Plugin source: $PLUGINS_DIR/$PLUGIN_NAME/"
+echo "    - index.ts (entry point)"
+echo "    - commands/ (command implementations)"
+echo "    - lib/ (utility libraries)"
+echo "    - types/ (TypeScript type definitions)"
+echo "  • Documentation: $SHARED_DIR/$PLUGIN_NAME/"
+echo "    - README.md"
+echo "    - docs/tasks-tools-guide.md"
+echo "    - templates/agents-md-tasks-guide.md"
 if [ -z "$TARGET_DIR" ]; then
     echo "  • AGENTS.md updated with tasks tools guide"
 fi
@@ -189,8 +214,10 @@ if [ -z "$TARGET_DIR" ]; then
     echo ""
     echo -e "${BLUE}📖 Next Steps:${NC}"
     echo "  1. Restart OpenCode to load the plugin"
-    echo "  2. Add tasks tools to your agent's frontmatter"
-    echo "  3. See the guide: $CONFIG_DIR/custom-plugins/$PLUGIN_NAME/docs/tasks-tools-guide.md"
+    echo "  2. Add tasks tools to your agent's frontmatter:"
+    echo "     tools:"
+    echo "       tasks_*: true"
+    echo "  3. See the guide: $SHARED_DIR/$PLUGIN_NAME/docs/tasks-tools-guide.md"
 else
     echo -e "${YELLOW}⚠️  Isolated test mode - plugin installed to: $CONFIG_DIR${NC}"
     echo ""
