@@ -332,6 +332,99 @@ function countMatches(output: string): number {
   return lines.length;
 }
 
+function formatJsonOutput(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    return JSON.stringify(parsed, null, 2);
+  } catch (error) {
+    return raw;
+  }
+}
+
+function normalizeAgentThoughts(
+  listInput?: string[] | null,
+  textInput?: string | null,
+): string[] {
+  if (Array.isArray(listInput) && listInput.length > 0) {
+    return listInput.map((item) => (item ?? "").toString().trim()).filter(Boolean);
+  }
+  if (textInput && textInput.trim().length > 0) {
+    return textInput
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function formatTimestamp(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const date = new Date(value * 1000);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+  return "N/A";
+}
+
+function formatRelatedMemoriesMarkdown(memories: any): string {
+  if (!Array.isArray(memories) || memories.length === 0) {
+    return "_관련 기억 없음_";
+  }
+
+  return memories
+    .map((memory, index) => {
+      const rawScore = memory?.score;
+      const score =
+        typeof rawScore === "number"
+          ? rawScore.toFixed(2)
+          : typeof rawScore === "string"
+            ? rawScore
+            : "?";
+      const content = (memory?.content ?? "(내용 없음)").toString().trim();
+      const truncated = content.length > 200 ? `${content.slice(0, 200)}...` : content;
+      const tags = Array.isArray(memory?.tags) && memory.tags.length > 0
+        ? ` (Tags: ${memory.tags.join(", ")})`
+        : "";
+      return `${index + 1}. [${score}] ${truncated}${tags}`;
+    })
+    .join("\n");
+}
+
+function formatContextStartMarkdown(raw: string): string {
+  try {
+    const data = JSON.parse(raw);
+    const lines: string[] = ["## 🧠 Context Briefing"];
+    if (typeof data.context_summary === "string" && data.context_summary.trim().length > 0) {
+      lines.push(data.context_summary.trim());
+    } else {
+      lines.push("⚠️ context_summary unavailable. Refer to related memories below.");
+    }
+
+    lines.push("", "### 📚 Related Memories");
+    lines.push(formatRelatedMemoriesMarkdown(data.relevant_memories));
+
+    lines.push("", "### 🔧 Episode");
+    lines.push(`- Episode ID: ${data.episode_id || "N/A"}`);
+    lines.push(`- Started: ${formatTimestamp(data.timestamp)}`);
+    if (data.task) {
+      lines.push(`- Task: ${data.task}`);
+    }
+
+    return lines.join("\n");
+  } catch (error) {
+    return [
+      "⚠️ Failed to parse context_start response as JSON.",
+      "```json",
+      raw,
+      "```",
+    ].join("\n");
+  }
+}
+
 /**
  * 성공 여부 판단
  */
@@ -730,7 +823,7 @@ export const ContextManagerPlugin: Plugin = async ({
           task: tool.schema.string().describe("Task description"),
         },
         async execute(args) {
-          const result = await runPython(["start", "--task", args.task]);
+          const raw = await runPython(["start", "--task", args.task]);
           isInitialized = true;
 
           // Task 1.5: 프롬프트 인젝션 - 메타데이터 도구 사용 지침 추가
@@ -739,7 +832,9 @@ export const ContextManagerPlugin: Plugin = async ({
             `"${args.task}"`,
           );
 
-          return result + "\n" + guidance;
+          const formatted = formatContextStartMarkdown(raw);
+
+          return `${formatted}\n\n${guidance}`;
         },
       }),
 
@@ -809,14 +904,27 @@ export const ContextManagerPlugin: Plugin = async ({
             .array(tool.schema.string())
             .optional()
             .describe("세운 가정들"),
+          agent_thoughts: tool.schema
+            .array(tool.schema.string())
+            .optional()
+            .describe("에이전트가 직접 작성한 사고 흐름 리스트"),
+          agent_thoughts_text: tool.schema
+            .string()
+            .optional()
+            .describe("줄바꿈으로 구분된 사고 흐름 입력 (배열 대신 사용 가능)"),
         },
         async execute(args) {
+          const agentThoughts = normalizeAgentThoughts(
+            args.agent_thoughts,
+            args.agent_thoughts_text,
+          );
           const payload = {
             session_id: "current", // Will be replaced by server with actual session
             goal: args.goal,
             user_request_summary: args.user_request_summary || null,
             context: args.context || null,
             assumptions: args.assumptions || [],
+            agent_thoughts: agentThoughts,
           };
 
           const result = await runPython([
@@ -827,7 +935,7 @@ export const ContextManagerPlugin: Plugin = async ({
           // Mark intent as called for this session
           // Note: We use "current" as a placeholder since sessionID is not available in execute
 
-          return `Intent recorded: ${args.goal}`;
+          return formatJsonOutput(result);
         },
       }),
 
@@ -868,7 +976,7 @@ export const ContextManagerPlugin: Plugin = async ({
             JSON.stringify(payload),
           ]);
 
-          return `Decision recorded: ${args.choice} (${args.decision_type})`;
+          return formatJsonOutput(result);
         },
       }),
 
@@ -898,7 +1006,7 @@ export const ContextManagerPlugin: Plugin = async ({
             JSON.stringify(payload),
           ]);
 
-          return `Learning recorded: ${args.learning}`;
+          return formatJsonOutput(result);
         },
       }),
     },

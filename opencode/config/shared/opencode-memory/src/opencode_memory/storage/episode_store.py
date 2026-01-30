@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS episodes (
     context_goal TEXT NOT NULL,
     context_user_request_summary TEXT,
     context_assumptions TEXT,  -- JSON array
+    context_agent_thoughts TEXT,  -- JSON array
     context_initial_tool TEXT,
     context_tools_used TEXT,  -- JSON array
 
@@ -93,6 +94,7 @@ class EpisodeStore:
         try:
             cursor = conn.cursor()
             cursor.executescript(EPISODES_SCHEMA)
+            self._ensure_column(cursor, "episodes", "context_agent_thoughts", "TEXT")
             conn.commit()
             self._initialized = True
             logger.info(f"EpisodeStore initialized at {self.db_path}")
@@ -108,6 +110,21 @@ class EpisodeStore:
         conn.row_factory = sqlite3.Row
         return conn
 
+    def _ensure_column(
+        self,
+        cursor: sqlite3.Cursor,
+        table_name: str,
+        column_name: str,
+        column_definition: str,
+    ) -> None:
+        """테이블에 특정 컬럼이 없으면 추가"""
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = {row[1] for row in cursor.fetchall()}
+        if column_name not in columns:
+            cursor.execute(
+                f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+            )
+
     def _serialize_episode(self, episode: Episode) -> dict:
         """Episode를 DB 저장용 dict로 변환"""
         return {
@@ -119,6 +136,9 @@ class EpisodeStore:
             "context_user_request_summary": episode.context.user_request_summary,
             "context_assumptions": json.dumps(
                 episode.context.assumptions or [], ensure_ascii=False
+            ),
+            "context_agent_thoughts": json.dumps(
+                episode.context.agent_thoughts or [], ensure_ascii=False
             ),
             "context_initial_tool": episode.context.initial_tool,
             "context_tools_used": json.dumps(
@@ -143,6 +163,7 @@ class EpisodeStore:
 
         # JSON 필드 파싱
         context_assumptions = json.loads(data.get("context_assumptions") or "[]")
+        context_agent_thoughts = json.loads(data.get("context_agent_thoughts") or "[]")
         context_tools_used = json.loads(data.get("context_tools_used") or "[]")
         learnings = json.loads(data.get("learnings") or "[]")
         tools_used = json.loads(data.get("tools_used") or "[]")
@@ -174,6 +195,7 @@ class EpisodeStore:
             goal=data.get("context_goal", data["goal"]),
             user_request_summary=data.get("context_user_request_summary"),
             assumptions=context_assumptions,
+            agent_thoughts=context_agent_thoughts,
             initial_tool=data.get("context_initial_tool"),
             tools_used=context_tools_used,
         )
@@ -218,14 +240,16 @@ class EpisodeStore:
                 INSERT INTO episodes (
                     id, session_id, goal, status,
                     context_goal, context_user_request_summary,
-                    context_assumptions, context_initial_tool, context_tools_used,
+                    context_assumptions, context_agent_thoughts,
+                    context_initial_tool, context_tools_used,
                     outcome, learnings,
                     start_time, last_updated, end_time,
                     tools_used, record_count
                 ) VALUES (
                     :id, :session_id, :goal, :status,
                     :context_goal, :context_user_request_summary,
-                    :context_assumptions, :context_initial_tool, :context_tools_used,
+                    :context_assumptions, :context_agent_thoughts,
+                    :context_initial_tool, :context_tools_used,
                     :outcome, :learnings,
                     :start_time, :last_updated, :end_time,
                     :tools_used, :record_count
@@ -322,6 +346,7 @@ class EpisodeStore:
                     context_goal = :context_goal,
                     context_user_request_summary = :context_user_request_summary,
                     context_assumptions = :context_assumptions,
+                    context_agent_thoughts = :context_agent_thoughts,
                     context_initial_tool = :context_initial_tool,
                     context_tools_used = :context_tools_used,
                     outcome = :outcome,

@@ -253,6 +253,46 @@ class AsyncLLMClient:
 
         return candidates
 
+    async def summarize_memories(
+        self, task: str, memories: List[Dict[str, Any]]
+    ) -> Optional[str]:
+        """Summarize retrieved memories for context briefing (Async)."""
+        if not self.enabled or not memories:
+            return None
+
+        # Prepare memories text
+        memory_texts = []
+        for i, m in enumerate(memories):
+            content = m.get("content", "") or m.get("summary", "") or str(m)
+            # Add metadata if available
+            tags = m.get("tags", [])
+            tag_str = f" [Tags: {', '.join(tags)}]" if tags else ""
+            memory_texts.append(f"[{i}] {content[:500]}{tag_str}")
+
+        memories_block = "\n".join(memory_texts)
+
+        prompt = f"""
+        You are a helpful assistant briefing another AI agent.
+        Analyze the following retrieved memories relevant to the current task: "{task}"
+
+        <memories>
+        {memories_block}
+        </memories>
+
+        Create a concise "Context Briefing" in Markdown.
+        Focus on actionable insights, user preferences, and technical constraints.
+        Do NOT just list the memories; synthesize them.
+        **The output must be written in Korean.**
+
+        Format:
+        ## 🧠 Context Briefing
+        - **💡 Insight**: ...
+        - **⚠️ Constraint**: ...
+        - **📂 Context**: ...
+        """
+
+        return await self.generate(prompt)
+
 
 class LLMClient:
     """동기 래퍼: AsyncLLMClient 사용"""

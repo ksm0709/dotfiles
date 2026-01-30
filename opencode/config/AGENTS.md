@@ -53,6 +53,116 @@
 
 ---
 
+
+<!-- TASKS_TOOLS_GUIDE_START -->
+<!-- 이 섹션은 Tasks Plugin에 의해 자동으로 관리됩니다. 수동으로 수정하지 마세요. -->
+
+### 📋 Task Management Tools
+
+Tasks Plugin은 에이전트가 작업을 체계적으로 관리할 수 있도록 다음 도구들을 제공합니다:
+
+#### 사용 가능한 도구 (tasks_*)
+
+Tasks Plugin은 `tasks_*` 와일드카드로 모든 작업 관리 도구를 제공합니다.
+
+**주요 도구:**
+- **`tasks_init(agent, title)`**: 작업 목록 초기화
+  - 반환값: `{ title, agent, fileName, taskIds, totalTasks }`
+- **`tasks_list(format)`**: 작업 목록 조회 (format: markdown/json/table)
+  - 반환값: `{ success, taskLists, formattedOutput, message }`
+- **`tasks_update(id, status)`**: 작업 상태 업데이트 (status: pending/in_progress/completed)
+  - 반환값: `{ success, taskId, status, message }`
+- **`tasks_complete(id)`**: 작업 완료 처리
+  - 반환값: `{ success, taskId, message }`
+- **`tasks_add(title, parent)`**: 새 작업 추가 (parent는 선택적)
+  - 반환값: `{ success, title, parent, details, message }`
+- **`tasks_remove(id)`**: 작업 제거
+  - 반환값: `{ success, taskId, taskTitle, message }`
+- **`tasks_status()`**: 전체 진행 상황 확인
+  - 반환값: `{ success, summaries, formattedOutput, message }`
+
+**사용 예시:**
+```typescript
+// 작업 목록 초기화
+const initResult = tasks_init(agent="senior-sw-engineer", title="API-구현")
+// 응답 예시:
+// ✅ Task list "API-구현" initialized successfully for agent "senior-sw-engineer"
+// 📁 File: senior-sw-engineer-api-구현.md
+// 📊 Total tasks: 0
+
+// 작업 추가
+tasks_add(title="요구사항 분석")
+tasks_add(title="설계")
+tasks_add(title="구현")
+
+// 작업 상태 업데이트
+tasks_update(id="1", status="in_progress")
+
+// 작업 완료
+tasks_complete(id="1")
+
+// 진행 상황 확인
+const statusResult = tasks_status()
+
+// 작업 목록 조회
+const listResult = tasks_list(format="markdown")
+```
+
+**주요 특짱:**
+- 세션 ID는 OpenCode 컨텍스트에서 자동으로 추출됩니다 (에이전트가 입력할 필요 없음)
+- 모든 도구는 반환값을 통해 결과를 전달합니다 (TUI 깨짐 없음)
+- 작업 파일은 `~/.local/share/opencode/tasks/{session-id}/`에 저장됩니다
+
+**설치 구조:**
+- 플러그인 코드: `~/.config/opencode/plugins/tasks/`
+- 문서 및 가이드: `~/.config/opencode/shared/tasks/`
+
+#### 에이전트 설정
+
+에이전트가 Tasks 도구를 사용하려면 frontmatter에 다음을 추가하세요:
+
+**방법 1: `tasks_*` 와일드카드 사용 (권장)**
+모든 Tasks 도구를 한 번에 활성화하려면 `tasks_*` 와일드카드를 사용하세요:
+
+```yaml
+---
+tools:
+  tasks_*: true
+---
+```
+
+**방법 2: 개별 도구 활성화**
+특정 도구만 필요한 경우 개별적으로 지정할 수 있습니다:
+
+```yaml
+---
+tools:
+  tasks_init: true
+  tasks_list: true
+  tasks_update: true
+  tasks_complete: true
+  tasks_add: true
+  tasks_remove: true
+  tasks_status: true
+---
+```
+
+#### 자세한 사용법
+
+자세한 사용법은 다음 문서를 참조하세요:
+`~/.config/opencode/shared/tasks/docs/tasks-tools-guide.md`
+
+<!-- TASKS_TOOLS_GUIDE_END -->
+
+
+
+
+
+
+
+
+
+
 ## 4. Global Agent Registry (글로벌 에이전트 명부)
 
 전역적으로 호출 가능한 에이전트 목록입니다.
@@ -119,3 +229,45 @@
 
 - **우선순위**: 프로젝트별 `AGENTS.md`의 설정이 글로벌 설정보다 우선합니다.
 - **상속**: 프로젝트 설정에 명시되지 않은 항목은 글로벌 설정을 따릅니다.
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- OPENCODE_MEMORY_INSTRUCTIONS_START -->
+### Context & Memory Management (컨텍스트 및 기억 관리)
+OpenCode의 장기 기억(Long-term Memory)과 작업 기억(Working Memory)을 적극 활용하여 일관성을 유지합니다.
+
+**⚠️ 필수 워크플로우 (Mandatory Workflow)**
+모든 작업은 반드시 다음 순서로 진행해야 합니다:
+1. **Start**: `context_start`로 작업 시작 알림 (관련 기억 검색됨)
+2. **Intent**: `context_intent`로 목표 설정 (사고 과정 기록)
+3. **Work**: 작업 수행 (중간중간 `context_decision`, `context_learning` 기록)
+4. **End**: `context_end`로 작업 종료 및 기억 저장
+
+---
+
+#### 🛠️ Memory Tools Guide
+
+1. **Task Lifecycle (작업 수명주기)**
+   - `context_start(task="...")`: 작업을 시작할 때 가장 먼저 호출합니다.
+   - `context_end(result="...")`: 작업이 완료되면 반드시 호출하여 기억을 저장합니다.
+
+2. **Thought Process (사고 과정)**
+   - `context_intent`: 작업의 **목표(Goal)**와 **의도(Intent)**를 기록합니다. (작업 시작 직후 권장)
+   - `context_decision`: 라이브러리 선택, 아키텍처 설계 등 **중요한 의사결정**을 기록합니다.
+   - `context_learning`: 오류 해결, 새로운 패턴 발견 등 **학습한 내용**을 기록합니다.
+
+3. **Maintenance (상태 관리)**
+   - `context_checkpoint`: 작업이 길어지거나 단계가 바뀔 때 **중간 저장**을 수행합니다. (메모리 압축 효과)
+   - `context_status`: 현재 작업의 진행 상태와 컨텍스트를 **점검**합니다.
+
+이 도구들을 통해 에이전트는 과거의 경험을 기억하고 더 똑똑해집니다.
+<!-- OPENCODE_MEMORY_INSTRUCTIONS_END -->

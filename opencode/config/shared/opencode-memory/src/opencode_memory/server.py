@@ -280,7 +280,7 @@ async def start_task(req: StartRequest):
         logger.info(f"Auto-started episode {episode.id} from context_start")
 
         # Retrieve related memories
-        relevant = get_state().context_memory.get_for_task(req.task, limit=5)
+        relevant = await get_state().context_memory.get_for_task(req.task, limit=5)
 
         # Format result
         result = {
@@ -293,6 +293,7 @@ async def start_task(req: StartRequest):
         }
 
         if relevant:
+            # Format memories for response
             result["relevant_memories"] = [
                 {
                     "content": (
@@ -305,15 +306,34 @@ async def start_task(req: StartRequest):
                 }
                 for m in relevant
             ]
-            # Simple summary generation (can be improved)
-            summary_lines = [f"## Task Started: {req.task}\n", "### Related Memories"]
-            for i, m in enumerate(relevant, 1):
-                summary_lines.append(
-                    f"{i}. [{round(m.get('score', 0), 2)}] {m['content'][:150]}..."
+
+            # Try to generate LLM summary
+            llm_summary = None
+            try:
+                llm_summary = await get_state().llm_client.summarize_memories(
+                    req.task, relevant
                 )
-                if m.get("tags"):
-                    summary_lines.append(f"   - Tags: {', '.join(m['tags'])}")
-            result["context_summary"] = "\n".join(summary_lines)
+            except Exception as e:
+                logger.warning(f"LLM summarization failed: {e}")
+
+            if llm_summary:
+                result["context_summary"] = llm_summary
+            else:
+                # Fallback summary with explicit instruction
+                summary_lines = [
+                    f"## Task Started: {req.task}",
+                    "### Related Memories (Raw List)",
+                    "⚠️ **System Warning**: LLM summarization failed.",
+                    "**ACTION REQUIRED**: Read the raw memories below and manually summarize key insights into your `context_intent`.",
+                    "",
+                ]
+                for i, m in enumerate(relevant, 1):
+                    summary_lines.append(
+                        f"{i}. [{round(m.get('score', 0), 2)}] {m['content'][:150]}..."
+                    )
+                    if m.get("tags"):
+                        summary_lines.append(f"   - Tags: {', '.join(m['tags'])}")
+                result["context_summary"] = "\n".join(summary_lines)
 
         return result
 
@@ -337,7 +357,7 @@ async def checkpoint(req: CheckpointRequest):
             return {"status": "skipped", "reason": "no items to checkpoint"}
 
         # 2. Save to context memory
-        get_state().context_memory.query_and_update(summary)
+        await get_state().context_memory.query_and_update(summary)
 
         # 3. Clear working memory
         wm.clear_since_checkpoint()
@@ -385,7 +405,7 @@ async def end_task(req: EndRequest):
 
         # 2. Save if content exists
         if summary:
-            checkpoint_result = get_state().context_memory.query_and_update(summary)
+            checkpoint_result = await get_state().context_memory.query_and_update(summary)
 
         # 3. Cleanup
         wm.clear()
@@ -461,7 +481,7 @@ async def add_memory(req: AddRequest):
 @app.post("/query")
 async def query_memory(req: QueryRequest):
     try:
-        results = get_state().context_memory.query(
+        results = await get_state().context_memory.query(
             req.query, limit=req.limit, tags=req.tags
         )
         return results
@@ -488,6 +508,7 @@ async def record_intent(req: RecordIntentRequest):
             user_request_summary=req.user_request_summary,
             context=req.context,
             assumptions=req.assumptions or [],
+            agent_thoughts=req.agent_thoughts or [],
             source="agent",
             confidence=0.9,
         )
@@ -501,6 +522,7 @@ async def record_intent(req: RecordIntentRequest):
             return SemanticRecordResponse(
                 status="success",
                 intent_id=result["intent_id"],
+                agent_thoughts=intent_info.agent_thoughts,
                 message=f"Intent recorded: {req.goal}",
             )
         else:
@@ -806,11 +828,12 @@ async def start_episode(req: StartEpisodeRequest):
         # Context dict -> EpisodeContext object
         context_data = req.context or {}
         goal = context_data.get("goal") or req.goal
-            
+
         context = EpisodeContext(
             goal=goal,
             user_request_summary=context_data.get("user_request_summary"),
             assumptions=context_data.get("assumptions", []),
+            agent_thoughts=context_data.get("agent_thoughts", []),
             initial_tool=context_data.get("initial_tool"),
             tools_used=context_data.get("tools_used", [])
         )
@@ -912,7 +935,8 @@ async def get_episode(episode_id: str):
                 "context": {
                     "goal": episode.context.goal,
                     "user_request_summary": episode.context.user_request_summary,
-                    "assumptions": episode.context.assumptions
+                    "assumptions": episode.context.assumptions,
+                    "agent_thoughts": episode.context.agent_thoughts,
                 }
             }
         else:
@@ -987,7 +1011,7 @@ async def get_compaction_context(session_id: Optional[str] = None):
         # 3. Relevant Memories (based on current task)
         current_task = get_state().context_memory._current_task
         if current_task:
-            relevant = get_state().context_memory.get_for_task(current_task, limit=3)
+            relevant = await get_state().context_memory.get_for_task(current_task, limit=3)
             if relevant:
                 logger.info(f"Including {len(relevant)} relevant past memories")
                 summary_parts.append("### Relevant Past Memories")

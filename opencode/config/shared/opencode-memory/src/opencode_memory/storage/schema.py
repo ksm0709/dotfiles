@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS active_intents (
     user_request_summary TEXT,
     context TEXT,
     assumptions TEXT,  -- JSON array
+    agent_thoughts TEXT,  -- JSON array
     source TEXT DEFAULT 'unknown',
     confidence REAL DEFAULT 0.5,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -130,6 +131,9 @@ class SemanticSchema:
             cursor.executescript(ACTIVE_DECISIONS_SCHEMA)
             cursor.executescript(ACTIVE_LEARNINGS_SCHEMA)
 
+            # 컬럼 보강 (마이그레이션 호환)
+            self._ensure_column(cursor, "active_intents", "agent_thoughts", "TEXT")
+
             # 인덱스 생성
             cursor.executescript(SEMANTIC_RECORDS_INDEXES)
 
@@ -174,3 +178,18 @@ class SemanticSchema:
 
         # 향후 마이그레이션 로직 추가
         logger.info("Schema migration completed (no changes needed)")
+
+    def _ensure_column(
+        self,
+        cursor: sqlite3.Cursor,
+        table_name: str,
+        column_name: str,
+        column_definition: str,
+    ) -> None:
+        """특정 테이블에 컬럼이 없으면 추가"""
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = {row[1] for row in cursor.fetchall()}
+        if column_name not in columns:
+            cursor.execute(
+                f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+            )

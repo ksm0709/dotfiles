@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-antigravity-auth@latest"],
+  "plugin": ["opencode-gemini-auth@latest"], //"opencode-antigravity-auth@latest",
   "mcp": {
     "context7": {
       "type": "remote",
@@ -76,7 +76,7 @@
           "name": "Gemini 3 Pro Preview (Gemini CLI)",
           "limit": { "context": 1048576, "output": 65535 },
           "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] }
-        }
+        },
       }
     }
   }

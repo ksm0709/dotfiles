@@ -24,6 +24,10 @@ class IntentInfo(BaseModel):
     assumptions: List[str] = Field(
         default_factory=list, description="세운 가정들"
     )
+    agent_thoughts: List[str] = Field(
+        default_factory=list,
+        description="에이전트가 명시적으로 기록한 사고 흐름/계획",
+    )
     source: Literal["agent", "inferred", "unknown"] = Field(
         default="unknown",
         description="의도 출처: agent=에이전트 명시, inferred=규칙 기반 추론, unknown=알 수 없음",
@@ -151,6 +155,10 @@ class RecordIntentRequest(BaseModel):
     user_request_summary: Optional[str] = None
     context: Optional[str] = None
     assumptions: List[str] = Field(default_factory=list)
+    agent_thoughts: List[str] = Field(
+        default_factory=list,
+        description="에이전트가 제공한 사고 흐름 (LLM 자동 생성 금지)",
+    )
 
 
 class RecordDecisionRequest(BaseModel):
@@ -193,6 +201,7 @@ class SemanticRecordResponse(BaseModel):
     episode_id: Optional[str] = None
     importance: Optional[str] = None
     message: Optional[str] = None
+    agent_thoughts: Optional[List[str]] = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -210,6 +219,10 @@ class EpisodeContext(BaseModel):
     )
     assumptions: List[str] = Field(
         default_factory=list, description="세운 가정들"
+    )
+    agent_thoughts: List[str] = Field(
+        default_factory=list,
+        description="에이전트가 기록한 사고 흐름 목록",
     )
 
     # 자동 수집

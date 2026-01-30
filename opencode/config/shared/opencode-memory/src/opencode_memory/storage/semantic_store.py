@@ -439,8 +439,9 @@ class SemanticRecordStore:
                 """
                 INSERT OR REPLACE INTO active_intents (
                     id, session_id, goal, user_request_summary,
-                    context, assumptions, source, confidence, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    context, assumptions, agent_thoughts,
+                    source, confidence, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     intent_id,
@@ -449,6 +450,7 @@ class SemanticRecordStore:
                     intent_info.user_request_summary,
                     intent_info.context,
                     json.dumps(intent_info.assumptions or [], ensure_ascii=False),
+                    json.dumps(intent_info.agent_thoughts or [], ensure_ascii=False),
                     intent_info.source,
                     intent_info.confidence,
                     datetime.now().isoformat(),
@@ -481,6 +483,7 @@ class SemanticRecordStore:
                     user_request_summary=data.get("user_request_summary"),
                     context=data.get("context"),
                     assumptions=json.loads(data.get("assumptions") or "[]"),
+                    agent_thoughts=json.loads(data.get("agent_thoughts") or "[]"),
                     source=data.get("source", "unknown"),
                     confidence=data.get("confidence", 0.5),
                 )

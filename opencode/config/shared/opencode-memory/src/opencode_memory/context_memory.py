@@ -18,7 +18,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
 
-from .utils.llm import LLMClient
+from .utils.llm import AsyncLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +321,7 @@ class ContextMemory:
         self._user_id = "context-manager"
         self._initialized = False
         self._current_task: str | None = None
-        self._llm = LLMClient(config)
+        self._llm = AsyncLLMClient(config)
 
         # Ensure database directory
         db_path = config.get("database", {}).get("path")
@@ -486,7 +486,7 @@ class ContextMemory:
             logger.error(f"Failed to add memory: {e}")
             return {"status": "error", "message": str(e)}
 
-    def query(
+    async def query(
         self,
         question: str,
         limit: int | None = None,
@@ -529,16 +529,17 @@ class ContextMemory:
         # If the question looks like a task or is short, expand it
         queries = [question]
         if len(question.split()) < 10:  # Simple heuristic for "short/task-like"
-            expanded = self._expand_query(question)
+            expanded = await self._expand_query(question)
             if expanded:
                 queries.extend(expanded)
                 # Remove duplicates while preserving order
                 queries = list(dict.fromkeys(queries))
 
-        async def _query_all():
-            if not self._mem:
-                return []
+        original_cwd = os.getcwd()
+        os.chdir(str(self._working_dir))
 
+        try:
+            # Query all expanded queries
             all_results = []
             # REQ-QE-02: Multi-query search and integration
             for q in queries:
@@ -558,19 +559,11 @@ class ContextMemory:
                     unique_results.append(r)
                     seen_ids.add(rid)
 
-            return unique_results
-
-        original_cwd = os.getcwd()
-        os.chdir(str(self._working_dir))
-
-        try:
-            results = _run_async(_query_all())
-
             # Normalize results and filter noise
             normalized: list[dict] = []
             noise_ids = []
 
-            for r in results:
+            for r in unique_results:
                 score = r.get("score", 0)
                 content = r.get("content", "")
                 memory_id = r.get("id")
@@ -594,7 +587,7 @@ class ContextMemory:
 
             # REQ-SR-02 & REQ-SR-03: 2-Stage Retrieval (Reranking)
             if normalized and self._current_task:
-                normalized = self._llm_rerank(normalized, self._current_task)
+                normalized = await self._llm_rerank(normalized, self._current_task)
 
             # Schedule async deletion of meaningless memories (background)
             if noise_ids:
@@ -608,17 +601,17 @@ class ContextMemory:
         finally:
             os.chdir(original_cwd)
 
-    def _expand_query(self, question: str) -> list[str]:
+    async def _expand_query(self, question: str) -> list[str]:
         """
         Expand query using LLM (HyDE).
         """
-        return self._llm.generate_queries(question)
+        return await self._llm.generate_queries(question)
 
-    def _llm_rerank(self, results: list[dict], task: str) -> list[dict]:
+    async def _llm_rerank(self, results: list[dict], task: str) -> list[dict]:
         """
         Rerank results using LLM based on task relevance.
         """
-        return self._llm.rerank(task, results)
+        return await self._llm.rerank(task, results)
 
     def _schedule_cleanup(self, memory_ids: list[str]):
         """
@@ -677,7 +670,7 @@ class ContextMemory:
     # Checkpoint Methods (2-layer core)
     # ═══════════════════════════════════════════════════════════════
 
-    def query_and_update(self, summary: str) -> dict:
+    async def query_and_update(self, summary: str) -> dict:
         """
         For checkpoints: Atomic search + save.
 
@@ -695,7 +688,7 @@ class ContextMemory:
             }
         """
         # 1. Search
-        related = self.query(summary, limit=5)
+        related = await self.query(summary, limit=5)
 
         # 2. Save
         tags = ["checkpoint"]
@@ -717,7 +710,7 @@ class ContextMemory:
             "saved": saved,
         }
 
-    def get_for_task(self, task: str, limit: int = 5) -> list[dict]:
+    async def get_for_task(self, task: str, limit: int = 5) -> list[dict]:
         """
         Get task-related memories.
 
@@ -728,7 +721,7 @@ class ContextMemory:
         Returns:
             list: List of related memories
         """
-        return self.query(task, limit=limit)
+        return await self.query(task, limit=limit)
 
     def save_checkpoint(self, summary: str, task: str | None = None) -> dict:
         """
