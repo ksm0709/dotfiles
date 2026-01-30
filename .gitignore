@@ -10,3 +10,7 @@ node_modules/
 coverage/
 dist/
 *.log
+
+# Package manager files
+package-lock.json
+yarn.lock
