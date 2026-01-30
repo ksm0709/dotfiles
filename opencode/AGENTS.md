@@ -33,16 +33,22 @@
 │   │   └── context/       # 컨텍스트 관리
 │   │       ├── config.yaml
 │   │       └── context_server.py
-│   └── agent/             # 에이전트 파일들
-│       ├── agent-creator.md
-│       ├── build.md
-│       ├── cpp-review.md
-│       ├── general.md
-│       ├── plan.md
-│       ├── pm.md
-│       ├── py-code-reviewer.md
-│       ├── research-analyst.md
-│       └── senior-sw-engineer.md
+│   ├── agent/             # 에이전트 파일들
+│   │   ├── agent-creator.md
+│   │   ├── build.md
+│   │   ├── cpp-review.md
+│   │   ├── general.md
+│   │   ├── plan.md
+│   │   ├── pm.md
+│   │   ├── py-code-reviewer.md
+│   │   ├── research-analyst.md
+│   │   └── senior-sw-engineer.md
+│   └── custom-tools/      # 사용자 정의 도구 및 플러그인
+│       ├── [plugin-name]/ # 개별 플러그인 디렉토리
+│       │   ├── test/      # 플러그인 테스트 환경
+│       │   ├── src/       # 플러그인 소스 코드
+│       │   └── README.md  # 플러그인 문서
+│       └── README.md      # custom-tools 가이드
 ├── install*.sh            # 설치 스크립트
 ├── setup.sh               # 메인 설정 스크립트
 └── AGENTS.md              # 이 파일
@@ -102,6 +108,15 @@
 3. **Configuration**: 설정 파일 배포
 4. **Initialization**: 컨텍스트 시스템 초기화
 5. **Verification**: 시스템 동작 확인
+
+### Plugin Development & Testing Workflow
+1. **Create Test Directory**: 플러그인 테스트를 위한 격리된 환경 생성 (`test/` 디렉토리), opencode init
+2. **Install in Test Environment**: 테스트 디렉토리에 플러그인 설치 및 기능 검증
+3. **Stability Verification**: 플러그인의 안정성, 호환성, 오류 처리 검증
+4. **Documentation**: README.md 작성 및 사용법 문서화
+5. **Production Deployment**: 안정성 검증 완료 후에만 `$HOME/.config/opencode`에 설치
+
+**⚠️ 중요**: 플러그인을 `$HOME/.config/opencode`에 직접 설치하지 마세요. 반드시 `custom-tools/[plugin-name]/test/` 디렉토리에서 먼저 테스트하고, 안정성이 검증된 후에만 프로덕션 환경에 배포하세요.
 
 ---
 
