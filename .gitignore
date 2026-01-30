@@ -5,3 +5,8 @@ data/
 *.pyc
 __pycache__/
 node_modules/
+
+# Test coverage and build outputs
+coverage/
+dist/
+*.log
