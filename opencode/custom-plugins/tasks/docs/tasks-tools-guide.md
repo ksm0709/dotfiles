@@ -291,6 +291,53 @@ tools:
 
 ---
 
+## 플러그인 설치 구조
+
+Tasks Plugin은 OpenCode 공식 구조에 따라 다음과 같이 설치됩니다:
+
+```
+~/.config/opencode/
+├── plugins/tasks/              # 실행용 TypeScript 파일
+│   ├── index.ts               # 진입점
+│   ├── commands/              # 명령어 구현 (init, list, update 등)
+│   ├── lib/                   # 유틸리티 라이브러리 (storage, parser 등)
+│   └── types/                 # TypeScript 타입 정의
+├── shared/tasks/              # 문서 및 가이드 (참조용)
+│   ├── README.md              # 기본 설명서
+│   ├── docs/
+│   │   └── tasks-tools-guide.md   # 상세 가이드 (이 문서)
+│   └── templates/
+│       └── agents-md-tasks-guide.md   # AGENTS.md 템플릿
+└── tasks/                     # 작업 데이터 저장소 (자동 생성)
+    └── {session-id}/
+        └── {agent}-{title}.md
+```
+
+### 설치 방법
+
+**자동 설치:**
+```bash
+cd ~/.config/opencode/custom-plugins/tasks
+./install.sh
+```
+
+**수동 설치:**
+```bash
+# 1. 플러그인 소스 복사
+cp -r src/* ~/.config/opencode/plugins/tasks/
+
+# 2. 문서 복사
+mkdir -p ~/.config/opencode/shared/tasks
+cp README.md ~/.config/opencode/shared/tasks/
+cp -r docs ~/.config/opencode/shared/tasks/
+cp -r templates ~/.config/opencode/shared/tasks/
+
+# 3. 의존성 추가
+# ~/.config/opencode/package.json에 "uuid": "^11.1.0" 추가
+```
+
+---
+
 ## 모범 사례
 
 1. **작업 시작 시 초기화**: 작업을 시작할 때 항상 `tasks_init`로 작업 목록을 초기화하세요.

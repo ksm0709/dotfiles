@@ -13,32 +13,62 @@ OpenCode 에이전트를 위한 작업 관리 플러그인입니다. 서브에�
 
 ## 🚀 설치
 
-### 1. 의존성 설치
+### 자동 설치 (권장)
 
 ```bash
 cd ~/.config/opencode/custom-plugins/tasks
-npm install
+./install.sh
 ```
 
-### 2. TypeScript 컴파일
+### 수동 설치
+
+#### 1. 플러그인 파일 복사
 
 ```bash
-npm run build
+# 플러그인 소스 복사 (실행용)
+cp -r src/* ~/.config/opencode/plugins/tasks/
+
+# 문서 복사 (참조용)
+mkdir -p ~/.config/opencode/shared/tasks
+cp README.md ~/.config/opencode/shared/tasks/
+cp -r docs ~/.config/opencode/shared/tasks/
+cp -r templates ~/.config/opencode/shared/tasks/
 ```
 
-### 3. OpenCode 플러그인 등록
+#### 2. 의존성 설치
 
-`~/.config/opencode/config.json`에 플러그인을 등록합니다:
+`~/.config/opencode/package.json`에 다음을 추가:
 
 ```json
 {
-  "plugins": [
-    {
-      "name": "tasks",
-      "path": "~/.config/opencode/custom-plugins/tasks"
-    }
-  ]
+  "dependencies": {
+    "uuid": "^11.1.0"
+  }
 }
+```
+
+#### 3. OpenCode 재시작
+
+OpenCode를 재시작하면 플러그인이 자동으로 로드됩니다.
+
+## 📁 설치 구조
+
+```
+~/.config/opencode/
+├── plugins/tasks/              # 실행용 TypeScript 파일
+│   ├── index.ts               # 진입점
+│   ├── commands/              # 명령어 구현
+│   ├── lib/                   # 유틸리티 라이브러리
+│   └── types/                 # TypeScript 타입 정의
+├── shared/tasks/              # 문서 및 가이드
+│   ├── README.md
+│   ├── docs/
+│   │   └── tasks-tools-guide.md
+│   └── templates/
+│       └── agents-md-tasks-guide.md
+└── tasks/                     # 작업 데이터 저장소
+    └── {session-id}/
+        └── {agent}-{title}.md
 ```
 
 ## 📖 사용법
@@ -106,7 +136,7 @@ tasks_add(
 )
 ```
 
-## 📁 파일 저장 구조
+## 📂 작업 데이터 저장 구조
 
 ```
 ~/.local/share/opencode/tasks/
@@ -148,6 +178,13 @@ tasks_add(
 
 ## 🔧 개발
 
+### 개발 환경 설정
+
+```bash
+cd ~/.config/opencode/custom-plugins/tasks
+npm install
+```
+
 ### 빌드
 
 ```bash
@@ -171,6 +208,19 @@ npm run clean
 ```bash
 npm test
 ```
+
+### 테스트 (격리 환경)
+
+```bash
+./install.sh --target ./test-env
+export OPENCODE_CONFIG_DIR=./test-env/.opencode
+# OpenCode 실행
+```
+
+## 📚 문서
+
+- **상세 가이드**: `~/.config/opencode/shared/tasks/docs/tasks-tools-guide.md`
+- **에이전트 템플릿**: `~/.config/opencode/shared/tasks/templates/agents-md-tasks-guide.md`
 
 ## 📄 라이선스
 

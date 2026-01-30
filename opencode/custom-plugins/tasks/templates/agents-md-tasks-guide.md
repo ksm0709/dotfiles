@@ -57,6 +57,10 @@ const listResult = tasks_list(format="markdown")
 - 모든 도구는 반환값을 통해 결과를 전달합니다 (TUI 깨짐 없음)
 - 작업 파일은 `~/.local/share/opencode/tasks/{session-id}/`에 저장됩니다
 
+**설치 구조:**
+- 플러그인 코드: `~/.config/opencode/plugins/tasks/`
+- 문서 및 가이드: `~/.config/opencode/shared/tasks/`
+
 #### 에이전트 설정
 
 에이전트가 Tasks 도구를 사용하려면 frontmatter에 다음을 추가하세요:
@@ -90,6 +94,6 @@ tools:
 #### 자세한 사용법
 
 자세한 사용법은 다음 문서를 참조하세요:
-`~/.config/opencode/custom-plugins/tasks/docs/tasks-tools-guide.md`
+`~/.config/opencode/shared/tasks/docs/tasks-tools-guide.md`
 
 <!-- TASKS_TOOLS_GUIDE_END -->
