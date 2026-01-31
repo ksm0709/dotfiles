@@ -3,16 +3,11 @@
 # Tasks Plugin Installer for OpenCode
 # 
 # OpenCode 공식 플러그인 구조에 맞게 설치합니다.
-# 이 플러그인은 에이전트들이 작업을 체계적으로 관리할 수 있도록 하는 
-# tasks_* 도구들을 제공합니다.
+# 참고: flows 플러그인의 번들링 방식을 따릅니다.
 #
 # 설치 구조:
 #   ~/.config/opencode/
-#   ├── plugins/tasks/          # 실행용 TypeScript 파일
-#   │   ├── index.ts
-#   │   ├── commands/
-#   │   ├── lib/
-#   │   └── types/
+#   ├── plugins/tasks.ts        # 번들링된 단일 플러그인 파일
 #   └── shared/tasks/           # 문서 및 가이드
 #       ├── README.md
 #       ├── docs/
@@ -81,42 +76,67 @@ SHARED_DIR="$CONFIG_DIR/shared"
 
 echo ""
 
-# 1. 기존 잘못 설치된 폴더 정리
+# 1. 기존 잘못 설치된 폴더/파일 정리
+echo -e "${BLUE}🧹 Cleaning up old installations...${NC}"
+
+# 기존 단수형 plugin 폴더 정리
 OLD_DIR="$CONFIG_DIR/plugin/$PLUGIN_NAME"
 if [ -d "$OLD_DIR" ]; then
-    echo -e "${YELLOW}🧹 Cleaning up old installation at $OLD_DIR...${NC}"
+    echo -e "${YELLOW}  Removing old directory: $OLD_DIR${NC}"
     rm -rf "$OLD_DIR"
 fi
 
-# 2. 필요한 디렉토리 생성
-echo -e "${BLUE}📁 Creating necessary directories...${NC}"
-mkdir -p "$PLUGINS_DIR/$PLUGIN_NAME"
+# 기존 디렉토리 구조 정리 (복수형 plugins/tasks/)
+OLD_PLUGIN_DIR="$PLUGINS_DIR/$PLUGIN_NAME"
+if [ -d "$OLD_PLUGIN_DIR" ]; then
+    echo -e "${YELLOW}  Removing old plugin directory: $OLD_PLUGIN_DIR${NC}"
+    rm -rf "$OLD_PLUGIN_DIR"
+fi
+
+# 기존 tasks.ts 파일 정리 (v2 레거시)
+OLD_PLUGIN_FILE="$PLUGINS_DIR/$PLUGIN_NAME.ts"
+if [ -f "$OLD_PLUGIN_FILE" ]; then
+    echo -e "${YELLOW}  Removing old plugin file: $OLD_PLUGIN_FILE${NC}"
+    rm -f "$OLD_PLUGIN_FILE"
+fi
+
+echo -e "${GREEN}✓ Cleanup complete${NC}"
+echo ""
+
+# 2. 빌드 및 번들링
+echo -e "${BLUE}🔨 Bundling plugin into a single file...${NC}"
+mkdir -p "$SOURCE_DIR/dist"
+
+# esbuild를 사용하여 번들링 (외부 의존성 제외)
+"$SOURCE_DIR/node_modules/.bin/esbuild" "$SOURCE_DIR/src/index.ts" \
+  --bundle \
+  --platform=node \
+  --format=esm \
+  --outfile="$SOURCE_DIR/dist/$PLUGIN_NAME.js" \
+  --external:@opencode-ai/plugin \
+  --external:@opencode-ai/sdk \
+  --external:zod \
+  --external:uuid
+
+echo -e "${GREEN}✓ Bundling complete${NC}"
+echo ""
+
+# 3. 올바른 plugins 디렉토리 생성
+mkdir -p "$PLUGINS_DIR"
+
+# 4. 플러그인 파일 복사
+# OpenCode는 plugins/ 폴더 내의 .ts 파일을 로드하므로 확장자를 .ts로 하여 복사합니다.
+echo -e "${BLUE}📄 Copying bundled plugin to $PLUGINS_DIR/$PLUGIN_NAME.ts...${NC}"
+cp "$SOURCE_DIR/dist/$PLUGIN_NAME.js" "$PLUGINS_DIR/$PLUGIN_NAME.ts"
+echo -e "${GREEN}✓ Plugin installed${NC}"
+echo ""
+
+# 5. 필요한 디렉토리 생성 (문서용)
+echo -e "${BLUE}📁 Creating documentation directories...${NC}"
 mkdir -p "$SHARED_DIR/$PLUGIN_NAME/docs"
 mkdir -p "$SHARED_DIR/$PLUGIN_NAME/templates"
 
-# 3. 플러그인 소스 파일 복사 (plugins/tasks/)
-echo -e "${BLUE}📄 Copying plugin source files to $PLUGINS_DIR/$PLUGIN_NAME/...${NC}"
-
-if [ -d "$SOURCE_DIR/src" ]; then
-    # Copy all source files maintaining directory structure
-    for dir in commands lib types; do
-        if [ -d "$SOURCE_DIR/src/$dir" ]; then
-            cp -r "$SOURCE_DIR/src/$dir" "$PLUGINS_DIR/$PLUGIN_NAME/"
-            echo -e "${GREEN}  ✓ Copied $dir/${NC}"
-        fi
-    done
-    
-    # Copy index.ts as entry point
-    cp "$SOURCE_DIR/src/index.ts" "$PLUGINS_DIR/$PLUGIN_NAME/"
-    echo -e "${GREEN}  ✓ Copied index.ts${NC}"
-    
-    echo -e "${GREEN}✓ Plugin source copied to $PLUGINS_DIR/$PLUGIN_NAME/${NC}"
-else
-    echo -e "${RED}❌ Source directory not found: $SOURCE_DIR/src${NC}"
-    exit 1
-fi
-
-# 4. 문서 파일 복사 (shared/tasks/)
+# 6. 문서 파일 복사 (shared/tasks/)
 echo -e "${BLUE}📖 Copying documentation to $SHARED_DIR/$PLUGIN_NAME/...${NC}"
 
 if [ -f "$SOURCE_DIR/README.md" ]; then
@@ -134,9 +154,10 @@ if [ -d "$SOURCE_DIR/templates" ]; then
     echo -e "${GREEN}  ✓ Copied templates/${NC}"
 fi
 
-echo -e "${GREEN}✓ Documentation copied to $SHARED_DIR/$PLUGIN_NAME/${NC}"
+echo -e "${GREEN}✓ Documentation copied${NC}"
+echo ""
 
-# 5. 의존성을 ~/.config/opencode/package.json에 추가 (기본 설치 시에만)
+# 7. 의존성을 ~/.config/opencode/package.json에 추가 (기본 설치 시에만)
 PACKAGE_JSON="$CONFIG_DIR/package.json"
 
 if [ -z "$TARGET_DIR" ]; then
@@ -148,7 +169,7 @@ if [ -z "$TARGET_DIR" ]; then
         echo '{"dependencies": {}}' > "$PACKAGE_JSON"
     fi
 
-    # jq가 있으면 사용, 없으면 경고
+    # jq가 있으면 사용, 없으면 node로 처리
     if command -v jq &> /dev/null; then
         TEMP_FILE=$(mktemp)
         jq '.dependencies += {
@@ -156,20 +177,32 @@ if [ -z "$TARGET_DIR" ]; then
         }' "$PACKAGE_JSON" > "$TEMP_FILE" && mv "$TEMP_FILE" "$PACKAGE_JSON"
         echo -e "${GREEN}✓ Dependencies updated using jq${NC}"
     else
-        echo -e "${YELLOW}⚠️  jq not found. Please manually add 'uuid': '^11.1.0' to $PACKAGE_JSON${NC}"
+        if command -v node &> /dev/null; then
+            node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
+pkg.dependencies = pkg.dependencies || {};
+pkg.dependencies['uuid'] = '^11.1.0';
+fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2));
+"
+            echo -e "${GREEN}✓ Dependencies updated using node${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Neither jq nor node found. Please manually add 'uuid': '^11.1.0' to $PACKAGE_JSON${NC}"
+        fi
     fi
 else
     # Isolated test mode - skip package.json update
     echo -e "${YELLOW}⚠️  Skipping package.json update (isolated test mode)${NC}"
 fi
 
-# 6. AGENTS.md 업데이트 (기본 설치 시에만)
+# 8. AGENTS.md 업데이트 (기본 설치 시에만)
 AGENTS_MD="$CONFIG_DIR/AGENTS.md"
 TASKS_GUIDE_TEMPLATE="$SHARED_DIR/$PLUGIN_NAME/templates/agents-md-tasks-guide.md"
 UPDATE_SCRIPT="$SOURCE_DIR/scripts/update-agents-md.py"
 
 if [ -z "$TARGET_DIR" ]; then
     # Default installation - update AGENTS.md
+    echo ""
     echo -e "${BLUE}📝 Updating $AGENTS_MD with tasks tools guide...${NC}"
 
     if [ -f "$AGENTS_MD" ] && [ -f "$TASKS_GUIDE_TEMPLATE" ] && [ -f "$UPDATE_SCRIPT" ]; then
@@ -184,6 +217,7 @@ if [ -z "$TARGET_DIR" ]; then
     fi
 else
     # Isolated test mode - skip AGENTS.md update
+    echo ""
     echo -e "${YELLOW}⚠️  Skipping AGENTS.md update (isolated test mode)${NC}"
 fi
 
@@ -191,11 +225,7 @@ echo ""
 echo -e "${GREEN}✅ Installation complete!${NC}"
 echo ""
 echo -e "${BLUE}📁 Installation Structure:${NC}"
-echo "  • Plugin source: $PLUGINS_DIR/$PLUGIN_NAME/"
-echo "    - index.ts (entry point)"
-echo "    - commands/ (command implementations)"
-echo "    - lib/ (utility libraries)"
-echo "    - types/ (TypeScript type definitions)"
+echo "  • Plugin: $PLUGINS_DIR/$PLUGIN_NAME.ts (bundled single file)"
 echo "  • Documentation: $SHARED_DIR/$PLUGIN_NAME/"
 echo "    - README.md"
 echo "    - docs/tasks-tools-guide.md"
@@ -214,9 +244,9 @@ if [ -z "$TARGET_DIR" ]; then
     echo ""
     echo -e "${BLUE}📖 Next Steps:${NC}"
     echo "  1. Restart OpenCode to load the plugin"
-    echo "  2. Add tasks tools to your agent's frontmatter:"
+    echo "  2. Add tasks tool to your agent's frontmatter:"
     echo "     tools:"
-    echo "       tasks_*: true"
+    echo "       tasks: true"
     echo "  3. See the guide: $SHARED_DIR/$PLUGIN_NAME/docs/tasks-tools-guide.md"
 else
     echo -e "${YELLOW}⚠️  Isolated test mode - plugin installed to: $CONFIG_DIR${NC}"

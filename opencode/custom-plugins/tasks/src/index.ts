@@ -60,18 +60,12 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               operations: args.operations
             });
 
-            // Return Native UI Response for OpenCode
-            return result.response;
+            // Return output string for OpenCode
+            // OpenCode expects string output, not the full response object
+            return result.response.output;
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            return {
-              title: '❌ 작업 실행 실패',
-              output: `Failed to execute tasks: ${errorMessage}`,
-              metadata: {
-                operation: 'unified',
-                message: `Failed to execute tasks: ${errorMessage}`
-              }
-            };
+            return `❌ 작업 실행 실패: ${errorMessage}`;
           }
         }
       }),
