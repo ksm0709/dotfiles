@@ -87,8 +87,10 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       const requiredDirs = [
         'plugins',
         'plugins/tasks',
-        'tasks',
-        'custom-plugins/tasks/docs'
+        'plugins/tasks/commands',
+        'plugins/tasks/lib',
+        'plugins/tasks/types',
+        'shared/tasks/docs'
       ];
 
       for (const dir of requiredDirs) {
@@ -110,7 +112,7 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       );
 
       // Verify main plugin file exists
-      const pluginFile = path.join(opencodeDir, 'plugins/tasks.ts');
+      const pluginFile = path.join(opencodeDir, 'plugins/tasks/index.ts');
       const pluginStats = await fs.stat(pluginFile);
       expect(pluginStats.isFile()).toBe(true);
 
@@ -119,8 +121,8 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       expect(content).toContain('export const TasksPlugin: Plugin');
       expect(content).toContain('import { tool } from "@opencode-ai/plugin"');
       
-      // Verify import paths are corrected (commands are imported from ./tasks/commands/)
-      expect(content).toContain("from './tasks/commands/");
+      // Verify import paths are corrected (commands are imported from ./commands/)
+      expect(content).toContain("from './commands/");
     });
 
     it('should copy all source files to tasks subdirectory', async () => {
@@ -180,7 +182,7 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
     });
 
     it('should have valid TypeScript syntax in plugin file', async () => {
-      const pluginFile = path.join(opencodeDir, 'plugins/tasks.ts');
+      const pluginFile = path.join(opencodeDir, 'plugins/tasks/index.ts');
       const content = await fs.readFile(pluginFile, 'utf-8');
 
       // Check for valid plugin structure
@@ -213,14 +215,14 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
     });
 
     it('should have correct import paths in plugin file', async () => {
-      const pluginFile = path.join(opencodeDir, 'plugins/tasks.ts');
+      const pluginFile = path.join(opencodeDir, 'plugins/tasks/index.ts');
       const content = await fs.readFile(pluginFile, 'utf-8');
 
-      // All imports should use './tasks/' prefix
+      // All imports should use direct subdirectory paths (./commands/, ./lib/, ./types/)
       const importMatches = content.match(/from\s+['"]\.\/[^'"]+['"]/g) || [];
       
       for (const importPath of importMatches) {
-        expect(importPath).toMatch(/from\s+['"]\.\/tasks\//);
+        expect(importPath).toMatch(/from\s+['"]\.\/(commands|lib|types)\//);
       }
     });
   });
@@ -238,7 +240,7 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
     });
 
     it('should copy documentation files', async () => {
-      const docsDir = path.join(opencodeDir, 'custom-plugins/tasks/docs');
+      const docsDir = path.join(opencodeDir, 'shared/tasks/docs');
       const guideFile = path.join(docsDir, 'tasks-tools-guide.md');
       
       const stats = await fs.stat(guideFile);
@@ -277,22 +279,20 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       // Step 3: Verify all components
       const checks = [
         // Main plugin file
-        fs.access(path.join(opencodeDir, 'plugins/tasks.ts')),
+        fs.access(path.join(opencodeDir, 'plugins/tasks/index.ts')),
         // Source directories
         fs.access(path.join(opencodeDir, 'plugins/tasks/commands')),
         fs.access(path.join(opencodeDir, 'plugins/tasks/lib')),
         fs.access(path.join(opencodeDir, 'plugins/tasks/types')),
         // Documentation
-        fs.access(path.join(opencodeDir, 'custom-plugins/tasks/docs/tasks-tools-guide.md')),
-        // Task storage directory
-        fs.access(path.join(opencodeDir, 'tasks'))
+        fs.access(path.join(opencodeDir, 'shared/tasks/docs/tasks-tools-guide.md'))
       ];
 
       await Promise.all(checks);
 
       // Step 4: Verify plugin content
       const pluginContent = await fs.readFile(
-        path.join(opencodeDir, 'plugins/tasks.ts'),
+        path.join(opencodeDir, 'plugins/tasks/index.ts'),
         'utf-8'
       );
 
@@ -333,8 +333,8 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
 
         // Both directories should have the plugin
         const [plugin1, plugin2] = await Promise.all([
-          fs.readFile(path.join(tempDir, '.opencode/plugins/tasks.ts'), 'utf-8'),
-          fs.readFile(path.join(tempDir2, '.opencode/plugins/tasks.ts'), 'utf-8')
+          fs.readFile(path.join(tempDir, '.opencode/plugins/tasks/index.ts'), 'utf-8'),
+          fs.readFile(path.join(tempDir2, '.opencode/plugins/tasks/index.ts'), 'utf-8')
         ]);
 
         expect(plugin1).toContain('TasksPlugin');

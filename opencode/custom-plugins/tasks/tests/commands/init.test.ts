@@ -91,6 +91,26 @@ describe('initCommand', () => {
     expect(result.totalTasks).toBe(0);
   });
 
+  it('should return ToolResponse with proper structure', async () => {
+    const args: InitArgs = {
+      sessionId: 'test-session',
+      agent: 'test-agent',
+      title: 'Test Project'
+    };
+
+    const result = await initCommand(args);
+
+    // Verify ToolResponse structure
+    expect(result.response).toBeDefined();
+    expect(result.response.title).toBeDefined();
+    expect(result.response.output).toBeDefined();
+    expect(result.response.metadata).toBeDefined();
+    expect(result.response.metadata.operation).toBe('init');
+    expect(result.response.metadata.taskList).toBeDefined();
+    expect(result.response.metadata.summary).toBeDefined();
+    expect(result.response.metadata.message).toBeDefined();
+  });
+
   it('should initialize with provided tasks', async () => {
     const tasks: TaskInput[] = [
       { id: '1', title: 'First Task', status: 'pending' },

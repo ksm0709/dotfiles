@@ -1,24 +1,41 @@
 import { updateCommand, UpdateArgs } from '../../src/commands/update';
 import { Storage } from '../../src/lib/storage';
 import { Parser } from '../../src/lib/parser';
+import { Formatter } from '../../src/lib/formatter';
 import { TaskStatus } from '../../src/types';
 
 // Mocks
 jest.mock('../../src/lib/storage');
 jest.mock('../../src/lib/parser');
+jest.mock('../../src/lib/formatter');
 
 describe('updateCommand', () => {
   let mockStorage: jest.Mocked<Storage>;
   let mockParser: jest.Mocked<Parser>;
+  let mockFormatter: jest.Mocked<Formatter>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     mockStorage = new Storage() as jest.Mocked<Storage>;
     mockParser = new Parser() as jest.Mocked<Parser>;
+    mockFormatter = new Formatter() as jest.Mocked<Formatter>;
 
     (Storage as jest.MockedClass<typeof Storage>).mockImplementation(() => mockStorage);
     (Parser as jest.MockedClass<typeof Parser>).mockImplementation(() => mockParser);
+    (Formatter as jest.MockedClass<typeof Formatter>).mockImplementation(() => mockFormatter);
+
+    // Mock formatter methods
+    mockFormatter.calculateStatusSummary.mockReturnValue({
+      agent: 'test-agent',
+      title: 'Test Project',
+      total: 1,
+      completed: 1,
+      inProgress: 0,
+      pending: 0,
+      completionRate: 100
+    });
+    mockFormatter.formatUpdateResult.mockReturnValue('# ✅ 작업 상태 업데이트 완료\n\n**ID**: 1\n**새 상태**: ✅ completed\n\n---\n\n## 📋 현황');
   });
 
   it('should update task status successfully', async () => {
@@ -34,7 +51,7 @@ describe('updateCommand', () => {
       sessionId: 'test-session',
       createdAt: '2026-01-30',
       tasks: [
-        { id: '1', title: 'Task One', status: 'pending' }
+        { id: '1', title: 'Task One', status: 'completed' }
       ]
     };
 
@@ -50,6 +67,20 @@ describe('updateCommand', () => {
     expect(mockStorage.saveTaskList).toHaveBeenCalledWith('test-session', 'project', 'updated content');
     expect(result.success).toBe(true);
     expect(result.message).toContain('updated');
+    expect(result.formattedOutput).toBeDefined();
+    expect(result.currentStatus).toBeDefined();
+    expect(result.statusSummary).toBeDefined();
+
+    // Verify ToolResponse structure
+    expect(result.response).toBeDefined();
+    expect(result.response.title).toBeDefined();
+    expect(result.response.output).toBeDefined();
+    expect(result.response.metadata).toBeDefined();
+    expect(result.response.metadata.operation).toBe('update');
+    expect(result.response.metadata.taskId).toBe('1');
+    expect(result.response.metadata.status).toBe('completed');
+    expect(result.response.metadata.taskList).toBeDefined();
+    expect(result.response.metadata.summary).toBeDefined();
   });
 
   it('should update task to in_progress status', async () => {
@@ -65,7 +96,7 @@ describe('updateCommand', () => {
       sessionId: 'test-session',
       createdAt: '2026-01-30',
       tasks: [
-        { id: '2', title: 'Task Two', status: 'pending' }
+        { id: '2', title: 'Task Two', status: 'in_progress' }
       ]
     };
 
@@ -79,6 +110,7 @@ describe('updateCommand', () => {
 
     expect(result.success).toBe(true);
     expect(result.status).toBe('in_progress');
+    expect(result.formattedOutput).toBeDefined();
   });
 
   it('should handle task not found', async () => {
@@ -105,6 +137,9 @@ describe('updateCommand', () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain('not found');
+    expect(result.formattedOutput).toBeDefined();
+    expect(result.currentStatus).toBeDefined();
+    expect(result.statusSummary).toBeDefined();
   });
 
   it('should handle no task lists found', async () => {
@@ -120,5 +155,8 @@ describe('updateCommand', () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain('No task lists found');
+    expect(result.formattedOutput).toBeDefined();
+    expect(result.currentStatus).toBeDefined();
+    expect(result.statusSummary).toBeDefined();
   });
 });

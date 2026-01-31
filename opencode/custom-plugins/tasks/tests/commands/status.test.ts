@@ -96,4 +96,41 @@ describe('statusCommand', () => {
     expect(result.success).toBe(true);
     expect(result.message).toContain('No task lists found');
   });
+
+  it('should return ToolResponse with title, output, and metadata', async () => {
+    const args: StatusArgs = { sessionId: 'test-session' };
+
+    const taskList = {
+      title: 'Test Project',
+      agent: 'test-agent',
+      sessionId: 'test-session',
+      createdAt: '2026-01-30',
+      tasks: [
+        { id: '1', title: 'Task One', status: 'completed' },
+        { id: '2', title: 'Task Two', status: 'pending' }
+      ]
+    };
+
+    mockStorage.listTaskFiles.mockResolvedValue(['project.md']);
+    mockStorage.readTaskList.mockResolvedValue('content');
+    mockParser.parseTaskList.mockReturnValue(taskList as any);
+    mockFormatter.formatStatusSummary.mockReturnValue('Status Output');
+
+    const result = await statusCommand(args);
+
+    // Verify ToolResponse structure
+    expect(result.response).toBeDefined();
+    expect(result.response.title).toBeDefined();
+    expect(result.response.output).toBeDefined();
+    expect(result.response.metadata).toBeDefined();
+    expect(result.response.metadata.operation).toBe('status');
+    expect(result.response.metadata.taskList).toBeDefined();
+    expect(result.response.metadata.taskList!.title).toBe('Test Project');
+    expect(result.response.metadata.tasks).toBeDefined();
+    expect(result.response.metadata.tasks).toHaveLength(2);
+    expect(result.response.metadata.summary).toBeDefined();
+    expect(result.response.metadata.summary!.total).toBe(2);
+    // Multiple summaries are in result.summaries, not in response.metadata
+    expect(result.summaries).toHaveLength(1);
+  });
 });

@@ -1,5 +1,5 @@
 import { Formatter } from '../../src/lib/formatter';
-import { TaskList, TaskDetail, TaskStatusSummary, TaskStatus } from '../../src/types';
+import { TaskList, TaskDetail, TaskStatusSummary, TaskStatus, BatchResult, StatusSummary } from '../../src/types';
 
 describe('Formatter', () => {
   let formatter: Formatter;
@@ -457,6 +457,372 @@ describe('Formatter', () => {
 
       // 75% of 20 characters = 15 filled
       expect(formatted).toContain('75%');
+    });
+  });
+
+  describe('formatTaskListWithStatus', () => {
+    it('should format task list with status summary', () => {
+      const taskList: TaskList = {
+        title: 'Status Test',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: [
+          {
+            id: '1',
+            title: 'Task 1',
+            status: 'completed' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '2',
+            title: 'Task 2',
+            status: 'in_progress' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '3',
+            title: 'Task 3',
+            status: 'pending' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          }
+        ]
+      };
+
+      const summary: StatusSummary = {
+        agent: 'test-agent',
+        title: 'Status Test',
+        total: 3,
+        completed: 1,
+        inProgress: 1,
+        pending: 1,
+        completionRate: 33
+      };
+
+      const formatted = formatter.formatTaskListWithStatus(taskList, summary);
+
+      expect(formatted).toContain('# 📋 Status Test');
+      expect(formatted).toContain('**에이전트**: test-agent');
+      expect(formatted).toContain('## 📊 진행 상황');
+      expect(formatted).toContain('| 상태 | 개수 | 비율 |');
+      expect(formatted).toContain('| ✅ 완료 | 1 |');
+      expect(formatted).toContain('| 🔄 진행중 | 1 |');
+      expect(formatted).toContain('| ⏳ 대기 | 1 |');
+      expect(formatted).toContain('### 진행률');
+      expect(formatted).toContain('## 📋 작업 목록');
+      expect(formatted).toContain('- [x] ✅ **1**. Task 1');
+      expect(formatted).toContain('- [ ] 🔄 **2**. Task 2');
+      expect(formatted).toContain('- [ ] ⏳ **3**. Task 3');
+    });
+  });
+
+  describe('formatProgressBar', () => {
+    it('should format 0% progress bar', () => {
+      const bar = formatter.formatProgressBar(0);
+      expect(bar).toBe('[░░░░░░░░░░░░░░░░░░░░] 0%');
+    });
+
+    it('should format 50% progress bar', () => {
+      const bar = formatter.formatProgressBar(50);
+      expect(bar).toContain('50%');
+      expect(bar).toContain('█');
+      expect(bar).toContain('░');
+    });
+
+    it('should format 100% progress bar', () => {
+      const bar = formatter.formatProgressBar(100);
+      expect(bar).toBe('[████████████████████] 100%');
+    });
+
+    it('should format custom length progress bar', () => {
+      const bar = formatter.formatProgressBar(50, 10);
+      expect(bar).toBe('[█████░░░░░] 50%');
+    });
+
+    it('should clamp percentage to 0-100 range', () => {
+      const barNegative = formatter.formatProgressBar(-10);
+      const barOver100 = formatter.formatProgressBar(150);
+      
+      expect(barNegative).toBe('[░░░░░░░░░░░░░░░░░░░░] 0%');
+      expect(barOver100).toBe('[████████████████████] 100%');
+    });
+  });
+
+  describe('calculateStatusSummary', () => {
+    it('should calculate correct status summary', () => {
+      const taskList: TaskList = {
+        title: 'Calc Test',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: [
+          {
+            id: '1',
+            title: 'Completed Task',
+            status: 'completed' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '2',
+            title: 'In Progress Task',
+            status: 'in_progress' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '3',
+            title: 'Pending Task',
+            status: 'pending' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          }
+        ]
+      };
+
+      const summary = formatter.calculateStatusSummary(taskList);
+
+      expect(summary.agent).toBe('test-agent');
+      expect(summary.title).toBe('Calc Test');
+      expect(summary.total).toBe(3);
+      expect(summary.completed).toBe(1);
+      expect(summary.inProgress).toBe(1);
+      expect(summary.pending).toBe(1);
+      expect(summary.completionRate).toBe(33);
+    });
+
+    it('should count subtasks in summary', () => {
+      const taskList: TaskList = {
+        title: 'Nested Calc Test',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: [
+          {
+            id: '1',
+            title: 'Parent',
+            status: 'in_progress' as TaskStatus,
+            details: [],
+            subtasks: [
+              {
+                id: '1.1',
+                title: 'Child 1',
+                status: 'completed' as TaskStatus,
+                details: [],
+                createdAt: '2026-01-30T10:00:00.000Z',
+                updatedAt: '2026-01-30T10:00:00.000Z'
+              },
+              {
+                id: '1.2',
+                title: 'Child 2',
+                status: 'pending' as TaskStatus,
+                details: [],
+                createdAt: '2026-01-30T10:00:00.000Z',
+                updatedAt: '2026-01-30T10:00:00.000Z'
+              }
+            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          }
+        ]
+      };
+
+      const summary = formatter.calculateStatusSummary(taskList);
+
+      expect(summary.total).toBe(3);  // Parent + 2 children
+      expect(summary.completed).toBe(1);
+      expect(summary.inProgress).toBe(1);
+      expect(summary.pending).toBe(1);
+      expect(summary.completionRate).toBe(33);
+    });
+
+    it('should handle empty task list', () => {
+      const taskList: TaskList = {
+        title: 'Empty',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: []
+      };
+
+      const summary = formatter.calculateStatusSummary(taskList);
+
+      expect(summary.total).toBe(0);
+      expect(summary.completed).toBe(0);
+      expect(summary.inProgress).toBe(0);
+      expect(summary.pending).toBe(0);
+      expect(summary.completionRate).toBe(0);
+    });
+  });
+
+  describe('formatBatchResult', () => {
+    it('should format successful batch results', () => {
+      const results: BatchResult[] = [
+        {
+          success: true,
+          operation: { type: 'add', title: 'Task 1' },
+          message: 'Task added: Task 1'
+        },
+        {
+          success: true,
+          operation: { type: 'complete', id: '1' },
+          taskId: '1',
+          message: 'Task 1 marked as completed'
+        }
+      ];
+
+      const summary = { total: 2, succeeded: 2, failed: 0 };
+
+      const taskList: TaskList = {
+        title: 'Batch Test',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: []
+      };
+
+      const statusSummary: StatusSummary = {
+        agent: 'test-agent',
+        title: 'Batch Test',
+        total: 2,
+        completed: 1,
+        inProgress: 0,
+        pending: 1,
+        completionRate: 50
+      };
+
+      const formatted = formatter.formatBatchResult(results, summary, taskList, statusSummary);
+
+      expect(formatted).toContain('# 📦 배치 작업 결과');
+      expect(formatted).toContain('## 📊 요약');
+      expect(formatted).toContain('- **총 작업**: 2');
+      expect(formatted).toContain('- **✅ 성공**: 2');
+      expect(formatted).toContain('- **❌ 실패**: 0');
+      expect(formatted).toContain('## ✅ 작업 상세');
+      expect(formatted).toContain('✅ **ADD**: Task added: Task 1');
+      expect(formatted).toContain('✅ **COMPLETE**: Task 1 marked as completed');
+      expect(formatted).toContain('## 📋 현재 작업 현황');
+    });
+
+    it('should include failed operations section when there are failures', () => {
+      const results: BatchResult[] = [
+        {
+          success: false,
+          operation: { type: 'add', title: 'Failed Task' },
+          message: 'Add failed',
+          error: 'Database error'
+        },
+        {
+          success: true,
+          operation: { type: 'complete', id: '1' },
+          taskId: '1',
+          message: 'Task completed'
+        }
+      ];
+
+      const summary = { total: 2, succeeded: 1, failed: 1 };
+
+      const taskList: TaskList = {
+        title: 'Batch Test',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: []
+      };
+
+      const statusSummary: StatusSummary = {
+        agent: 'test-agent',
+        title: 'Batch Test',
+        total: 1,
+        completed: 1,
+        inProgress: 0,
+        pending: 0,
+        completionRate: 100
+      };
+
+      const formatted = formatter.formatBatchResult(results, summary, taskList, statusSummary);
+
+      expect(formatted).toContain('## ❌ 실패한 작업');
+      expect(formatted).toContain('➕ 추가: Failed Task');
+      expect(formatted).toContain('- **오류**: Add failed');
+      expect(formatted).toContain('- **상세**: Database error');
+    });
+  });
+
+  describe('formatAddResult', () => {
+    it('should format add result with status', () => {
+      const task: TaskDetail = {
+        id: '4',
+        title: 'New Task',
+        status: 'pending',
+        details: [],
+        createdAt: '2026-01-30T10:00:00.000Z',
+        updatedAt: '2026-01-30T10:00:00.000Z'
+      };
+
+      const taskList: TaskList = {
+        title: 'Add Test',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: [task]
+      };
+
+      const summary: StatusSummary = {
+        agent: 'test-agent',
+        title: 'Add Test',
+        total: 1,
+        completed: 0,
+        inProgress: 0,
+        pending: 1,
+        completionRate: 0
+      };
+
+      const formatted = formatter.formatAddResult(task, taskList, summary);
+
+      expect(formatted).toContain('✅ 작업 추가 완료');
+      expect(formatted).toContain('**제목**: New Task');
+      expect(formatted).toContain('**ID**: 4');
+      expect(formatted).toContain('**상태**: ⏳ 대기');
+      expect(formatted).toContain('---');
+    });
+  });
+
+  describe('formatUpdateResult', () => {
+    it('should format update result with status', () => {
+      const taskList: TaskList = {
+        title: 'Update Test',
+        agent: 'test-agent',
+        createdAt: '2026-01-30',
+        sessionId: 'abc',
+        tasks: []
+      };
+
+      const summary: StatusSummary = {
+        agent: 'test-agent',
+        title: 'Update Test',
+        total: 1,
+        completed: 1,
+        inProgress: 0,
+        pending: 0,
+        completionRate: 100
+      };
+
+      const formatted = formatter.formatUpdateResult('1', 'completed', taskList, summary);
+
+      expect(formatted).toContain('✅ 작업 상태 업데이트 완료');
+      expect(formatted).toContain('**ID**: 1');
+      expect(formatted).toContain('✅ completed');
+      expect(formatted).toContain('---');
     });
   });
 });
