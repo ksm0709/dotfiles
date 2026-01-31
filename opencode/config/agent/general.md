@@ -5,8 +5,7 @@ permission:
   "*": allow
   doom_loop: ask
   external_directory: ask
-  todowrite: allow
-  todoread: allow
+  tasks: allow
 tools:
   bash: true
   read: true
@@ -14,8 +13,7 @@ tools:
   edit: true
   glob: true
   grep: true
-  todowrite: true
-  todoread: true
+  tasks: true
 ---
 
 # Role: General Agent

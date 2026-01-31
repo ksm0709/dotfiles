@@ -8,13 +8,10 @@ tools:
   edit: true
   glob: true
   grep: true
-  task: true
-  todowrite: true
-  todoread: true
+  tasks: true
 temperature: 0.1
 permission:
-  todowrite: allow
-  todoread: allow
+  tasks: allow
   "*": allow
 ---
 

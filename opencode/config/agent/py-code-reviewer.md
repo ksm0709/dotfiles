@@ -4,11 +4,9 @@ mode: subagent
 tools:
   bash: true
   read: true
-  todowrite: true
-  todoread: true
+  tasks: true
 permission:
-  todowrite: allow
-  todoread: allow
+  tasks: allow
 ---
 
 # Role: Py Code Reviewer

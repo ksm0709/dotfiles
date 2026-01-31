@@ -7,11 +7,9 @@ tools:
   edit: false
   bash: true
   webfetch: true
-  todowrite: true
-  todoread: true
+  tasks: true
 permission:
-  todowrite: allow
-  todoread: allow
+  tasks: allow
 ---
 
 # Role: C++ Code Reviewer

@@ -8,6 +8,7 @@ tools:
   edit: true
   glob: true
   grep: true
+  tasks: true
 ---
 
 # Role: Senior Software Engineer

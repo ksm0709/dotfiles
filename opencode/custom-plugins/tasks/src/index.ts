@@ -52,16 +52,20 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
         },
         async execute(args: { operations: any[] }, ctx: any) {
           try {
-            // Extract sessionId from OpenCode context
-            const sessionId = ctx.sessionId || ctx.session_id || 'default-session';
+            // OpenCode ToolContext에서 sessionID 추출 (대문자 ID 사용)
+            // sessionID가 없으면 명확하게 실패 - default-session fallback 금지
+            if (!ctx.sessionID) {
+              throw new Error('Session ID is required from ToolContext but was not provided. Cannot initialize task list without a valid session ID.');
+            }
+            const sessionId = ctx.sessionID;
 
             const result = await unifiedCommand({
               sessionId,
               operations: args.operations
             });
 
-            // Return output string for OpenCode
-            // OpenCode expects string output, not the full response object
+            // Return markdown output string
+            // OpenCode tool interface requires Promise<string> return type
             return result.response.output;
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);

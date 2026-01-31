@@ -279,21 +279,16 @@ function formatUnifiedResponse(
 ): ToolResponse {
   const lines: string[] = [];
 
-  // Header
-  lines.push('# 📦 작업 실행 결과');
-  lines.push('');
-
-  // Summary
-  lines.push('## 📊 요약');
-  lines.push('');
-  lines.push(`- **총 작업**: ${summary.total}`);
-  lines.push(`- **✅ 성공**: ${summary.succeeded}`);
-  lines.push(`- **❌ 실패**: ${summary.failed}`);
-  lines.push('');
-
-  if (summary.total > 0) {
-    const percentage = Math.round((summary.succeeded / summary.total) * 100);
-    lines.push(formatter.formatProgressBar(percentage));
+  // 작업 목록 현황 요약 (맨 처음에 표시)
+  if (currentStatus) {
+    const statusSummary = formatter.calculateStatusSummary(currentStatus);
+    const total = statusSummary.total;
+    const completed = statusSummary.completed;
+    const inProgress = statusSummary.inProgress;
+    const pending = statusSummary.pending;
+    
+    // 간결한 요약 라인: "📋 total 5, in-progress 2, done 1"
+    lines.push(`📋 total ${total}, in-progress ${inProgress}, done ${completed}`);
     lines.push('');
   }
 
@@ -309,7 +304,7 @@ function formatUnifiedResponse(
     }
   }
 
-  // Failed operations
+  // Failed operations - 최상단에 노출 (실패한 경우에만)
   if (failedResults.length > 0) {
     lines.push('## ❌ 실패한 작업');
     lines.push('');
@@ -322,26 +317,14 @@ function formatUnifiedResponse(
     lines.push('');
   }
 
-  // Successful operations
-  if (succeededResults.length > 0) {
-    lines.push('## ✅ 성공한 작업');
-    lines.push('');
-    for (const result of succeededResults) {
-      const taskInfo = result.taskId ? `(ID: ${result.taskId})` : '';
-      lines.push(`- ✅ **${result.operation.type}**: ${result.message} ${taskInfo}`);
-    }
-    lines.push('');
-  }
-
-  // Current session status
+  // 작업 목록 표시 (한 줄 요약 아래에 체크박스 형태로만)
   if (currentStatus) {
-    const statusSummary = formatter.calculateStatusSummary(currentStatus);
-    lines.push('---');
     lines.push('');
-    lines.push(formatter.formatTaskListWithStatus(currentStatus, statusSummary));
+    for (const task of currentStatus.tasks) {
+      lines.push(...formatTaskCheckbox(task, 0));
+    }
+    lines.push(''); // tasks list 마지막에 빈 줄 1줄 추가
   } else {
-    lines.push('---');
-    lines.push('');
     lines.push('ℹ️ 현재 세션에 작업 목록이 없습니다.');
   }
 
@@ -369,4 +352,25 @@ function formatUnifiedResponse(
       operation: 'unified'
     }
   };
+}
+
+/**
+ * 작업을 체크박스 형태로 포맷팅
+ */
+function formatTaskCheckbox(task: any, indent: number): string[] {
+  const lines: string[] = [];
+  const prefix = '  '.repeat(indent);
+  const checkbox = task.status === 'completed' ? '[x]' : '[ ]';
+  const statusEmoji = task.status === 'completed' ? '✅' : 
+                     task.status === 'in_progress' ? '🔄' : '⏳';
+  
+  lines.push(`${prefix}- ${checkbox} ${statusEmoji} **${task.id}**. ${task.title}`);
+
+  if (task.subtasks && task.subtasks.length > 0) {
+    for (const subtask of task.subtasks) {
+      lines.push(...formatTaskCheckbox(subtask, indent + 1));
+    }
+  }
+
+  return lines;
 }
