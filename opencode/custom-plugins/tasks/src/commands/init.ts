@@ -3,7 +3,8 @@
 
 import { Storage } from '../lib/storage';
 import { Parser } from '../lib/parser';
-import { TaskList, TaskDetail } from '../types';
+import { Formatter } from '../lib/formatter';
+import { TaskList, TaskDetail, CommandResultWithStatus, StatusSummary, ToolResponse } from '../types';
 
 export interface InitArgs {
   sessionId: string;    // 세션 ID (필수)
@@ -20,22 +21,24 @@ export interface TaskInput {
   subtasks?: TaskInput[];
 }
 
-export interface InitResult {
+export interface InitResult extends CommandResultWithStatus {
   title: string;
   agent: string;
   fileName: string;
   taskIds: string[];
   totalTasks: number;
+  response: ToolResponse;
 }
 
 /**
  * 작업 목록 초기화
  * ~/.local/share/opencode/tasks/{sessionId}/{agent}-{title}.md 생성
- * @returns 생성된 작업 목록 정보와 작업 ID 목록
+ * @returns 생성된 작업 목록 정보와 작업 ID 목록, 현황 정보
  */
 export async function initCommand(args: InitArgs): Promise<InitResult> {
   const storage = new Storage();
   const parser = new Parser();
+  const formatter = new Formatter();
 
   try {
     // 작업 목록 생성
@@ -52,18 +55,75 @@ export async function initCommand(args: InitArgs): Promise<InitResult> {
 
     // 작업 ID 목록 추출
     const taskIds = extractTaskIds(taskList.tasks);
+    const totalTasks = countTasks(taskList.tasks);
+
+    // 상태 요약 계산
+    const statusSummary = formatter.calculateStatusSummary(taskList);
+
+    // 포맷팅된 출력 생성
+    const formattedOutput = formatInitResult(args, taskList, statusSummary, fileName, taskIds, totalTasks, formatter);
+
+    // Native UI Response 생성
+    const response: ToolResponse = {
+      title: `Initialized: ${args.title} (${totalTasks} tasks)`,
+      output: formattedOutput,
+      metadata: {
+        taskList: taskList,
+        tasks: taskList.tasks,
+        summary: statusSummary,
+        operation: 'init',
+        message: `Task list "${args.title}" initialized successfully for agent "${args.agent}"`
+      }
+    };
 
     return {
+      success: true,
       title: args.title,
       agent: args.agent,
       fileName,
       taskIds,
-      totalTasks: countTasks(taskList.tasks)
+      totalTasks,
+      message: `Task list "${args.title}" initialized successfully for agent "${args.agent}"`,
+      currentStatus: taskList,
+      statusSummary,
+      formattedOutput,
+      response
     };
   } catch (error) {
     console.error('❌ Failed to initialize task list:', error);
     throw error;
   }
+}
+
+/**
+ * init 작업 결과 포맷팅
+ */
+function formatInitResult(
+  args: InitArgs,
+  taskList: TaskList,
+  summary: StatusSummary,
+  fileName: string,
+  taskIds: string[],
+  totalTasks: number,
+  formatter: Formatter
+): string {
+  const lines: string[] = [];
+
+  lines.push(`# ✅ Task List Initialized`);
+  lines.push('');
+  lines.push(`**작업 목록**: ${args.title}`);
+  lines.push(`**에이전트**: ${args.agent}`);
+  lines.push(`**파일명**: ${fileName}.md`);
+  lines.push(`**총 작업**: ${totalTasks}`);
+  if (taskIds.length > 0) {
+    lines.push(`**작업 ID**: ${taskIds.join(', ')}`);
+  }
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push(formatter.formatTaskListWithStatus(taskList, summary));
+
+  return lines.join('\n');
 }
 
 /**

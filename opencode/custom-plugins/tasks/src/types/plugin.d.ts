@@ -15,7 +15,7 @@ declare module "@opencode-ai/plugin" {
   export interface ToolSchema {
     string: (options?: { description?: string }) => any;
     enum: <T extends string>(values: T[], options?: { description?: string }) => any;
-    array: (itemSchema: any) => any;
+    array: (itemSchema: any, options?: { description?: string }) => any;
     object: (properties: Record<string, any>) => any;
     any: () => any;
     optional: (schema: any) => any;
