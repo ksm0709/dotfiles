@@ -230,10 +230,13 @@ async function executeOperation(
       };
 
     default:
+      // Exhaustive type checking - TypeScript will error if a new operation type is added
+      // but not handled in this switch statement
+      const _exhaustiveCheck: never = operation as never;
       return {
         success: false,
-        operation,
-        message: `Unknown operation type: ${(operation as any).type}`
+        operation: operation,
+        message: `Unknown operation type: ${(operation as UnifiedOperation).type}`
       };
   }
 }
@@ -294,11 +297,23 @@ function formatUnifiedResponse(
     lines.push('');
   }
 
+  // Separate results into failed and succeeded (single pass)
+  const failedResults: UnifiedOperationResult[] = [];
+  const succeededResults: UnifiedOperationResult[] = [];
+  
+  for (const result of results) {
+    if (result.success) {
+      succeededResults.push(result);
+    } else {
+      failedResults.push(result);
+    }
+  }
+
   // Failed operations
-  if (summary.failed > 0) {
+  if (failedResults.length > 0) {
     lines.push('## ❌ 실패한 작업');
     lines.push('');
-    for (const result of results.filter(r => !r.success)) {
+    for (const result of failedResults) {
       lines.push(`- ❌ **${result.operation.type}**: ${result.message}`);
       if (result.error) {
         lines.push(`  - 상세: ${result.error}`);
@@ -308,10 +323,10 @@ function formatUnifiedResponse(
   }
 
   // Successful operations
-  if (summary.succeeded > 0) {
+  if (succeededResults.length > 0) {
     lines.push('## ✅ 성공한 작업');
     lines.push('');
-    for (const result of results.filter(r => r.success)) {
+    for (const result of succeededResults) {
       const taskInfo = result.taskId ? `(ID: ${result.taskId})` : '';
       lines.push(`- ✅ **${result.operation.type}**: ${result.message} ${taskInfo}`);
     }
@@ -337,6 +352,10 @@ function formatUnifiedResponse(
     output,
     metadata: {
       results: results,
+      // Operation execution summary (not task list status)
+      // completed: operations that succeeded
+      // failed: operations that failed
+      // total: total operations attempted
       summary: currentStatus ? {
         agent: currentStatus.agent,
         title: currentStatus.title,
