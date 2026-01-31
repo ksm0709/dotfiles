@@ -18,6 +18,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
-    '/custom-plugins/(?!tasks)'
+    '/custom-plugins/(?!tasks)',
+    '/tests/commands/deprecated/'
   ],
 };
