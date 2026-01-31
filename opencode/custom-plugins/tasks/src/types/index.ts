@@ -37,7 +37,53 @@ export interface CommandArgs {
 }
 
 // ===========================================
-// Batch Operations Types (New)
+// Unified Operations Types (New - v3.0)
+// ===========================================
+
+export type UnifiedOperationType = 'init' | 'add' | 'update' | 'complete' | 'remove';
+
+export interface UnifiedOperation {
+  type: UnifiedOperationType;
+  // For 'init'
+  agent?: string;
+  // For 'init' and 'add'
+  title?: string;
+  // For 'update', 'complete', 'remove'
+  id?: string;
+  // For 'add' (optional)
+  parent?: string;
+  // For 'update'
+  status?: TaskStatus;
+}
+
+export interface UnifiedCommandParams {
+  sessionId: string;
+  operations: UnifiedOperation[];
+}
+
+export interface UnifiedCommandResult {
+  success: boolean;
+  results: UnifiedOperationResult[];
+  summary: {
+    total: number;
+    succeeded: number;
+    failed: number;
+  };
+  currentStatus: TaskList | null;
+  response: ToolResponse;
+}
+
+export interface UnifiedOperationResult {
+  success: boolean;
+  operation: UnifiedOperation;
+  message: string;
+  taskId?: string;
+  taskTitle?: string;
+  error?: string;
+}
+
+// ===========================================
+// Batch Operations Types (Deprecated - use UnifiedOperation instead)
 // ===========================================
 
 export type OperationType = 'add' | 'update' | 'complete' | 'remove';
@@ -107,8 +153,8 @@ export interface ToolResponse {
     tasks?: TaskDetail[];
     taskList?: TaskList;
     summary?: StatusSummary;
-    results?: BatchResult[];
-    operation?: 'add' | 'update' | 'complete' | 'remove' | 'batch' | 'init' | 'list' | 'status';
+    results?: UnifiedOperationResult[];
+    operation?: 'add' | 'update' | 'complete' | 'remove' | 'batch' | 'init' | 'list' | 'status' | 'unified';
     taskId?: string;
     status?: TaskStatus;
     parent?: string;
