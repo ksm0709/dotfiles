@@ -47,7 +47,7 @@ describe('unifiedCommand (TDD)', () => {
       parseTaskList: jest.fn(),
       generateTaskList: jest.fn().mockReturnValue(''),
       addTask: jest.fn().mockReturnValue(true),
-      updateTask: jest.fn().mockReturnValue(true),
+      updateTaskStatus: jest.fn().mockReturnValue(true),
       removeTask: jest.fn().mockReturnValue(true),
       findTask: jest.fn()
     } as unknown as jest.Mocked<Parser>;
@@ -81,8 +81,9 @@ describe('unifiedCommand (TDD)', () => {
     it('should only access current session tasks', async () => {
       const sessionId = 'test-session-1';
       
-      mockStorage.listTaskFiles.mockResolvedValueOnce(['test-agent-tasks.md']);
-      mockStorage.readTaskList.mockResolvedValueOnce(`
+      // Use mockResolvedValue (not Once) since add-task command also calls these methods
+      mockStorage.listTaskFiles.mockResolvedValue(['test-agent-tasks.md']);
+      mockStorage.readTaskList.mockResolvedValue(`
 # Task List: Test Tasks
 **에이전트**: test-agent
 **세션 ID**: ${sessionId}
@@ -90,7 +91,7 @@ describe('unifiedCommand (TDD)', () => {
 ## 작업 목록
 - [ ] ⏳ **1**. Test task
       `);
-      mockParser.parseTaskList.mockReturnValueOnce({
+      mockParser.parseTaskList.mockReturnValue({
         title: 'Test Tasks',
         agent: 'test-agent',
         sessionId,
@@ -339,7 +340,7 @@ describe('unifiedCommand (TDD)', () => {
       expect(result.summary.total).toBe(3);
     });
 
-    it('should limit to 50 operations', async () => {
+    it('should reject more than 50 operations', async () => {
       const sessionId = 'test-session';
       
       // Create 51 operations
@@ -348,11 +349,10 @@ describe('unifiedCommand (TDD)', () => {
         title: `Task ${i + 1}`
       }));
 
-      // Should handle gracefully (implementation may reject or truncate)
-      const result = await unifiedCommand({ sessionId, operations });
-      
-      // Implementation should handle this case
-      expect(result).toBeDefined();
+      // Should throw error for exceeding maximum operations
+      await expect(
+        unifiedCommand({ sessionId, operations })
+      ).rejects.toThrow('Too many operations: maximum 50 allowed, got 51');
     });
   });
 
