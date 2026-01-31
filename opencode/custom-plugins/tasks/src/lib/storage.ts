@@ -17,6 +17,14 @@ export class Storage {
   }
 
   /**
+   * 공통 에러 핸들러
+   */
+  private handleError(operation: string, path: string, error: unknown): never {
+    console.error(`❌ Storage error [${operation}]: ${path}`, error);
+    throw error;
+  }
+
+  /**
    * 세션별 디렉토리 생성
    * ~/.local/share/opencode/tasks/{sessionId}/
    */
@@ -25,8 +33,7 @@ export class Storage {
     try {
       await fs.mkdir(sessionDir, { recursive: true });
     } catch (error) {
-      console.error(`Failed to create directory: ${sessionDir}`, error);
-      throw error;
+      this.handleError('mkdir', sessionDir, error);
     }
     return sessionDir;
   }
@@ -43,8 +50,7 @@ export class Storage {
     try {
       await fs.writeFile(filePath, content, 'utf-8');
     } catch (error) {
-      console.error(`Failed to write file: ${filePath}`, error);
-      throw error;
+      this.handleError('write', filePath, error);
     }
   }
 
