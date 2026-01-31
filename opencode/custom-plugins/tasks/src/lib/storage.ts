@@ -25,6 +25,19 @@ export class Storage {
   }
 
   /**
+   * 타입 가드: NodeJS 에러인지 확인
+   * instanceof Error를 사용하지 않음 - Jest 환경에서 VM 컨텍스트 문제 방지
+   */
+  private isNodeError(error: unknown): error is NodeJS.ErrnoException {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof (error as NodeJS.ErrnoException).code === 'string'
+    );
+  }
+
+  /**
    * 세션별 디렉토리 생성
    * ~/.local/share/opencode/tasks/{sessionId}/
    */
@@ -65,7 +78,7 @@ export class Storage {
     try {
       return await fs.readFile(filePath, 'utf-8');
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (this.isNodeError(error) && error.code === 'ENOENT') {
         return null;
       }
       throw error;
@@ -82,7 +95,7 @@ export class Storage {
       const files = await fs.readdir(sessionDir);
       return files.filter(f => f.endsWith('.md'));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (this.isNodeError(error) && error.code === 'ENOENT') {
         return [];
       }
       throw error;
@@ -100,7 +113,7 @@ export class Storage {
     try {
       await fs.unlink(filePath);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (this.isNodeError(error) && error.code !== 'ENOENT') {
         throw error;
       }
     }
