@@ -4,7 +4,31 @@
 `unify-tasks-tool-and-session-isolation`
 
 ## Status
-PROPOSED
+ARCHIVED
+
+## Implementation Summary
+✅ **Completed on 2026-01-31**
+
+### Deliverables
+- [x] Unified `tasks` tool implementation (replaced 7 individual tools)
+- [x] Session isolation - only current session's tasks visible
+- [x] Batch operations support (max 50 operations)
+- [x] Comprehensive input validation and error handling
+- [x] Updated documentation (README, Migration Guide, AGENTS.md)
+- [x] Test suite with 99% code coverage
+- [x] Code review APPROVED
+
+### Git Commits
+1. `dcf65bd` - feat(tasks): add unified tasks tool replacing 7 individual tools
+2. `cdaf767` - refactor(tasks): improve error handling in storage layer
+3. `db6cc99` - test(tasks): update test suite for unified tool
+4. `923b771` - docs(tasks): update documentation for v3.0 unified tool
+5. `1174393` - docs(openspec): add proposal for tasks plugin unification
+
+### Metrics
+- **Code Coverage**: 73% → 99%
+- **Test Count**: 94 → 158 tests
+- **Breaking Change**: Yes (hard deprecation of old tools)
 
 ## Summary
 Tasks 플러그인의 7개 개별 툴(`tasks_init`, `tasks_add`, `tasks_remove`, `tasks_update`, `tasks_complete`, `tasks_list`, `tasks_status`)을 **단일 툴 `tasks`로 통합**하고, **세션 격리(Session Isolation)**를 강화하여 현재 세션의 작업만 표시하도록 개선합니다.
