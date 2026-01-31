@@ -13,6 +13,7 @@ import { completeCommand } from './commands/complete';
 import { removeCommand } from './commands/remove';
 import { statusCommand } from './commands/status';
 import { addTaskCommand } from './commands/add-task';
+import { batchCommand } from './commands/batch';
 
 export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
   return {
@@ -20,7 +21,7 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
     tool: {
       // Tool: tasks_init - Initialize a new task list
       tasks_init: tool({
-        description: "Initialize a new task list. Creates a structured task list for tracking progress.",
+        description: "Initialize a new task list. Creates a structured task list for tracking progress. Returns formatted markdown output with current status.",
         args: {
           agent: tool.schema.string({ description: "Agent name (e.g., senior-sw-engineer, py-code-reviewer)" }),
           title: tool.schema.string({ description: "Task list title" }),
@@ -36,15 +37,8 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               title: args.title
             });
             
-            let response = `✅ Task list "${result.title}" initialized successfully for agent "${result.agent}"\n`;
-            response += `📁 File: ${result.fileName}.md\n`;
-            response += `📊 Total tasks: ${result.totalTasks}`;
-            
-            if (result.taskIds.length > 0) {
-              response += `\n📝 Available task IDs: ${result.taskIds.join(', ')}`;
-            }
-            
-            return response;
+            // Return Native UI Response for OpenCode
+            return result.response;
           } catch (error) {
             return `❌ Failed to initialize task list: ${error}`;
           }
@@ -53,7 +47,7 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
 
       // Tool: tasks_list - List all tasks
       tasks_list: tool({
-        description: "List all tasks for current session with their current status and progress.",
+        description: "List all tasks for current session with their current status and progress. Returns formatted markdown output.",
         args: {
           format: tool.schema.enum(['markdown', 'json', 'table'], { description: "Output format (default: markdown)" }),
         },
@@ -67,10 +61,17 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               format: args.format || 'markdown'
             });
             
-            if (result.success && result.formattedOutput) {
-              return result.formattedOutput;
+            if (result.success && result.response) {
+              return result.response;
             } else {
-              return result.message;
+              return {
+                title: 'List: Error',
+                output: result.message,
+                metadata: {
+                  operation: 'list',
+                  message: result.message
+                }
+              };
             }
           } catch (error) {
             return `❌ Failed to list tasks: ${error}`;
@@ -80,7 +81,7 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
 
       // Tool: tasks_update - Update task status
       tasks_update: tool({
-        description: "Update the status of a specific task (pending, in_progress, completed).",
+        description: "Update the status of a specific task (pending, in_progress, completed). Returns formatted markdown output with current status.",
         args: {
           id: tool.schema.string({ description: "Task ID (e.g., 1, 2, 2.1)" }),
           status: tool.schema.enum(['pending', 'in_progress', 'completed'], { description: "New status" }),
@@ -96,11 +97,8 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               status: args.status
             });
             
-            if (result.success) {
-              return `✅ ${result.message}`;
-            } else {
-              return `❌ ${result.message}`;
-            }
+            // Return Native UI Response for OpenCode
+            return result.response;
           } catch (error) {
             return `❌ Failed to update task: ${error}`;
           }
@@ -109,7 +107,7 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
 
       // Tool: tasks_complete - Mark task as completed
       tasks_complete: tool({
-        description: "Mark a task as completed. Shortcut for tasks_update with status=completed.",
+        description: "Mark a task as completed. Shortcut for tasks_update with status=completed. Returns formatted markdown output with current status.",
         args: {
           id: tool.schema.string({ description: "Task ID to mark as completed" }),
         },
@@ -123,11 +121,8 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               id: args.id
             });
             
-            if (result.success) {
-              return `✅ ${result.message}`;
-            } else {
-              return `❌ ${result.message}`;
-            }
+            // Return Native UI Response for OpenCode
+            return result.response;
           } catch (error) {
             return `❌ Failed to complete task: ${error}`;
           }
@@ -136,7 +131,7 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
 
       // Tool: tasks_add - Add a new task
       tasks_add: tool({
-        description: "Add a new task to the task list with optional details.",
+        description: "Add a new task to the task list with optional details. Returns formatted markdown output with current status.",
         args: {
           title: tool.schema.string({ description: "Task title" }),
           parent: tool.schema.string({ description: "Parent task ID (optional, for nested tasks)" }),
@@ -152,11 +147,8 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               parent: args.parent
             });
             
-            if (result.success) {
-              return `✅ ${result.message}`;
-            } else {
-              return `❌ ${result.message}`;
-            }
+            // Return Native UI Response for OpenCode
+            return result.response;
           } catch (error) {
             return `❌ Failed to add task: ${error}`;
           }
@@ -165,7 +157,7 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
 
       // Tool: tasks_remove - Remove a task
       tasks_remove: tool({
-        description: "Remove a task from the task list.",
+        description: "Remove a task from the task list. Returns formatted markdown output with current status.",
         args: {
           id: tool.schema.string({ description: "Task ID to remove" }),
         },
@@ -180,11 +172,8 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               force: true
             });
             
-            if (result.success) {
-              return `✅ ${result.message}`;
-            } else {
-              return `❌ ${result.message}`;
-            }
+            // Return Native UI Response for OpenCode
+            return result.response;
           } catch (error) {
             return `❌ Failed to remove task: ${error}`;
           }
@@ -193,7 +182,7 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
 
       // Tool: tasks_status - Get task status summary
       tasks_status: tool({
-        description: "Get a summary of task completion status and progress for current session.",
+        description: "Get a summary of task completion status and progress for current session. Returns formatted markdown output.",
         args: {},
         async execute(args: {}, ctx: any) {
           try {
@@ -204,13 +193,53 @@ export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
               sessionId
             });
             
-            if (result.success && result.formattedOutput) {
-              return result.formattedOutput;
+            if (result.success && result.response) {
+              return result.response;
             } else {
-              return result.message;
+              return {
+                title: 'Status: Error',
+                output: result.message,
+                metadata: {
+                  operation: 'status',
+                  message: result.message
+                }
+              };
             }
           } catch (error) {
             return `❌ Failed to get status: ${error}`;
+          }
+        }
+      }),
+
+      // Tool: tasks_batch - Execute multiple operations in batch
+      tasks_batch: tool({
+        description: "Execute multiple task operations (add, update, complete, remove) in a single batch call. Maximum 50 operations. Returns formatted markdown output with current status.",
+        args: {
+          operations: tool.schema.array(
+            tool.schema.object({
+              type: tool.schema.enum(['add', 'update', 'complete', 'remove'], { description: "Operation type" }),
+              id: tool.schema.optional(tool.schema.string({ description: "Task ID (required for update, complete, remove)" })),
+              title: tool.schema.optional(tool.schema.string({ description: "Task title (required for add)" })),
+              parent: tool.schema.optional(tool.schema.string({ description: "Parent task ID (optional, for nested tasks)" })),
+              status: tool.schema.optional(tool.schema.enum(['pending', 'in_progress', 'completed'], { description: "New status (required for update)" })),
+            }),
+            { description: "Array of operations to execute (max 50)" }
+          ),
+        },
+        async execute(args: { operations: any[] }, ctx: any) {
+          try {
+            // Extract sessionId from OpenCode context
+            const sessionId = ctx.sessionId || ctx.session_id || 'default-session';
+            
+            const result = await batchCommand({
+              sessionId,
+              operations: args.operations
+            });
+            
+            // Return Native UI Response for OpenCode
+            return result.response;
+          } catch (error) {
+            return `❌ Failed to execute batch operations: ${error}`;
           }
         }
       }),
