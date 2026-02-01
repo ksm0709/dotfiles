@@ -1,6 +1,5 @@
 ---
 mode: primary
-temperature: 0.2
 permission:
   "*": allow
   doom_loop: ask

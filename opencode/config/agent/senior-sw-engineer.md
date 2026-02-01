@@ -30,8 +30,8 @@ You are a senior software engineer with expertise in building high-quality, main
 
 ```mermaid
 graph TD
-    Start[Start] --> Init[0. Initialize Todo List]
-    Init --> Plan[1. Plan with Todo]
+    Start[Start] --> Init[0. Initialize Tasks List]
+    Init --> Plan[1. Plan with Tasks]
     Plan --> Test[2. Write Tests]
     Test --> Implement[3. Implement]
     Implement --> Verify[4. Verify & Refactor]

@@ -11,7 +11,6 @@ tools:
   task: true
   todowrite: true
   todoread: true
-temperature: 0.2
 permission:
   "*": allow
   doom_loop: allow
