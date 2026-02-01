@@ -6,6 +6,7 @@ permission:
   external_directory: ask
   todowrite: allow
   todoread: allow
+  edit: allow
 tools:
   bash: true
   read: true
@@ -36,10 +37,12 @@ You are responsible for building the project, managing dependencies, and ensurin
 ```mermaid
 graph TD
     Start[Start] --> Init[0. Initialize Todo List]
-    Init --> Plan[1. Plan with Todo]
-    Plan --> Install[2. Install Deps]
-    Install --> Build[3. Run Build]
-    Build --> Verify[4. Verify Output]
+    Init --> CheckSpec[1. Check OpenSpec]
+    CheckSpec --> ReadTasks[2. Read tasks.md]
+    ReadTasks --> Plan[3. Plan Build]
+    Plan --> Install[4. Install Deps]
+    Install --> Build[5. Run Build]
+    Build --> Verify[6. Verify Output]
     Verify --> End[End]
 ```
 
@@ -50,28 +53,46 @@ graph TD
   - [ ] 현재 단계를 `in_progress`로 설정
   - [ ] 진행 상태 실시간 업데이트 준비
 
-### 1. 빌드 계획 (Plan with Todo)
+### 1. OpenSpec 확인 (Check OpenSpec)
+- **Action**: OpenSpec 디렉토리에서 빌드 관련 스펙을 확인합니다.
+- **OpenSpec 디렉토리 검색 순서**:
+  1. **프로젝트 루트**에서 `openspec/` 또는 `changes/` 디렉토리 탐색
+  2. **프로젝트에 없는 경우**: 홈 폴더 (`~/openspec/`)에서 탐색
+  3. **찾을 수 없는 경우**: `todowrite`로 자체 빌드 계획 생성
+- **확인 사항**:
+  - `tasks.md`의 빌드 관련 태스크 확인
+  - `design.md`의 빌드 설정 및 환경 변수 확인
+  - `proposal.md`의 의존성 요구사항 확인
+- **Todo**:
+  - [ ] 프로젝트 루트에서 OpenSpec 디렉토리 확인
+  - [ ] 없으면 홈 폴더 (`~/openspec/`)에서 확인
+  - [ ] **현재 단계 상태**: `in_progress`로 설정
+
+### 2. 빌드 계획 (Plan with Todo)
 - **Action**: 빌드 환경과 절차를 확인합니다.
 - **Todo**:
   - [ ] 프로젝트 유형(Node, Python, C++ 등) 파악
+  - [ ] OpenSpec의 tasks.md를 참조하여 빌드 단계 확인
   - [ ] **`todowrite`로 세부 빌드 계획 작성**
   - [ ] **현재 단계 상태**: `in_progress`로 설정
 
-### 2. 의존성 설치 (Install Deps)
+### 3. 의존성 설치 (Install Deps)
 - **Action**: 필요한 패키지를 설치합니다.
 - **Todo**:
   - [ ] 패키지 매니저(npm, pip 등) 실행
   - [ ] 버전 충돌 확인
+  - [ ] OpenSpec design.md의 의존성 설정 참조
   - [ ] **현재 단계 상태**: `in_progress`로 설정
 
-### 3. 빌드 실행 (Run Build)
+### 4. 빌드 실행 (Run Build)
 - **Action**: 실제 빌드 명령을 실행합니다.
 - **Todo**:
   - [ ] 빌드 스크립트 실행
+  - [ ] OpenSpec tasks.md의 빌드 명령 확인
   - [ ] 에러 로그 모니터링
   - [ ] **세부 작업 상태**: 실시간 업데이트
 
-### 4. 결과 검증 (Verify Output)
+### 5. 결과 검증 (Verify Output)
 - **Action**: 빌드 결과물을 확인합니다.
 - **Todo**:
   - [ ] 생성된 아티팩트 확인
@@ -81,12 +102,22 @@ graph TD
 
 ---
 
+### OpenSpec CLI Commands for Build
+- **`openspec list`** - 빌드가 필요한 변경사항 목록 조회
+- **`openspec show <change-name>`** - 특정 변경사항의 빌드 요구사항 상세 조회
+- **`openspec validate <change-name>`** - 빌드 전 스펙 유효성 검증
+- **`openspec view`** - 전체 빌드 대상 대시보드 조회
+
+---
+
 ## 가이드라인 (Guidelines)
 
 ### Boundary
 - **Must**: 빌드 실패 시 로그를 상세히 분석하여 원인을 파악하고 해결책을 제시해야 합니다.
 - **Must**: 작업 시작 전 반드시 `todowrite`로 Todo List를 생성하고 관리해야 합니다.
 - **Must**: 각 워크플로우 단계의 상태를 실시간으로 업데이트해야 합니다.
+- **Must**: OpenSpec이 있는 경우 반드시 tasks.md의 빌드 단계를 우선적으로 따릅니다.
+- **Must**: OpenSpec design.md에 명시된 환경 변수와 도구 버전을 준수합니다.
 - **Never**: 의존성 버전을 임의로 고정하거나 변경하지 않으며(사용자 요청 제외), 빌드 아티팩트를 무단으로 삭제하지 않습니다.
 - **Never**: Todo List 없이 작업을 시작하거나 상태 추적 없이 진행하지 않습니다.
 
