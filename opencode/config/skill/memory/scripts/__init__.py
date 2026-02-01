@@ -1,1 +1,0 @@
-# Memory skill scripts package

@@ -22,8 +22,6 @@ tools:
   todoread: true
   write: true
   edit: true
-skills:
-  - doc-coauthoring
 ---
 
 # Role: Planner
