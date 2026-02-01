@@ -70,18 +70,25 @@ class SemanticRecordStore:
             "success": 1 if record.success else 0,
             "intent_info": (
                 json.dumps(record.intent_info.model_dump(), ensure_ascii=False)
-                if record.intent_info else None
+                if record.intent_info
+                else None
             ),
             "decision": (
-                json.dumps(record.decision.model_dump(), ensure_ascii=False, default=str)
-                if record.decision else None
+                json.dumps(
+                    record.decision.model_dump(), ensure_ascii=False, default=str
+                )
+                if record.decision
+                else None
             ),
             "problem_resolution": (
                 json.dumps(record.problem_resolution.model_dump(), ensure_ascii=False)
-                if record.problem_resolution else None
+                if record.problem_resolution
+                else None
             ),
             "learnings": json.dumps(record.learnings or [], ensure_ascii=False),
-            "related_records": json.dumps(record.related_records or [], ensure_ascii=False),
+            "related_records": json.dumps(
+                record.related_records or [], ensure_ascii=False
+            ),
             "importance": record.importance,
         }
 
@@ -103,13 +110,19 @@ class SemanticRecordStore:
         if data.get("decision"):
             decision_data = json.loads(data["decision"])
             # timestamp 문자열을 datetime으로 변환
-            if "timestamp" in decision_data and isinstance(decision_data["timestamp"], str):
-                decision_data["timestamp"] = datetime.fromisoformat(decision_data["timestamp"])
+            if "timestamp" in decision_data and isinstance(
+                decision_data["timestamp"], str
+            ):
+                decision_data["timestamp"] = datetime.fromisoformat(
+                    decision_data["timestamp"]
+                )
             decision = Decision(**decision_data)
 
         problem_resolution = None
         if data.get("problem_resolution"):
-            problem_resolution = ProblemResolution(**json.loads(data["problem_resolution"]))
+            problem_resolution = ProblemResolution(
+                **json.loads(data["problem_resolution"])
+            )
 
         # timestamp 파싱
         timestamp = datetime.now()
@@ -616,13 +629,15 @@ class SemanticRecordStore:
             decisions = []
             for row in rows:
                 data = dict(row)
-                decisions.append(Decision(
-                    decision_type=data["decision_type"],
-                    choice=data["choice"],
-                    alternatives=json.loads(data.get("alternatives") or "[]"),
-                    rationale=data["rationale"],
-                    is_user_preference=bool(data.get("is_user_preference", 0)),
-                ))
+                decisions.append(
+                    Decision(
+                        decision_type=data["decision_type"],
+                        choice=data["choice"],
+                        alternatives=json.loads(data.get("alternatives") or "[]"),
+                        rationale=data["rationale"],
+                        is_user_preference=bool(data.get("is_user_preference", 0)),
+                    )
+                )
             return decisions
         finally:
             conn.close()

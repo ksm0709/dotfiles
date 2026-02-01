@@ -13,7 +13,7 @@ Task 3.2: EpisodeManager 서비스 구현
 import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Optional
 
 from opencode_memory.models.semantic import (
     Episode,
@@ -31,12 +31,16 @@ logger = logging.getLogger(__name__)
 
 class EpisodeManager:
     """에피소드 생명주기 관리
-    
+
     세션별 활성 에피소드를 추적하고,
     레코드 추가, 학습 기록, 에피소드 완료 등을 처리합니다.
     """
 
-    def __init__(self, store: EpisodeStore, reflection_engine: Optional["ReflectionEngine"] = None):
+    def __init__(
+        self,
+        store: EpisodeStore,
+        reflection_engine: Optional["ReflectionEngine"] = None,
+    ):
         """
         Args:
             store: EpisodeStore 인스턴스
@@ -69,7 +73,9 @@ class EpisodeManager:
         # 1. 기존 활성 에피소드 완료 처리
         active = self.get_active_episode(session_id)
         if active:
-            logger.info(f"Interrupting active episode {active.id} for session {session_id}")
+            logger.info(
+                f"Interrupting active episode {active.id} for session {session_id}"
+            )
             self.complete_episode(session_id, outcome="interrupted")
 
         # 2. 새 에피소드 생성
@@ -90,7 +96,9 @@ class EpisodeManager:
         # 4. 캐시 업데이트
         self._active_episodes[session_id] = episode
 
-        logger.info(f"Started new episode {episode.id} for session {session_id}: {goal}")
+        logger.info(
+            f"Started new episode {episode.id} for session {session_id}: {goal}"
+        )
         return episode
 
     def get_active_episode(self, session_id: str) -> Optional[Episode]:
@@ -156,7 +164,7 @@ class EpisodeManager:
             del self._active_episodes[session_id]
 
         logger.info(f"Completed episode {episode.id} with outcome: {outcome}")
-        
+
         # Task 4.5: 자동 성찰 트리거 (비동기)
         if self.reflection_engine:
             self._trigger_reflection(episode)
@@ -174,7 +182,9 @@ class EpisodeManager:
         except Exception as e:
             logger.error(f"Failed to trigger reflection: {e}")
 
-    def fail_episode(self, session_id: str, reason: str = "failed") -> Optional[Episode]:
+    def fail_episode(
+        self, session_id: str, reason: str = "failed"
+    ) -> Optional[Episode]:
         """에피소드 실패 처리
 
         Args:
@@ -313,8 +323,8 @@ _global_manager: Optional[EpisodeManager] = None
 
 
 def get_episode_manager(
-    store: Optional[EpisodeStore] = None, 
-    reflection_engine: Optional["ReflectionEngine"] = None
+    store: Optional[EpisodeStore] = None,
+    reflection_engine: Optional["ReflectionEngine"] = None,
 ) -> EpisodeManager:
     """전역 EpisodeManager 인스턴스 반환
 

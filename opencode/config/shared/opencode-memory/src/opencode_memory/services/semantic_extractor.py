@@ -4,9 +4,10 @@ Semantic Extractor Service
 Encapsulates LLM calls for semantic analysis of agent activities.
 """
 
-import logging
 import json
-from typing import Any, Dict, List, Optional
+import logging
+from typing import Any, Dict, List
+
 from ..utils.llm import AsyncLLMClient
 
 logger = logging.getLogger(__name__)
@@ -27,11 +28,11 @@ class SemanticExtractor:
 
         prompt = f"""
         Analyze the following tool execution and extract the high-level user intent.
-        
+
         Tool: {tool}
         Arguments: {json.dumps(args, indent=2)}
         Context: {context}
-        
+
         Summarize the intent in one clear, concise sentence (e.g., "Fix the bug in the login handler" or "Search for documentation on API").
         Do not include the tool name or technical details unless necessary for understanding the goal.
         """
@@ -67,20 +68,24 @@ class SemanticExtractor:
         - success: Boolean, whether the apparent goal was achieved.
         - key_learnings: A list of string bullet points containing technical facts, patterns, or mistakes learned.
         - next_steps: Suggested next steps if the task is incomplete.
-        
+
         Return ONLY valid JSON.
         """
 
-        response = await self.llm.generate(prompt, system_instruction="You are a JSON-speaking developer assistant.")
-        
+        response = await self.llm.generate(
+            prompt, system_instruction="You are a JSON-speaking developer assistant."
+        )
+
         if response:
             try:
                 # Clean up markdown code blocks if present
-                clean_response = response.replace("```json", "").replace("```", "").strip()
+                clean_response = (
+                    response.replace("```json", "").replace("```", "").strip()
+                )
                 return json.loads(clean_response)
             except json.JSONDecodeError:
                 logger.error("Failed to parse reflection JSON")
-        
+
         return {}
 
     async def detect_goal_change(self, current_goal: str, new_input: str) -> bool:
@@ -101,5 +106,5 @@ class SemanticExtractor:
         response = await self.llm.generate(prompt)
         if response:
             return response.strip().upper().startswith("YES")
-        
+
         return False

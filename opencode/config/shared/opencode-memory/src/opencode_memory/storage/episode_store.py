@@ -9,7 +9,6 @@ Task 3.1: Episode 데이터 모델 및 스토어
 import json
 import logging
 import sqlite3
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -17,8 +16,6 @@ from typing import Any, Dict, List, Optional
 from opencode_memory.models.semantic import (
     Episode,
     EpisodeContext,
-    ProblemResolution,
-    SemanticRecord,
 )
 
 logger = logging.getLogger(__name__)

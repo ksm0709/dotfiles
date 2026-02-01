@@ -23,11 +23,26 @@ class DecisionDetector:
     # 의사결정 패턴 (한국어)
     DECISION_PATTERNS = [
         # 선택/사용/채택 패턴 - 더 정확한 매칭
-        (r"([A-Za-z][A-Za-z0-9\.\-_]+)(?:를|을)\s*(?:선택|사용|채택)(?:할|했|하기로)", "library"),
-        (r"([A-Za-z][A-Za-z0-9\.\-_]+)\s+대신\s+([A-Za-z][A-Za-z0-9\.\-_]+)(?:를|을)?\s*(?:사용|선택)", "library"),
-        (r"([A-Za-z][A-Za-z0-9\.\-_]+)(?:보다|대신에?)\s+([A-Za-z][A-Za-z0-9\.\-_]+)(?:가|이)?\s*(?:더\s+)?(?:적합|좋|낫)", "library"),
-        (r"([A-Za-z][A-Za-z0-9\s\.\-_]+)\s*패턴(?:을|를)?\s*(?:채택|적용|사용)", "architecture"),
-        (r"([A-Za-z][A-Za-z0-9\.\-_]+)(?:을|를)\s*(?:추천|권장)(?:드립니다|합니다)", "recommendation"),
+        (
+            r"([A-Za-z][A-Za-z0-9\.\-_]+)(?:를|을)\s*(?:선택|사용|채택)(?:할|했|하기로)",
+            "library",
+        ),
+        (
+            r"([A-Za-z][A-Za-z0-9\.\-_]+)\s+대신\s+([A-Za-z][A-Za-z0-9\.\-_]+)(?:를|을)?\s*(?:사용|선택)",
+            "library",
+        ),
+        (
+            r"([A-Za-z][A-Za-z0-9\.\-_]+)(?:보다|대신에?)\s+([A-Za-z][A-Za-z0-9\.\-_]+)(?:가|이)?\s*(?:더\s+)?(?:적합|좋|낫)",
+            "library",
+        ),
+        (
+            r"([A-Za-z][A-Za-z0-9\s\.\-_]+)\s*패턴(?:을|를)?\s*(?:채택|적용|사용)",
+            "architecture",
+        ),
+        (
+            r"([A-Za-z][A-Za-z0-9\.\-_]+)(?:을|를)\s*(?:추천|권장)(?:드립니다|합니다)",
+            "recommendation",
+        ),
         # 결정 패턴
         (r"(?:결정|결론).*?([A-Za-z][A-Za-z0-9\.\-_]+)", "approach"),
         (r"([A-Za-z][A-Za-z0-9\s\.\-_]+)\s*방식(?:을|를)?\s*(?:채택|선택)", "approach"),
@@ -39,19 +54,61 @@ class DecisionDetector:
     # 기술 키워드 (라이브러리/프레임워크)
     TECH_KEYWORDS = {
         # Python 라이브러리
-        "pytest", "flask", "django", "fastapi", "pyjwt", "jwt", "requests",
-        "sqlalchemy", "asyncio", "aiohttp", "celery", "redis", "poetry", "pip",
+        "pytest",
+        "flask",
+        "django",
+        "fastapi",
+        "pyjwt",
+        "jwt",
+        "requests",
+        "sqlalchemy",
+        "asyncio",
+        "aiohttp",
+        "celery",
+        "redis",
+        "poetry",
+        "pip",
         # JavaScript/TypeScript
-        "react", "vue", "angular", "nextjs", "express", "nestjs", "typescript",
-        "javascript", "npm", "yarn", "webpack", "vite", "eslint", "prettier",
+        "react",
+        "vue",
+        "angular",
+        "nextjs",
+        "express",
+        "nestjs",
+        "typescript",
+        "javascript",
+        "npm",
+        "yarn",
+        "webpack",
+        "vite",
+        "eslint",
+        "prettier",
         # 데이터베이스
-        "postgresql", "postgres", "mysql", "sqlite", "mongodb", "redis",
-        "dynamodb", "elasticsearch",
+        "postgresql",
+        "postgres",
+        "mysql",
+        "sqlite",
+        "mongodb",
+        "redis",
+        "dynamodb",
+        "elasticsearch",
         # 클라우드/인프라
-        "aws", "gcp", "azure", "docker", "kubernetes", "k8s", "terraform",
+        "aws",
+        "gcp",
+        "azure",
+        "docker",
+        "kubernetes",
+        "k8s",
+        "terraform",
         # 아키텍처 패턴
-        "mvc", "mvvm", "clean architecture", "hexagonal", "microservices",
-        "monolith", "serverless", "event-driven",
+        "mvc",
+        "mvvm",
+        "clean architecture",
+        "hexagonal",
+        "microservices",
+        "monolith",
+        "serverless",
+        "event-driven",
     }
 
     def __init__(self):
@@ -92,9 +149,7 @@ class DecisionDetector:
                 groups = match.groups()
                 choice = self._extract_choice(groups, text, found_techs)
                 if choice:
-                    alternatives = self._extract_alternatives(
-                        text, choice, found_techs
-                    )
+                    alternatives = self._extract_alternatives(text, choice, found_techs)
                     rationale = self._extract_rationale(text, match)
 
                     return Decision(
@@ -189,10 +244,10 @@ class DecisionDetector:
     def _extract_rationale(self, text: str, match: re.Match) -> Optional[str]:
         """선택 이유 추출"""
         # 매치 이후 텍스트에서 이유 추출 시도
-        after_match = text[match.end():].strip()
+        after_match = text[match.end() :].strip()
         if after_match:
             # 첫 문장 추출
-            sentences = re.split(r'[.!?。]', after_match)
+            sentences = re.split(r"[.!?。]", after_match)
             if sentences and sentences[0].strip():
                 return sentences[0].strip()[:100]
 
@@ -235,8 +290,7 @@ class DecisionDetector:
         if not choice:
             # 마지막 줄을 선택으로 간주
             lines = [
-                line.strip() for line in question_output.split("\n")
-                if line.strip()
+                line.strip() for line in question_output.split("\n") if line.strip()
             ]
             if lines:
                 choice = lines[-1]

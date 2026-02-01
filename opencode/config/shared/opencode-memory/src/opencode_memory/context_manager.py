@@ -126,7 +126,7 @@ class ContextManager:
                             return
                         if attempt < max_retries - 1:
                             logger.warning(
-                                f"Existing server unresponsive (attempt {attempt+1}/{max_retries}). Retrying in 0.5s..."
+                                f"Existing server unresponsive (attempt {attempt + 1}/{max_retries}). Retrying in 0.5s..."
                             )
                             time.sleep(0.5)
 
@@ -139,7 +139,9 @@ class ContextManager:
                         try:
                             # Check if process is alive
                             os.kill(pid, 0)
-                            logger.warning(f"Killing unresponsive server process (PID: {pid})")
+                            logger.warning(
+                                f"Killing unresponsive server process (PID: {pid})"
+                            )
                             os.kill(pid, signal.SIGTERM)
                             # Give it a moment to die
                             time.sleep(0.5)
@@ -370,7 +372,6 @@ class ContextManager:
         return self._record("fix", content, "high", metadata)
 
     def record_change(self, content: str, file_path: str | None = None) -> dict:
-
         metadata = {"file": file_path} if file_path else None
         return self._record("change", content, "medium", metadata)
 
@@ -387,7 +388,9 @@ class ContextManager:
             return {"status": "error", "message": "Client not initialized"}
         return self.client.record_intent(payload)
 
-    def record_decision(self, content: str | dict, metadata: dict | None = None) -> dict:
+    def record_decision(
+        self, content: str | dict, metadata: dict | None = None
+    ) -> dict:
         """
         Record decision via API.
         Supports both legacy (str content) and new (dict payload) formats.

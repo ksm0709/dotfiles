@@ -44,7 +44,10 @@ def cmd_start(args):
     cm = ContextManager(config)
     task = args.task or args.task_positional
     if not task:
-        print(json.dumps({"error": "Task description required"}, indent=2), file=sys.stderr)
+        print(
+            json.dumps({"error": "Task description required"}, indent=2),
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     result = cm.start(task)
@@ -313,7 +316,9 @@ def main():
     # start
     p_start = subparsers.add_parser("start", help="Start task")
     p_start.add_argument("--task", help="Task description")
-    p_start.add_argument("task_positional", nargs="?", help="Task description (positional)")
+    p_start.add_argument(
+        "task_positional", nargs="?", help="Task description (positional)"
+    )
 
     # checkpoint
     p_checkpoint = subparsers.add_parser("checkpoint", help="Create checkpoint")
@@ -322,7 +327,9 @@ def main():
     # end
     p_end = subparsers.add_parser("end", help="End task")
     p_end.add_argument("--result", help="Task result summary")
-    p_end.add_argument("result_positional", nargs="?", help="Task result summary (positional)")
+    p_end.add_argument(
+        "result_positional", nargs="?", help="Task result summary (positional)"
+    )
 
     # query
     p_query = subparsers.add_parser("query", help="Search memories")
@@ -351,11 +358,15 @@ def main():
     p_semantic.add_argument("payload", help="JSON payload")
 
     # problem-start (Phase 2)
-    p_problem_start = subparsers.add_parser("problem-start", help="Start problem tracking")
+    p_problem_start = subparsers.add_parser(
+        "problem-start", help="Start problem tracking"
+    )
     p_problem_start.add_argument("payload", help="JSON payload")
 
     # problem-attempt (Phase 2)
-    p_problem_attempt = subparsers.add_parser("problem-attempt", help="Record problem attempt")
+    p_problem_attempt = subparsers.add_parser(
+        "problem-attempt", help="Record problem attempt"
+    )
     p_problem_attempt.add_argument("payload", help="JSON payload")
 
     # problem-resolve (Phase 2)
@@ -367,11 +378,15 @@ def main():
     p_episode_start.add_argument("payload", help="JSON payload")
 
     # episode-complete (Phase 3)
-    p_episode_complete = subparsers.add_parser("episode-complete", help="Complete episode")
+    p_episode_complete = subparsers.add_parser(
+        "episode-complete", help="Complete episode"
+    )
     p_episode_complete.add_argument("payload", help="JSON payload")
 
     # episode-active (Phase 3)
-    p_episode_active = subparsers.add_parser("episode-active", help="Get active episode")
+    p_episode_active = subparsers.add_parser(
+        "episode-active", help="Get active episode"
+    )
     p_episode_active.add_argument("session_id", help="Session ID")
 
     # episode-get (Phase 3)

@@ -268,13 +268,10 @@ async def start_task(req: StartRequest):
         # Task 3.6: context_start 연동 - 에피소드 자동 시작
         # 기존 활성 에피소드가 있으면 중단하고 새 에피소드 시작 (BoundaryDetector 규칙)
         episode_manager = get_state().episode_manager
-        
+
         # EpisodeContext 생성
-        context = EpisodeContext(
-            goal=req.task,
-            initial_tool="context_start"
-        )
-        
+        context = EpisodeContext(goal=req.task, initial_tool="context_start")
+
         # 새 에피소드 시작 (기존 활성 에피소드 자동 중단)
         episode = episode_manager.start_episode(req.session_id, req.task, context)
         logger.info(f"Auto-started episode {episode.id} from context_start")
@@ -405,19 +402,20 @@ async def end_task(req: EndRequest):
 
         # 2. Save if content exists
         if summary:
-            checkpoint_result = await get_state().context_memory.query_and_update(summary)
+            checkpoint_result = await get_state().context_memory.query_and_update(
+                summary
+            )
 
         # 3. Cleanup
         wm.clear()
         get_state().context_memory.set_current_task(None)
-        
+
         # Task 3.6: context_end 연동 - 에피소드 완료 처리
         episode_manager = get_state().episode_manager
         active_episode = episode_manager.get_active_episode(req.session_id)
         if active_episode:
             episode_manager.complete_episode(
-                req.session_id, 
-                outcome="completed_by_user_end_command"
+                req.session_id, outcome="completed_by_user_end_command"
             )
             logger.info(f"Auto-completed episode {active_episode.id} from context_end")
 
@@ -579,7 +577,7 @@ async def record_learning(req: RecordLearningRequest):
             learning=req.learning,
             category=req.category,
         )
-        
+
         # Task 3.5: 학습 사항을 활성 에피소드에도 추가
         episode_manager = get_state().episode_manager
         episode_manager.add_learning(req.session_id, req.learning)
@@ -634,25 +632,25 @@ async def record_semantic(req: RecordSemanticRequest):
             episode_id=None,
             problem_resolution=None,
         )
-        
+
         # Task 3.5: 활성 에피소드 연동
         # EpisodeManager를 통해 에피소드 ID 할당 및 tools_used 업데이트
         episode_manager = get_state().episode_manager
-        
+
         # Boundary Detection (Task 3.3)
         # 경계 감지 수행
         active_episode = episode_manager.get_active_episode(req.session_id)
         if get_state().boundary_detector.should_start_new_episode(
             current_episode=active_episode,
-            new_input=req.intent, # Use intent as new input for now
-            tool_name=req.tool_name
+            new_input=req.intent,  # Use intent as new input for now
+            tool_name=req.tool_name,
         ):
             # 새 에피소드가 필요하면?
-            # 현재는 context_start 외에는 자동 시작하지 않고, 
+            # 현재는 context_start 외에는 자동 시작하지 않고,
             # 기존 에피소드에 계속 기록하거나 에피소드 없이 기록 (None)
             # 향후 LLM 기반 감지 시 여기서 자동 분기 가능
             pass
-            
+
         episode_manager.add_record(req.session_id, record)
 
         # 저장
@@ -753,14 +751,16 @@ async def resolve_problem(req: ResolveProblemRequest):
         if resolution:
             # Task 3.5: 해결된 문제를 에피소드에 연결
             session_id = tracker.get_session_for_problem(req.problem_id)
-            if session_id: # Note: resolve removes from problem_sessions, so we might miss it
+            if (
+                session_id
+            ):  # Note: resolve removes from problem_sessions, so we might miss it
                 # Logic improvement: tracker.resolve removes from active list but we need session_id
                 # This should be handled inside tracker or we pass session_id
                 pass
-            
+
             # Since resolve deletes from active list, we can't easily get session_id unless we change tracker
             # For now, we'll skip explicit linking here, relying on run-time linking if needed
-            
+
             return {
                 "status": "resolved",
                 "problem_id": resolution.id,
@@ -824,7 +824,7 @@ async def start_episode(req: StartEpisodeRequest):
     """POST /episode/start - 새 에피소드 시작"""
     try:
         episode_manager = get_state().episode_manager
-        
+
         # Context dict -> EpisodeContext object
         context_data = req.context or {}
         goal = context_data.get("goal") or req.goal
@@ -835,20 +835,18 @@ async def start_episode(req: StartEpisodeRequest):
             assumptions=context_data.get("assumptions", []),
             agent_thoughts=context_data.get("agent_thoughts", []),
             initial_tool=context_data.get("initial_tool"),
-            tools_used=context_data.get("tools_used", [])
+            tools_used=context_data.get("tools_used", []),
         )
-        
+
         episode = episode_manager.start_episode(
-            session_id=req.session_id,
-            goal=req.goal,
-            context=context
+            session_id=req.session_id, goal=req.goal, context=context
         )
-        
+
         return EpisodeResponse(
             status="success",
             episode_id=episode.id,
             goal=episode.goal,
-            message=f"Episode started: {episode.goal}"
+            message=f"Episode started: {episode.goal}",
         )
     except Exception as e:
         logger.error(f"Start episode failed: {e}", exc_info=True)
@@ -860,24 +858,20 @@ async def complete_episode(req: CompleteEpisodeRequest):
     """POST /episode/complete - 에피소드 완료"""
     try:
         episode_manager = get_state().episode_manager
-        
+
         episode = episode_manager.complete_episode(
-            session_id=req.session_id,
-            outcome=req.outcome
+            session_id=req.session_id, outcome=req.outcome
         )
-        
+
         if episode:
             return EpisodeResponse(
                 status="completed",
                 episode_id=episode.id,
                 goal=episode.goal,
-                message=f"Episode completed: {episode.goal}"
+                message=f"Episode completed: {episode.goal}",
             )
         else:
-            return EpisodeResponse(
-                status="error",
-                message="No active episode found"
-            )
+            return EpisodeResponse(status="error", message="No active episode found")
     except Exception as e:
         logger.error(f"Complete episode failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -888,9 +882,9 @@ async def get_active_episode(session_id: str):
     """GET /episode/active - 활성 에피소드 조회"""
     try:
         episode_manager = get_state().episode_manager
-        
+
         episode = episode_manager.get_active_episode(session_id)
-        
+
         if episode:
             return {
                 "has_active_episode": True,
@@ -898,15 +892,14 @@ async def get_active_episode(session_id: str):
                     "id": episode.id,
                     "goal": episode.goal,
                     "status": episode.status,
-                    "start_time": episode.start_time.isoformat() if episode.start_time else None,
-                    "tools_used": episode.tools_used
-                }
+                    "start_time": (
+                        episode.start_time.isoformat() if episode.start_time else None
+                    ),
+                    "tools_used": episode.tools_used,
+                },
             }
         else:
-            return {
-                "has_active_episode": False,
-                "episode": None
-            }
+            return {"has_active_episode": False, "episode": None}
     except Exception as e:
         logger.error(f"Get active episode failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -917,9 +910,9 @@ async def get_episode(episode_id: str):
     """GET /episode/{episode_id} - 에피소드 조회"""
     try:
         episode_manager = get_state().episode_manager
-        
+
         episode = episode_manager.get_episode(episode_id)
-        
+
         if episode:
             # Serialize
             return {
@@ -930,14 +923,16 @@ async def get_episode(episode_id: str):
                 "outcome": episode.outcome,
                 "learnings": episode.learnings,
                 "tools_used": episode.tools_used,
-                "start_time": episode.start_time.isoformat() if episode.start_time else None,
+                "start_time": (
+                    episode.start_time.isoformat() if episode.start_time else None
+                ),
                 "end_time": episode.end_time.isoformat() if episode.end_time else None,
                 "context": {
                     "goal": episode.context.goal,
                     "user_request_summary": episode.context.user_request_summary,
                     "assumptions": episode.context.assumptions,
                     "agent_thoughts": episode.context.agent_thoughts,
-                }
+                },
             }
         else:
             raise HTTPException(status_code=404, detail="Episode not found")
@@ -1011,7 +1006,9 @@ async def get_compaction_context(session_id: Optional[str] = None):
         # 3. Relevant Memories (based on current task)
         current_task = get_state().context_memory._current_task
         if current_task:
-            relevant = await get_state().context_memory.get_for_task(current_task, limit=3)
+            relevant = await get_state().context_memory.get_for_task(
+                current_task, limit=3
+            )
             if relevant:
                 logger.info(f"Including {len(relevant)} relevant past memories")
                 summary_parts.append("### Relevant Past Memories")

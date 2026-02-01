@@ -221,6 +221,7 @@ tools:
 
 
 
+
 <!-- OPENCODE_MEMORY_INSTRUCTIONS_START -->
 ### Context & Memory Management (컨텍스트 및 기억 관리)
 OpenCode의 장기 기억(Long-term Memory)과 작업 기억(Working Memory)을 적극 활용하여 일관성을 유지합니다.

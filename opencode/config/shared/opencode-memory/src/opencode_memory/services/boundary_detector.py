@@ -14,7 +14,7 @@ Task 3.3: 에피소드 경계 감지 구현
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, Any, Coroutine, TypeVar
+from typing import Any, Coroutine, Optional, TypeVar
 
 from opencode_memory.models.semantic import Episode
 from opencode_memory.services.semantic_extractor import SemanticExtractor
@@ -77,7 +77,9 @@ class EpisodeBoundaryDetector:
 
         # 3. 현재 에피소드가 완료/실패 상태
         if current_episode.status != "active":
-            logger.debug(f"Boundary detected: episode status is {current_episode.status}")
+            logger.debug(
+                f"Boundary detected: episode status is {current_episode.status}"
+            )
             return True
 
         # 4. 시간 기반 휴리스틱 (30분 이상 간격)
@@ -122,7 +124,9 @@ class EpisodeBoundaryDetector:
 
         # 3. 현재 에피소드가 완료/실패 상태
         if current_episode.status != "active":
-            logger.debug(f"Boundary detected: episode status is {current_episode.status}")
+            logger.debug(
+                f"Boundary detected: episode status is {current_episode.status}"
+            )
             return True
 
         # 4. 시간 기반 휴리스틱 (30분 이상 간격)
@@ -175,9 +179,14 @@ class EpisodeBoundaryDetector:
             return False
         if not self.semantic_extractor:
             return False
-        return bool(getattr(self.semantic_extractor, "llm", None) and self.semantic_extractor.llm.enabled)
+        return bool(
+            getattr(self.semantic_extractor, "llm", None)
+            and self.semantic_extractor.llm.enabled
+        )
 
-    async def _detect_goal_change_async(self, current_goal: str, new_input: str) -> bool:
+    async def _detect_goal_change_async(
+        self, current_goal: str, new_input: str
+    ) -> bool:
         semantic_extractor = self.semantic_extractor
         if semantic_extractor is None:
             return False

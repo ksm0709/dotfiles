@@ -7,7 +7,7 @@ Task 4.1 ~ 4.4 구현
 
 import asyncio
 import logging
-from typing import List, Optional, Any, Coroutine, TypeVar
+from typing import Any, Coroutine, List, Optional, TypeVar
 
 from opencode_memory.context_memory import ContextMemory, is_meaningful_content
 from opencode_memory.models.semantic import Episode, Reflection
@@ -33,7 +33,7 @@ class ReflectionEngine:
 
     def reflect(self, episode: Episode) -> Reflection:
         """에피소드 성찰 (동기)
-        
+
         LLM이 있으면 LLM을 사용하고, 없으면 규칙 기반으로 추출합니다.
         """
         if self._llm_reflection_available():
@@ -72,37 +72,39 @@ class ReflectionEngine:
         """동기 성찰 및 저장 로직"""
         # 1. 성찰
         reflection = self.reflect(episode)
-        
+
         # 2. 학습 내용 저장
         all_learnings = (
             reflection.key_learnings
             + reflection.user_preferences_discovered
             + reflection.reusable_patterns
         )
-        
+
         self.persist_learnings(all_learnings, episode.id)
-        
+
         return reflection
 
     def _reflect_rule_based(self, episode: Episode) -> Reflection:
         """규칙 기반 성찰 (Fallback)"""
-        
+
         # 1. 요약 생성
-        summary = f"Episode '{episode.goal}' completed with {episode.record_count} records."
+        summary = (
+            f"Episode '{episode.goal}' completed with {episode.record_count} records."
+        )
         if episode.outcome:
             summary += f" Outcome: {episode.outcome}."
-            
+
         # 2. 학습 추출
         learnings = self.extract_learnings(episode)
-        
+
         # 3. Reflection 객체 생성
         return Reflection(
             episode_id=episode.id,
             summary=summary,
             key_learnings=learnings,
-            user_preferences_discovered=[], # 규칙 기반으로는 추출 어려움
+            user_preferences_discovered=[],  # 규칙 기반으로는 추출 어려움
             reusable_patterns=[],
-            improvements=[]
+            improvements=[],
         )
 
     def _llm_reflection_available(self) -> bool:
@@ -110,7 +112,10 @@ class ReflectionEngine:
             return False
         if not self.semantic_extractor:
             return False
-        return bool(getattr(self.semantic_extractor, "llm", None) and self.semantic_extractor.llm.enabled)
+        return bool(
+            getattr(self.semantic_extractor, "llm", None)
+            and self.semantic_extractor.llm.enabled
+        )
 
     async def _reflect_with_llm_async(self, episode: Episode) -> Optional[Reflection]:
         """LLM 기반 성찰 (비동기)"""
@@ -173,22 +178,30 @@ class ReflectionEngine:
     def extract_learnings(self, episode: Episode) -> List[str]:
         """학습 내용 추출 (Task 4.2)"""
         learnings = []
-        
+
         # 1. 해결된 문제에서 학습 추출
         for problem in episode.problems_solved:
             if problem.status == "resolved" and problem.successful_solution:
                 learning = f"Problem '{problem.error_type}' solved by: {problem.successful_solution}"
                 learnings.append(learning)
-                
+
         # 2. 에피소드 내 명시적 학습 사항 포함
         learnings.extend(episode.learnings)
-        
+
         # 3. Successful actions (추가)
-        IMPORTANT_KEYWORDS = ["install", "setup", "config", "create", "add", "update", "fix"]
+        IMPORTANT_KEYWORDS = [
+            "install",
+            "setup",
+            "config",
+            "create",
+            "add",
+            "update",
+            "fix",
+        ]
         for r in episode.records:
             if r.success and any(k in r.action.lower() for k in IMPORTANT_KEYWORDS):
                 learnings.append(f"{r.action} (Auto-extracted)")
-        
+
         # 4. 중복 제거
         return list(set(learnings))
 
@@ -202,7 +215,7 @@ class ReflectionEngine:
         for learning in learnings:
             if self.should_persist(learning):
                 tags = ["learning", f"episode:{episode_id}"]
-                
+
                 # ContextMemory.add 호출
                 result = self.context_memory.add(
                     content=learning,
@@ -210,11 +223,11 @@ class ReflectionEngine:
                     metadata={
                         "type": "learning",
                         "source": "reflection_engine",
-                        "episode_id": episode_id
-                    }
+                        "episode_id": episode_id,
+                    },
                 )
                 if result.get("status") == "success":
                     count += 1
-        
+
         if count > 0:
             logger.info(f"Persisted {count} learnings for episode {episode_id}")

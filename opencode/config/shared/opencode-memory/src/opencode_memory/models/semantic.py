@@ -21,9 +21,7 @@ class IntentInfo(BaseModel):
         default=None, description="사용자 요청 요약"
     )
     context: Optional[str] = Field(default=None, description="배경 정보, 제약 사항")
-    assumptions: List[str] = Field(
-        default_factory=list, description="세운 가정들"
-    )
+    assumptions: List[str] = Field(default_factory=list, description="세운 가정들")
     agent_thoughts: List[str] = Field(
         default_factory=list,
         description="에이전트가 명시적으로 기록한 사고 흐름/계획",
@@ -48,13 +46,9 @@ class Decision(BaseModel):
         description="결정 유형: library, architecture, approach, user_preference 등",
     )
     choice: str = Field(..., description="최종 선택")
-    alternatives: List[str] = Field(
-        default_factory=list, description="고려한 대안들"
-    )
+    alternatives: List[str] = Field(default_factory=list, description="고려한 대안들")
     rationale: str = Field(..., description="선택 이유")
-    is_user_preference: bool = Field(
-        False, description="사용자 직접 선택 여부"
-    )
+    is_user_preference: bool = Field(False, description="사용자 직접 선택 여부")
     timestamp: datetime = Field(default_factory=datetime.now)
 
 
@@ -67,12 +61,8 @@ class ProblemResolution(BaseModel):
     attempted_solutions: List[str] = Field(
         default_factory=list, description="시도한 해결책들"
     )
-    successful_solution: Optional[str] = Field(
-        None, description="성공한 해결책"
-    )
-    path_to_solution: List[str] = Field(
-        default_factory=list, description="해결 경로"
-    )
+    successful_solution: Optional[str] = Field(None, description="성공한 해결책")
+    path_to_solution: List[str] = Field(default_factory=list, description="해결 경로")
     status: Literal["active", "resolved", "abandoned"] = Field(
         "active", description="상태"
     )
@@ -104,9 +94,7 @@ class SemanticRecord(BaseModel):
 
     # 도구 정보
     tool_name: str = Field(..., description="사용한 도구명")
-    tool_args: dict = Field(
-        default_factory=dict, description="도구 인자 (JSON)"
-    )
+    tool_args: dict = Field(default_factory=dict, description="도구 인자 (JSON)")
     success: bool = Field(default=True, description="성공 여부")
 
     # 풍부화 필드 (에이전트 제공)
@@ -150,6 +138,7 @@ class SemanticRecord(BaseModel):
 
 class RecordIntentRequest(BaseModel):
     """POST /record-intent 요청"""
+
     session_id: str
     goal: str
     user_request_summary: Optional[str] = None
@@ -163,6 +152,7 @@ class RecordIntentRequest(BaseModel):
 
 class RecordDecisionRequest(BaseModel):
     """POST /record-decision 요청"""
+
     session_id: str
     decision_type: str
     choice: str
@@ -173,6 +163,7 @@ class RecordDecisionRequest(BaseModel):
 
 class RecordLearningRequest(BaseModel):
     """POST /record-learning 요청"""
+
     session_id: str
     learning: str
     category: Optional[str] = None  # project, pattern, preference, error_solution
@@ -180,6 +171,7 @@ class RecordLearningRequest(BaseModel):
 
 class RecordSemanticRequest(BaseModel):
     """POST /record-semantic 요청"""
+
     session_id: str
     intent: str
     action: str
@@ -193,6 +185,7 @@ class RecordSemanticRequest(BaseModel):
 
 class SemanticRecordResponse(BaseModel):
     """Semantic API 응답"""
+
     status: str
     record_id: Optional[str] = None
     intent_id: Optional[str] = None
@@ -217,9 +210,7 @@ class EpisodeContext(BaseModel):
     user_request_summary: Optional[str] = Field(
         default=None, description="사용자 요청 요약"
     )
-    assumptions: List[str] = Field(
-        default_factory=list, description="세운 가정들"
-    )
+    assumptions: List[str] = Field(default_factory=list, description="세운 가정들")
     agent_thoughts: List[str] = Field(
         default_factory=list,
         description="에이전트가 기록한 사고 흐름 목록",
@@ -227,9 +218,7 @@ class EpisodeContext(BaseModel):
 
     # 자동 수집
     initial_tool: Optional[str] = Field(default=None, description="첫 번째 도구")
-    tools_used: List[str] = Field(
-        default_factory=list, description="사용된 도구들"
-    )
+    tools_used: List[str] = Field(default_factory=list, description="사용된 도구들")
 
 
 class Episode(BaseModel):
@@ -263,9 +252,7 @@ class Episode(BaseModel):
 
     # 결과
     outcome: Optional[str] = Field(default=None, description="에피소드 결과")
-    learnings: List[str] = Field(
-        default_factory=list, description="학습 사항들"
-    )
+    learnings: List[str] = Field(default_factory=list, description="학습 사항들")
 
     # 시간
     start_time: datetime = Field(default_factory=datetime.now)
@@ -273,9 +260,7 @@ class Episode(BaseModel):
     end_time: Optional[datetime] = Field(default=None, description="종료 시각")
 
     # 메타
-    tools_used: List[str] = Field(
-        default_factory=list, description="사용된 도구 목록"
-    )
+    tools_used: List[str] = Field(default_factory=list, description="사용된 도구 목록")
     record_count: int = Field(default=0, description="레코드 수")
 
     model_config = ConfigDict(
@@ -290,6 +275,7 @@ class Episode(BaseModel):
 
 class StartEpisodeRequest(BaseModel):
     """POST /episode/start 요청"""
+
     session_id: str
     goal: str
     context: dict = Field(default_factory=dict)
@@ -297,6 +283,7 @@ class StartEpisodeRequest(BaseModel):
 
 class CompleteEpisodeRequest(BaseModel):
     """POST /episode/complete 요청"""
+
     session_id: str
     outcome: str = "completed"
     summary: Optional[str] = None
@@ -304,6 +291,7 @@ class CompleteEpisodeRequest(BaseModel):
 
 class EpisodeResponse(BaseModel):
     """Episode API 응답"""
+
     status: str
     episode_id: Optional[str] = None
     goal: Optional[str] = None
@@ -315,15 +303,11 @@ class Reflection(BaseModel):
 
     episode_id: str = Field(..., description="에피소드 ID")
     summary: str = Field(..., description="에피소드 요약")
-    key_learnings: List[str] = Field(
-        default_factory=list, description="핵심 학습 내용"
-    )
+    key_learnings: List[str] = Field(default_factory=list, description="핵심 학습 내용")
     user_preferences_discovered: List[str] = Field(
         default_factory=list, description="발견된 사용자 선호"
     )
     reusable_patterns: List[str] = Field(
         default_factory=list, description="재사용 가능한 패턴"
     )
-    improvements: List[str] = Field(
-        default_factory=list, description="향후 개선점"
-    )
+    improvements: List[str] = Field(default_factory=list, description="향후 개선점")
