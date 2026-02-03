@@ -25,7 +25,7 @@ export class Formatter {
     lines.push('');
 
     for (const task of taskList.tasks) {
-      lines.push(...this.formatTaskMarkdown(task, 0));
+      lines.push(...this.formatTaskMarkdown(task));
     }
 
     lines.push('');
@@ -46,23 +46,16 @@ export class Formatter {
     return lines.join('\n');
   }
 
-  private formatTaskMarkdown(task: TaskDetail, indent: number): string[] {
+  private formatTaskMarkdown(task: TaskDetail): string[] {
     const lines: string[] = [];
-    const prefix = '  '.repeat(indent);
     const checkbox = task.status === 'completed' ? '[x]' : '[ ]';
-    const statusEmoji = task.status === 'completed' ? '✅' : 
+    const statusEmoji = task.status === 'completed' ? '✅' :
                        task.status === 'in_progress' ? '🔄' : '⏳';
-    
-    lines.push(`${prefix}- ${checkbox} ${statusEmoji} **${task.id}**. ${task.title}`);
+
+    lines.push(`- ${checkbox} ${statusEmoji} **${task.id}**. ${task.title}`);
 
     for (const detail of task.details) {
-      lines.push(`${prefix}  - ${detail}`);
-    }
-
-    if (task.subtasks) {
-      for (const subtask of task.subtasks) {
-        lines.push(...this.formatTaskMarkdown(subtask, indent + 1));
-      }
+      lines.push(`  - ${detail}`);
     }
 
     return lines;
@@ -80,23 +73,12 @@ export class Formatter {
     lines.push('| ID | 상태 | 제목 | 세부사항 |');
     lines.push('|------|--------|------|----------|');
 
-    const formatTaskRow = (task: TaskDetail, indent: string): void => {
-      const status = task.status === 'completed' ? '✅ 완료' : 
+    for (const task of taskList.tasks) {
+      const status = task.status === 'completed' ? '✅ 완료' :
                     task.status === 'in_progress' ? '🔄 진행중' : '⏳ 대기';
       const details = task.details.join(', ').substring(0, 30);
-      const title = indent + task.title;
-      
-      lines.push(`| ${task.id} | ${status} | ${title} | ${details}${details.length > 30 ? '...' : ''} |`);
 
-      if (task.subtasks) {
-        for (const subtask of task.subtasks) {
-          formatTaskRow(subtask, indent + '  ');
-        }
-      }
-    };
-
-    for (const task of taskList.tasks) {
-      formatTaskRow(task, '');
+      lines.push(`| ${task.id} | ${status} | ${task.title} | ${details}${details.length > 30 ? '...' : ''} |`);
     }
 
     return lines.join('\n');
@@ -134,25 +116,17 @@ export class Formatter {
   }
 
   private calculateStats(tasks: TaskDetail[]): { status: string; completionRate: number; completedCount: number; totalCount: number } {
-    let total = 0;
+    let total = tasks.length;
     let completed = 0;
     let inProgress = 0;
 
-    const countTasks = (taskList: TaskDetail[]) => {
-      for (const task of taskList) {
-        total++;
-        if (task.status === 'completed') {
-          completed++;
-        } else if (task.status === 'in_progress') {
-          inProgress++;
-        }
-        if (task.subtasks) {
-          countTasks(task.subtasks);
-        }
+    for (const task of tasks) {
+      if (task.status === 'completed') {
+        completed++;
+      } else if (task.status === 'in_progress') {
+        inProgress++;
       }
-    };
-
-    countTasks(tasks);
+    }
 
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
     let status = 'pending';
@@ -198,29 +172,22 @@ export class Formatter {
     lines.push('');
 
     for (const task of taskList.tasks) {
-      lines.push(...this.formatTaskWithStatus(task, 0));
+      lines.push(...this.formatTaskWithStatus(task));
     }
 
     return lines.join('\n');
   }
 
-  private formatTaskWithStatus(task: TaskDetail, indent: number): string[] {
+  private formatTaskWithStatus(task: TaskDetail): string[] {
     const lines: string[] = [];
-    const prefix = '  '.repeat(indent);
     const checkbox = task.status === 'completed' ? '[x]' : '[ ]';
-    const statusEmoji = task.status === 'completed' ? '✅' : 
+    const statusEmoji = task.status === 'completed' ? '✅' :
                        task.status === 'in_progress' ? '🔄' : '⏳';
-    
-    lines.push(`${prefix}- ${checkbox} ${statusEmoji} **${task.id}**. ${this.escapeMarkdown(task.title)}`);
+
+    lines.push(`- ${checkbox} ${statusEmoji} **${task.id}**. ${this.escapeMarkdown(task.title)}`);
 
     for (const detail of task.details) {
-      lines.push(`${prefix}  - ${this.escapeMarkdown(detail)}`);
-    }
-
-    if (task.subtasks && task.subtasks.length > 0) {
-      for (const subtask of task.subtasks) {
-        lines.push(...this.formatTaskWithStatus(subtask, indent + 1));
-      }
+      lines.push(`  - ${this.escapeMarkdown(detail)}`);
     }
 
     return lines;
@@ -349,28 +316,20 @@ export class Formatter {
    * TaskList에서 상태 통계 계산
    */
   calculateStatusSummary(taskList: TaskList): StatusSummary {
-    let total = 0;
+    let total = taskList.tasks.length;
     let completed = 0;
     let inProgress = 0;
     let pending = 0;
 
-    const countTasks = (tasks: TaskDetail[]) => {
-      for (const task of tasks) {
-        total++;
-        if (task.status === 'completed') {
-          completed++;
-        } else if (task.status === 'in_progress') {
-          inProgress++;
-        } else {
-          pending++;
-        }
-        if (task.subtasks) {
-          countTasks(task.subtasks);
-        }
+    for (const task of taskList.tasks) {
+      if (task.status === 'completed') {
+        completed++;
+      } else if (task.status === 'in_progress') {
+        inProgress++;
+      } else {
+        pending++;
       }
-    };
-
-    countTasks(taskList.tasks);
+    }
 
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 

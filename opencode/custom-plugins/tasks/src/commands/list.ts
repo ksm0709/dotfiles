@@ -124,22 +124,17 @@ export async function listCommand(args: ListArgs): Promise<ListResult> {
     let pending = 0;
 
     for (const taskList of taskLists) {
-      const countTasks = (tasks: any[]): void => {
-        for (const task of tasks) {
-          total++;
-          if (task.status === 'completed') {
-            completed++;
-          } else if (task.status === 'in_progress') {
-            inProgress++;
-          } else {
-            pending++;
-          }
-          if (task.subtasks && task.subtasks.length > 0) {
-            countTasks(task.subtasks);
-          }
+      // Flat structure - count only top-level tasks
+      for (const task of taskList.tasks) {
+        total++;
+        if (task.status === 'completed') {
+          completed++;
+        } else if (task.status === 'in_progress') {
+          inProgress++;
+        } else {
+          pending++;
         }
-      };
-      countTasks(taskList.tasks);
+      }
     }
 
     const statusSummary: StatusSummary = {

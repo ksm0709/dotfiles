@@ -15,8 +15,6 @@ export class Parser {
 
     let currentSection: 'header' | 'tasks' | 'summary' | 'changelog' = 'header';
     let currentTask: TaskDetail | null = null;
-    let currentParent: TaskDetail | null = null;
-    let taskStack: TaskDetail[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -38,40 +36,31 @@ export class Parser {
         currentSection = 'changelog';
       }
 
-      // Parse tasks
+      // Parse tasks - flat structure only
       if (currentSection === 'tasks') {
-        const taskMatch = line.match(/^(\s*)- \[([ x])\] (\d+\.\s*.+)$/);
-        const detailMatch = line.match(/^(\s{2,})- (.+)$/);
+        const taskMatch = line.match(/^- \[([ x])\] ((?:\d+\.)+\d*\.?\s*.+)$/);
+        const detailMatch = line.match(/^\s+- (.+)$/);
 
         if (taskMatch) {
-          const indent = taskMatch[1].length;
-          const isChecked = taskMatch[2] === 'x';
-          const title = taskMatch[3].trim();
-          const id = title.match(/^(\d+(?:\.\d+)*)/)?.[1] || '';
+          const isChecked = taskMatch[1] === 'x';
+          const title = taskMatch[2].trim();
+          const id = title.match(/^((?:\d+\.)+\d*)/)?.[1]?.replace(/\.$/, '') || '';
 
           const task: TaskDetail = {
             id,
-            title: title.replace(/^\d+\.\s*/, ''),
+            title: title.replace(/^(?:\d+\.)+\s*/, ''),
             status: isChecked ? 'completed' : 'pending',
             details: [],
-            subtasks: [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
 
-          if (indent === 0) {
-            taskList.tasks.push(task);
-            currentParent = task;
-            taskStack = [task];
-          } else if (currentParent && indent >= 2) {
-            currentParent.subtasks = currentParent.subtasks || [];
-            currentParent.subtasks.push(task);
-          }
-
+          taskList.tasks.push(task);
           currentTask = task;
         } else if (detailMatch && currentTask) {
-          const detail = detailMatch[2].trim();
-          if (!detail.match(/^\d+\.\d+/)) {
+          const detail = detailMatch[1].trim();
+          // 상세 정보로 인식 (ID 패턴이 아닌 경우)
+          if (!detail.match(/^(?:\d+\.)+\d+/)) {
             currentTask.details.push(detail);
           }
         }
@@ -103,12 +92,12 @@ export class Parser {
     lines.push('---');
     lines.push('');
 
-    // Tasks
+    // Tasks - flat structure
     lines.push('## 작업 목록 (Task List)');
     lines.push('');
 
     for (const task of taskList.tasks) {
-      lines.push(...this.formatTask(task, 0));
+      lines.push(...this.formatTask(task));
     }
 
     lines.push('');
@@ -142,48 +131,32 @@ export class Parser {
     return lines.join('\n');
   }
 
-  private formatTask(task: TaskDetail, indent: number): string[] {
+  private formatTask(task: TaskDetail): string[] {
     const lines: string[] = [];
-    const prefix = '  '.repeat(indent);
     const checkbox = task.status === 'completed' ? '[x]' : '[ ]';
     
-    lines.push(`${prefix}- ${checkbox} ${task.id}. ${task.title}`);
+    lines.push(`- ${checkbox} ${task.id}. ${task.title}`);
 
     // Add details
     for (const detail of task.details) {
-      lines.push(`${prefix}  - ${detail}`);
-    }
-
-    // Add subtasks
-    if (task.subtasks) {
-      for (const subtask of task.subtasks) {
-        lines.push(...this.formatTask(subtask, indent + 1));
-      }
+      lines.push(`  - ${detail}`);
     }
 
     return lines;
   }
 
   private calculateStats(tasks: TaskDetail[]): { status: string; completionRate: number; completedCount: number; totalCount: number } {
-    let total = 0;
+    let total = tasks.length;
     let completed = 0;
     let inProgress = 0;
 
-    const countTasks = (taskList: TaskDetail[]) => {
-      for (const task of taskList) {
-        total++;
-        if (task.status === 'completed') {
-          completed++;
-        } else if (task.status === 'in_progress') {
-          inProgress++;
-        }
-        if (task.subtasks) {
-          countTasks(task.subtasks);
-        }
+    for (const task of tasks) {
+      if (task.status === 'completed') {
+        completed++;
+      } else if (task.status === 'in_progress') {
+        inProgress++;
       }
-    };
-
-    countTasks(tasks);
+    }
 
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
     let status = 'pending';
@@ -197,24 +170,17 @@ export class Parser {
   }
 
   updateTaskStatus(taskList: TaskList, taskId: string, status: TaskStatus): boolean {
-    const findAndUpdate = (tasks: TaskDetail[]): boolean => {
-      for (const task of tasks) {
-        if (task.id === taskId) {
-          task.status = status;
-          task.updatedAt = new Date().toISOString();
-          return true;
-        }
-        if (task.subtasks && findAndUpdate(task.subtasks)) {
-          return true;
-        }
+    for (const task of taskList.tasks) {
+      if (task.id === taskId) {
+        task.status = status;
+        task.updatedAt = new Date().toISOString();
+        return true;
       }
-      return false;
-    };
-
-    return findAndUpdate(taskList.tasks);
+    }
+    return false;
   }
 
-  addTask(taskList: TaskList, parentId: string | undefined, title: string, details: string[]): boolean {
+  addTask(taskList: TaskList, title: string, details: string[]): boolean {
     const newTask: TaskDetail = {
       id: '',
       title,
@@ -224,61 +190,26 @@ export class Parser {
       updatedAt: new Date().toISOString()
     };
 
-    if (!parentId) {
-      // Add as top-level task
-      const maxId = Math.max(...taskList.tasks.map(t => {
-        const match = t.id.match(/^(\d+)/);
-        return match ? parseInt(match[1]) : 0;
-      }), 0);
-      newTask.id = `${maxId + 1}`;
-      taskList.tasks.push(newTask);
-      return true;
-    }
-
-    // Add as subtask
-    const findParent = (tasks: TaskDetail[]): TaskDetail | null => {
-      for (const task of tasks) {
-        if (task.id === parentId) {
-          return task;
-        }
-        if (task.subtasks) {
-          const found = findParent(task.subtasks);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const parent = findParent(taskList.tasks);
-    if (parent) {
-      parent.subtasks = parent.subtasks || [];
-      const maxSubId = Math.max(...parent.subtasks.map(t => {
-        const match = t.id.match(/\.(\d+)$/);
-        return match ? parseInt(match[1]) : 0;
-      }), 0);
-      newTask.id = `${parentId}.${maxSubId + 1}`;
-      parent.subtasks.push(newTask);
-      return true;
-    }
-
-    return false;
+    // Flat structure: generate ID based on existing tasks
+    const existingIds = taskList.tasks.map(t => t.id);
+    const maxId = existingIds.length > 0 
+      ? Math.max(...existingIds.map(id => {
+          const parts = id.split('.');
+          return parts.length > 0 ? parseInt(parts[0]) : 0;
+        }))
+      : 0;
+    
+    newTask.id = `${maxId + 1}`;
+    taskList.tasks.push(newTask);
+    return true;
   }
 
   removeTask(taskList: TaskList, taskId: string): boolean {
-    const findAndRemove = (tasks: TaskDetail[]): boolean => {
-      const index = tasks.findIndex(t => t.id === taskId);
-      if (index !== -1) {
-        tasks.splice(index, 1);
-        return true;
-      }
-      for (const task of tasks) {
-        if (task.subtasks && findAndRemove(task.subtasks)) {
-          return true;
-        }
-      }
-      return false;
-    };
-
-    return findAndRemove(taskList.tasks);
+    const index = taskList.tasks.findIndex(t => t.id === taskId);
+    if (index !== -1) {
+      taskList.tasks.splice(index, 1);
+      return true;
+    }
+    return false;
   }
 }

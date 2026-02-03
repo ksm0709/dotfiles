@@ -18,7 +18,6 @@ export interface TaskInput {
   title: string;
   status?: 'pending' | 'in_progress' | 'completed';
   details?: string[];
-  subtasks?: TaskInput[];
 }
 
 export interface InitResult extends CommandResultWithStatus {
@@ -127,19 +126,10 @@ function formatInitResult(
 }
 
 /**
- * 작업 ID 목록 추출 (하위 작업 포함)
+ * 작업 ID 목록 추출 (flat structure)
  */
 function extractTaskIds(tasks: TaskDetail[]): string[] {
-  const ids: string[] = [];
-  
-  for (const task of tasks) {
-    ids.push(task.id);
-    if (task.subtasks && task.subtasks.length > 0) {
-      ids.push(...extractTaskIds(task.subtasks));
-    }
-  }
-  
-  return ids;
+  return tasks.map(task => task.id);
 }
 
 /**
@@ -166,7 +156,6 @@ function convertTasks(inputs: TaskInput[] | undefined): TaskDetail[] {
     title: input.title,
     status: input.status || 'pending',
     details: input.details || [],
-    subtasks: input.subtasks ? convertTasks(input.subtasks) : [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }));
@@ -189,15 +178,8 @@ function createTaskList(args: InitArgs): TaskList {
 }
 
 /**
- * 전체 작업 수 계산 (하위 작업 포함)
+ * 전체 작업 수 계산 (flat structure)
  */
 function countTasks(tasks: TaskDetail[]): number {
-  let count = 0;
-  for (const task of tasks) {
-    count++;
-    if (task.subtasks && task.subtasks.length > 0) {
-      count += countTasks(task.subtasks);
-    }
-  }
-  return count;
+  return tasks.length;
 }

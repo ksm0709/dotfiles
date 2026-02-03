@@ -70,13 +70,13 @@ describe('Unified Tasks Integration', () => {
       const files = await fs.readdir(sessionDir);
       expect(files.length).toBeGreaterThan(0);
 
-      // Step 2: Add tasks
+      // Step 2: Add tasks (flat structure with hierarchical IDs)
       const addResult = await unifiedCommand({
         sessionId,
         operations: [
           { type: 'add', title: 'Task 1' },
           { type: 'add', title: 'Task 2' },
-          { type: 'add', title: 'Subtask 2.1', parent: '2' }
+          { type: 'add', title: 'Task 3 (subtask of 2 using ID 2.1)' }
         ]
       });
 
