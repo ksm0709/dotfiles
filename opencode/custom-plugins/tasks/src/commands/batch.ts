@@ -171,8 +171,7 @@ async function executeAdd(
 ): Promise<BatchResult> {
   const result = await addTaskCommand({
     sessionId,
-    title: operation.title!,
-    parent: operation.parent
+    title: operation.title!
   });
 
   return {

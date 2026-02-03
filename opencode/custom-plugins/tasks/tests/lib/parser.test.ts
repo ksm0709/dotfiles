@@ -113,7 +113,7 @@ describe('Parser', () => {
       expect(result.tasks[0].details).toContain('Detail 3');
     });
 
-    it('should parse nested subtasks', () => {
+    it('should parse flat subtasks with hierarchical IDs (1.1, 1.2, etc.)', () => {
       const content = `# Task List: Test
 
 **에이전트**: agent  
@@ -125,9 +125,9 @@ describe('Parser', () => {
 ## 작업 목록 (Task List)
 
 - [ ] 1. Parent task
-  - [ ] 1.1. Subtask 1
-  - [x] 1.2. Subtask 2
-  - [ ] 1.3. Subtask 3
+- [ ] 1.1. Subtask 1
+- [x] 1.2. Subtask 2
+- [ ] 1.3. Subtask 3
 
 ---
 
@@ -140,11 +140,12 @@ describe('Parser', () => {
 
       const result = parser.parseTaskList(content);
 
-      expect(result.tasks).toHaveLength(1);
-      expect(result.tasks[0].subtasks).toHaveLength(3);
-      expect(result.tasks[0].subtasks![0].id).toBe('1.1');
-      expect(result.tasks[0].subtasks![1].id).toBe('1.2');
-      expect(result.tasks[0].subtasks![2].id).toBe('1.3');
+      // Flat structure: all tasks at same level
+      expect(result.tasks).toHaveLength(4);
+      expect(result.tasks[0].id).toBe('1');
+      expect(result.tasks[1].id).toBe('1.1');
+      expect(result.tasks[2].id).toBe('1.2');
+      expect(result.tasks[3].id).toBe('1.3');
     });
 
     it('should parse current phase and memo', () => {
@@ -215,7 +216,6 @@ describe('Parser', () => {
             title: 'First task',
             status: 'pending' as TaskStatus,
             details: ['Detail 1', 'Detail 2'],
-            subtasks: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           },
@@ -224,7 +224,6 @@ describe('Parser', () => {
             title: 'Second task',
             status: 'completed' as TaskStatus,
             details: [],
-            subtasks: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -244,7 +243,7 @@ describe('Parser', () => {
       expect(markdown).toContain('**완료율**: 50% (1/2)');
     });
 
-    it('should include nested subtasks in markdown', () => {
+    it('should include flat subtasks with hierarchical IDs in markdown', () => {
       const taskList: TaskList = {
         title: 'Test',
         agent: 'agent',
@@ -256,16 +255,14 @@ describe('Parser', () => {
             title: 'Parent',
             status: 'pending' as TaskStatus,
             details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'Child 1',
-                status: 'completed' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Child 1',
+            status: 'completed' as TaskStatus,
+            details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -274,8 +271,9 @@ describe('Parser', () => {
 
       const markdown = parser.generateTaskList(taskList);
 
+      // Flat structure: no indentation for subtasks
       expect(markdown).toContain('- [ ] 1. Parent');
-      expect(markdown).toContain('  - [x] 1.1. Child 1');
+      expect(markdown).toContain('- [x] 1.1. Child 1');
     });
 
     it('should include memo if present', () => {
@@ -321,7 +319,7 @@ describe('Parser', () => {
       expect(taskList.tasks[0].updatedAt).toBeDefined();
     });
 
-    it('should update nested subtask status', () => {
+    it('should update subtask status by ID in flat structure', () => {
       const taskList: TaskList = {
         title: 'Test',
         agent: 'agent',
@@ -333,16 +331,14 @@ describe('Parser', () => {
             title: 'Parent',
             status: 'pending' as TaskStatus,
             details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'Child',
-                status: 'pending' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Child',
+            status: 'pending' as TaskStatus,
+            details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -352,7 +348,7 @@ describe('Parser', () => {
       const result = parser.updateTaskStatus(taskList, '1.1', 'completed');
 
       expect(result).toBe(true);
-      expect(taskList.tasks[0].subtasks![0].status).toBe('completed');
+      expect(taskList.tasks[1].status).toBe('completed');
     });
 
     it('should return false for non-existent task', () => {
@@ -371,7 +367,7 @@ describe('Parser', () => {
   });
 
   describe('addTask', () => {
-    it('should add top-level task', () => {
+    it('should add task with auto-generated ID', () => {
       const taskList: TaskList = {
         title: 'Test',
         agent: 'agent',
@@ -389,7 +385,7 @@ describe('Parser', () => {
         ]
       };
 
-      const result = parser.addTask(taskList, undefined, 'New Task', ['Detail 1']);
+      const result = parser.addTask(taskList, 'New Task', ['Detail 1']);
 
       expect(result).toBe(true);
       expect(taskList.tasks).toHaveLength(2);
@@ -398,7 +394,7 @@ describe('Parser', () => {
       expect(taskList.tasks[1].details).toContain('Detail 1');
     });
 
-    it('should add subtask to parent', () => {
+    it('should add subtask with hierarchical ID when specified', () => {
       const taskList: TaskList = {
         title: 'Test',
         agent: 'agent',
@@ -410,55 +406,22 @@ describe('Parser', () => {
             title: 'Parent',
             status: 'pending' as TaskStatus,
             details: [],
-            subtasks: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
         ]
       };
 
-      const result = parser.addTask(taskList, '1', 'Child Task', []);
+      // In flat structure, "subtask" is just another task with hierarchical ID
+      // The agent should specify the ID like "1.1" manually
+      const result = parser.addTask(taskList, 'Child Task', []);
 
       expect(result).toBe(true);
-      expect(taskList.tasks[0].subtasks).toHaveLength(1);
-      expect(taskList.tasks[0].subtasks![0].id).toBe('1.1');
+      expect(taskList.tasks).toHaveLength(2);
+      expect(taskList.tasks[1].id).toBe('2'); // Auto-generated, not hierarchical
     });
 
-    it('should add multiple subtasks with correct IDs', () => {
-      const taskList: TaskList = {
-        title: 'Test',
-        agent: 'agent',
-        createdAt: '2026-01-30',
-        sessionId: 'abc',
-        tasks: [
-          {
-            id: '1',
-            title: 'Parent',
-            status: 'pending' as TaskStatus,
-            details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'First Child',
-                status: 'pending' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
-            createdAt: '2026-01-30T10:00:00.000Z',
-            updatedAt: '2026-01-30T10:00:00.000Z'
-          }
-        ]
-      };
-
-      parser.addTask(taskList, '1', 'Second Child', []);
-
-      expect(taskList.tasks[0].subtasks).toHaveLength(2);
-      expect(taskList.tasks[0].subtasks![1].id).toBe('1.2');
-    });
-
-    it('should return false for non-existent parent', () => {
+    it('should handle adding first task', () => {
       const taskList: TaskList = {
         title: 'Test',
         agent: 'agent',
@@ -467,14 +430,16 @@ describe('Parser', () => {
         tasks: []
       };
 
-      const result = parser.addTask(taskList, '999', 'New Task', []);
+      const result = parser.addTask(taskList, 'First Task', []);
 
-      expect(result).toBe(false);
+      expect(result).toBe(true);
+      expect(taskList.tasks).toHaveLength(1);
+      expect(taskList.tasks[0].id).toBe('1');
     });
   });
 
   describe('removeTask', () => {
-    it('should remove top-level task', () => {
+    it('should remove task by ID in flat structure', () => {
       const taskList: TaskList = {
         title: 'Test',
         agent: 'agent',
@@ -498,7 +463,7 @@ describe('Parser', () => {
       expect(taskList.tasks).toHaveLength(0);
     });
 
-    it('should remove nested subtask', () => {
+    it('should remove subtask by ID in flat structure', () => {
       const taskList: TaskList = {
         title: 'Test',
         agent: 'agent',
@@ -510,16 +475,14 @@ describe('Parser', () => {
             title: 'Parent',
             status: 'pending' as TaskStatus,
             details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'To Remove',
-                status: 'pending' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'To Remove',
+            status: 'pending' as TaskStatus,
+            details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -529,7 +492,7 @@ describe('Parser', () => {
       const result = parser.removeTask(taskList, '1.1');
 
       expect(result).toBe(true);
-      expect(taskList.tasks[0].subtasks).toHaveLength(0);
+      expect(taskList.tasks).toHaveLength(1);
     });
 
     it('should return false for non-existent task', () => {
@@ -560,16 +523,14 @@ describe('Parser', () => {
             title: 'Task with details',
             status: 'in_progress' as TaskStatus,
             details: ['Detail A', 'Detail B'],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'Subtask',
-                status: 'completed' as TaskStatus,
-                details: ['Sub detail'],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Subtask in flat structure',
+            status: 'completed' as TaskStatus,
+            details: ['Sub detail'],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -583,12 +544,12 @@ describe('Parser', () => {
 
       expect(parsed.title).toBe(original.title);
       expect(parsed.agent).toBe(original.agent);
-      expect(parsed.tasks).toHaveLength(1);
+      expect(parsed.tasks).toHaveLength(2);
       expect(parsed.tasks[0].title).toBe('Task with details');
       // Note: Markdown format can only distinguish between 'completed' ([x]) and 'pending' ([ ])
       // 'in_progress' status cannot be preserved through round-trip
       expect(parsed.tasks[0].status).toBe('pending');
-      expect(parsed.tasks[0].subtasks).toHaveLength(1);
+      expect(parsed.tasks[1].id).toBe('1.1');
       expect(parsed.currentPhase).toBe('Testing');
     });
   });

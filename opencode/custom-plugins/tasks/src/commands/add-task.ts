@@ -7,14 +7,12 @@ import { CommandResultWithStatus, TaskList, TaskDetail, StatusSummary, ToolRespo
 
 export interface AddTaskArgs {
   sessionId: string;    // 세션 ID (필수)
-  parent?: string;      // 부모 작업 ID (선택)
   title: string;        // 작업 제목 (필수)
   details?: string;     // 세부사항 (쉼표로 구분, 선택)
 }
 
 export interface AddTaskResult extends CommandResultWithStatus {
   title: string;
-  parent?: string;
   details: string[];
   taskId?: string;
   response: ToolResponse;
@@ -62,7 +60,6 @@ export async function addTaskCommand(args: AddTaskArgs): Promise<AddTaskResult> 
       return {
         success: false,
         title: args.title,
-        parent: args.parent,
         details: [],
         message: `No task lists found for session: ${args.sessionId}. Create a task list first with: tasks init`,
         currentStatus: emptyTaskList,
@@ -86,12 +83,7 @@ export async function addTaskCommand(args: AddTaskArgs): Promise<AddTaskResult> 
     // Parse details from comma-separated string
     const details = args.details ? args.details.split(',').map(d => d.trim()).filter(d => d) : [];
 
-    // Handle empty or invalid parent values
-    const parent = args.parent && args.parent.trim() !== '' && args.parent !== 'root' 
-      ? args.parent 
-      : undefined;
-
-    const added = parser.addTask(taskList, parent, args.title, details);
+    const added = parser.addTask(taskList, args.title, details);
 
     if (added) {
       // Save updated content
@@ -117,7 +109,6 @@ export async function addTaskCommand(args: AddTaskArgs): Promise<AddTaskResult> 
           summary: statusSummary,
           operation: 'add',
           taskId: newTask.id,
-          parent: parent,
           message: details.length > 0 
             ? `Task added: ${args.title} with ${details.length} detail(s)`
             : `Task added: ${args.title}`
@@ -127,7 +118,6 @@ export async function addTaskCommand(args: AddTaskArgs): Promise<AddTaskResult> 
       return {
         success: true,
         title: args.title,
-        parent,
         details,
         taskId: newTask.id,
         message: details.length > 0 
@@ -139,7 +129,7 @@ export async function addTaskCommand(args: AddTaskArgs): Promise<AddTaskResult> 
         response
       };
     } else {
-      throw new Error(`Failed to add task. Parent task ${args.parent} not found.`);
+      throw new Error(`Failed to add task: ${args.title}`);
     }
   } catch (error) {
     throw error;
@@ -150,20 +140,9 @@ export async function addTaskCommand(args: AddTaskArgs): Promise<AddTaskResult> 
  * 새로 추가된 작업 찾기 (제목으로 식별)
  */
 function findNewlyAddedTask(taskList: TaskList, title: string): TaskDetail {
-  const findTask = (tasks: TaskDetail[]): TaskDetail | null => {
-    for (const task of tasks) {
-      if (task.title === title) {
-        return task;
-      }
-      if (task.subtasks) {
-        const found = findTask(task.subtasks);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  const found = findTask(taskList.tasks);
+  // Flat structure: search only in top-level tasks
+  const found = taskList.tasks.find(task => task.title === title);
+  
   if (found) {
     return found;
   }

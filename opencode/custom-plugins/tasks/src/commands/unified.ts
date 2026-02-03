@@ -159,8 +159,7 @@ async function executeOperation(
       }
       const addResult = await addTaskCommand({
         sessionId,
-        title: operation.title,
-        parent: operation.parent
+        title: operation.title
       });
       return {
         success: addResult.success,
@@ -366,11 +365,6 @@ function formatTaskCheckbox(task: any, indent: number): string[] {
   
   lines.push(`${prefix}- ${checkbox} ${statusEmoji} **${task.id}**. ${task.title}`);
 
-  if (task.subtasks && task.subtasks.length > 0) {
-    for (const subtask of task.subtasks) {
-      lines.push(...formatTaskCheckbox(subtask, indent + 1));
-    }
-  }
-
+  // Flat structure - no subtasks
   return lines;
 }

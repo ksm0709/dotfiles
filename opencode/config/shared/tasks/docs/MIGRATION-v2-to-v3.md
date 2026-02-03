@@ -61,10 +61,12 @@ tasks({
   operations: [
     { type: 'add', title: '요구사항 분석' },
     { type: 'add', title: '설계 문서 작성' },
-    { type: 'add', title: '구현', parent: '2' }
+    { type: 'add', title: '구현' }
   ]
 })
 ```
+
+**참고:** v3.0+에서는 parent/child 개념이 제거되었습니다. 모든 작업은 flat한 구조로 관리됩니다. 필요시 작업 제목에 계층 정보를 포함하세요 (예: "1.1. 구현").
 
 ### 예제 3: 상태 업데이트
 
@@ -94,7 +96,7 @@ tasks_init(agent="dev", title="프로젝트")
 // 작업 추가
 tasks_add(title="작업 1")
 tasks_add(title="작업 2")
-tasks_add(title="하위 작업", parent="2")
+tasks_add(title="하위 작업", parent="2")  // v3: parent 파라미터 제거됨
 
 // 상태 업데이트
 tasks_update(id="1", status="completed")
@@ -112,7 +114,7 @@ tasks({
     { type: 'init', agent: 'dev', title: '프로젝트' },
     { type: 'add', title: '작업 1' },
     { type: 'add', title: '작업 2' },
-    { type: 'add', title: '하위 작업', parent: '2' },
+    { type: 'add', title: '2.1. 하위 작업' },  // flat 구조: ID 형식으로 계층 표현
     { type: 'update', id: '1', status: 'completed' },
     { type: 'complete', id: '2' }
   ]
@@ -137,10 +139,11 @@ tasks({
 ```typescript
 {
   type: 'add',
-  title: string,      // 필수: 작업 제목
-  parent?: string     // 선택: 부모 작업 ID
+  title: string       // 필수: 작업 제목
 }
 ```
+
+**참고:** v3.0+에서는 parent 파라미터가 제거되었습니다. 모든 작업은 동일한 레벨(flat)에 추가됩니다. 필요시 작업 제목에 계층 ID를 포함할 수 있습니다 (예: "1.1. 작업명").
 
 ### `update` - 상태 업데이트
 

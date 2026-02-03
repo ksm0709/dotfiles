@@ -21,7 +21,6 @@ describe('Formatter', () => {
             title: 'First task',
             status: 'pending' as TaskStatus,
             details: ['Detail 1', 'Detail 2'],
-            subtasks: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           },
@@ -30,7 +29,6 @@ describe('Formatter', () => {
             title: 'Second task',
             status: 'completed' as TaskStatus,
             details: [],
-            subtasks: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -50,7 +48,7 @@ describe('Formatter', () => {
       expect(markdown).toContain('  - Detail 2');
     });
 
-    it('should format nested subtasks', () => {
+    it('should format flat tasks with hierarchical IDs (1.1, 1.1.1)', () => {
       const taskList: TaskList = {
         title: 'Nested Test',
         agent: 'agent',
@@ -62,26 +60,22 @@ describe('Formatter', () => {
             title: 'Parent task',
             status: 'in_progress' as TaskStatus,
             details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'Child 1',
-                status: 'completed' as TaskStatus,
-                details: [],
-                subtasks: [
-                  {
-                    id: '1.1.1',
-                    title: 'Grandchild',
-                    status: 'pending' as TaskStatus,
-                    details: [],
-                    createdAt: '2026-01-30T10:00:00.000Z',
-                    updatedAt: '2026-01-30T10:00:00.000Z'
-                  }
-                ],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Child 1',
+            status: 'completed' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1.1',
+            title: 'Grandchild',
+            status: 'pending' as TaskStatus,
+            details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -90,9 +84,10 @@ describe('Formatter', () => {
 
       const markdown = formatter.formatAsMarkdown(taskList);
 
+      // Flat structure: no indentation, all at same level
       expect(markdown).toContain('- [ ] 🔄 **1**. Parent task');
-      expect(markdown).toContain('  - [x] ✅ **1.1**. Child 1');
-      expect(markdown).toContain('    - [ ] ⏳ **1.1.1**. Grandchild');
+      expect(markdown).toContain('- [x] ✅ **1.1**. Child 1');
+      expect(markdown).toContain('- [ ] ⏳ **1.1.1**. Grandchild');
     });
 
     it('should include memo if present', () => {
@@ -125,7 +120,7 @@ describe('Formatter', () => {
       expect(markdown).toContain('**현재 단계**: 미정');
     });
 
-    it('should calculate completion stats correctly', () => {
+    it('should calculate completion stats correctly for flat structure', () => {
       const taskList: TaskList = {
         title: 'Stats Test',
         agent: 'agent',
@@ -137,16 +132,14 @@ describe('Formatter', () => {
             title: 'Task 1',
             status: 'completed' as TaskStatus,
             details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'Subtask 1',
-                status: 'completed' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Subtask 1',
+            status: 'completed' as TaskStatus,
+            details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           },
@@ -163,7 +156,7 @@ describe('Formatter', () => {
 
       const markdown = formatter.formatAsMarkdown(taskList);
 
-      // 2 completed out of 3 total tasks (including subtask)
+      // 2 completed out of 3 total tasks (flat structure, no nesting)
       expect(markdown).toContain('**완료율**: 67% (2/3)');
       expect(markdown).toContain('**상태**: in_progress');
     });
@@ -304,7 +297,7 @@ describe('Formatter', () => {
       expect(table).toContain('This is a very long detail tha');
     });
 
-    it('should format nested subtasks with indentation', () => {
+    it('should format flat tasks without indentation', () => {
       const taskList: TaskList = {
         title: 'Nested Table Test',
         agent: 'agent',
@@ -316,16 +309,14 @@ describe('Formatter', () => {
             title: 'Parent',
             status: 'pending' as TaskStatus,
             details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'Child',
-                status: 'completed' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Child',
+            status: 'completed' as TaskStatus,
+            details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -334,8 +325,10 @@ describe('Formatter', () => {
 
       const table = formatter.formatAsTable(taskList);
 
+      // Flat structure: no indentation
       expect(table).toContain('Parent');
-      expect(table).toContain('  Child'); // Indented
+      expect(table).toContain('Child');
+      expect(table).not.toContain('  Child');
     });
 
     it('should handle empty task list', () => {
@@ -600,9 +593,9 @@ describe('Formatter', () => {
       expect(summary.completionRate).toBe(33);
     });
 
-    it('should count subtasks in summary', () => {
+    it('should count flat tasks without subtask nesting', () => {
       const taskList: TaskList = {
-        title: 'Nested Calc Test',
+        title: 'Flat Calc Test',
         agent: 'test-agent',
         createdAt: '2026-01-30',
         sessionId: 'abc',
@@ -612,24 +605,22 @@ describe('Formatter', () => {
             title: 'Parent',
             status: 'in_progress' as TaskStatus,
             details: [],
-            subtasks: [
-              {
-                id: '1.1',
-                title: 'Child 1',
-                status: 'completed' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              },
-              {
-                id: '1.2',
-                title: 'Child 2',
-                status: 'pending' as TaskStatus,
-                details: [],
-                createdAt: '2026-01-30T10:00:00.000Z',
-                updatedAt: '2026-01-30T10:00:00.000Z'
-              }
-            ],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Child 1',
+            status: 'completed' as TaskStatus,
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.2',
+            title: 'Child 2',
+            status: 'pending' as TaskStatus,
+            details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
           }
@@ -638,7 +629,8 @@ describe('Formatter', () => {
 
       const summary = formatter.calculateStatusSummary(taskList);
 
-      expect(summary.total).toBe(3);  // Parent + 2 children
+      // Flat structure: all 3 tasks counted as separate
+      expect(summary.total).toBe(3);
       expect(summary.completed).toBe(1);
       expect(summary.inProgress).toBe(1);
       expect(summary.pending).toBe(1);

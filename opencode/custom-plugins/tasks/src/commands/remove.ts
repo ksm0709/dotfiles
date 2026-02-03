@@ -77,19 +77,8 @@ export async function removeCommand(args: RemoveArgs): Promise<RemoveResult> {
 
       const taskList = parser.parseTaskList(content);
       
-      // Find the task to get its title
-      const findTask = (tasks: TaskDetail[]): TaskDetail | null => {
-        for (const task of tasks) {
-          if (task.id === args.id) return task;
-          if (task.subtasks) {
-            const found = findTask(task.subtasks);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
-      const taskToRemove = findTask(taskList.tasks);
+      // Find the task to get its title (flat structure)
+      const taskToRemove = taskList.tasks.find(task => task.id === args.id) || null;
 
       if (taskToRemove) {
         const removed = parser.removeTask(taskList, args.id);

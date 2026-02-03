@@ -25,47 +25,48 @@ describe('Types', () => {
   });
 
   describe('TaskDetail', () => {
-    it('should create valid task structure', () => {
+    it('should create valid task structure with flat ID', () => {
       const task: TaskDetail = {
-        id: '1.2',
+        id: '1',
         title: 'Test Task',
         status: 'pending',
         details: ['Detail 1', 'Detail 2'],
-        subtasks: [
-          {
-            id: '1.2.1',
-            title: 'Subtask',
-            status: 'completed',
-            details: [],
-            createdAt: '2026-01-30T10:00:00.000Z',
-            updatedAt: '2026-01-30T10:00:00.000Z'
-          }
-        ],
         createdAt: '2026-01-30T10:00:00.000Z',
         updatedAt: '2026-01-30T10:00:00.000Z'
       };
 
-      expect(task.id).toBe('1.2');
+      expect(task.id).toBe('1');
       expect(task.details).toHaveLength(2);
-      expect(task.subtasks).toHaveLength(1);
     });
 
-    it('should allow optional subtasks', () => {
-      const task: TaskDetail = {
+    it('should create task with hierarchical ID (1.1, 1.2 format)', () => {
+      // In flat structure, hierarchical IDs are just string IDs
+      const parentTask: TaskDetail = {
         id: '1',
-        title: 'Simple Task',
-        status: 'pending',
+        title: 'Parent Task',
+        status: 'in_progress',
         details: [],
         createdAt: '2026-01-30T10:00:00.000Z',
         updatedAt: '2026-01-30T10:00:00.000Z'
       };
 
-      expect(task.subtasks).toBeUndefined();
+      const childTask: TaskDetail = {
+        id: '1.1',
+        title: 'Child Task',
+        status: 'completed',
+        details: [],
+        createdAt: '2026-01-30T10:00:00.000Z',
+        updatedAt: '2026-01-30T10:00:00.000Z'
+      };
+
+      expect(parentTask.id).toBe('1');
+      expect(childTask.id).toBe('1.1');
+      // No parent-child relationship in flat structure
     });
   });
 
   describe('TaskList', () => {
-    it('should create valid task list structure', () => {
+    it('should create valid task list structure with flat tasks', () => {
       const taskList: TaskList = {
         title: 'Project Tasks',
         agent: 'test-agent',
@@ -79,6 +80,14 @@ describe('Types', () => {
             details: [],
             createdAt: '2026-01-30T10:00:00.000Z',
             updatedAt: '2026-01-30T10:00:00.000Z'
+          },
+          {
+            id: '1.1',
+            title: 'Subtask 1.1',
+            status: 'completed',
+            details: [],
+            createdAt: '2026-01-30T10:00:00.000Z',
+            updatedAt: '2026-01-30T10:00:00.000Z'
           }
         ],
         currentPhase: 'Planning',
@@ -86,7 +95,9 @@ describe('Types', () => {
       };
 
       expect(taskList.title).toBe('Project Tasks');
-      expect(taskList.tasks).toHaveLength(1);
+      expect(taskList.tasks).toHaveLength(2);
+      expect(taskList.tasks[0].id).toBe('1');
+      expect(taskList.tasks[1].id).toBe('1.1');
       expect(taskList.currentPhase).toBe('Planning');
       expect(taskList.memo).toBe('Important notes');
     });

@@ -134,25 +134,9 @@ export async function statusCommand(args: StatusArgs): Promise<StatusResult> {
 }
 
 function calculateStats(tasks: TaskDetail[]): { status: TaskStatus; completionRate: number; completedCount: number; totalCount: number } {
-  let total = 0;
-  let completed = 0;
-  let inProgress = 0;
-
-  const countTasks = (taskList: TaskDetail[]) => {
-    for (const task of taskList) {
-      total++;
-      if (task.status === 'completed') {
-        completed++;
-      } else if (task.status === 'in_progress') {
-        inProgress++;
-      }
-      if (task.subtasks) {
-        countTasks(task.subtasks);
-      }
-    }
-  };
-
-  countTasks(tasks);
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.status === 'completed').length;
+  const inProgress = tasks.filter(t => t.status === 'in_progress').length;
 
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
   let status: TaskStatus = 'pending';

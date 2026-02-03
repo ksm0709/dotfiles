@@ -28,7 +28,7 @@ tasks({
   operations: [
     { type: 'add', title: '요구사항 분석' },
     { type: 'add', title: '설계' },
-    { type: 'add', title: '구현', parent: '2' },
+    { type: 'add', title: '구현' },
     { type: 'update', id: '1', status: 'in_progress' },
     { type: 'complete', id: '2' }
   ]
@@ -37,10 +37,16 @@ tasks({
 
 **Operation 타입:**
 - `init`: 작업 목록 초기화 (필수: agent, title)
-- `add`: 작업 추가 (필수: title, 선택: parent)
+- `add`: 작업 추가 (필수: title)
 - `update`: 상태 업데이트 (필수: id, status)
 - `complete`: 작업 완료 (필수: id)
 - `remove`: 작업 제거 (필수: id)
+
+**Flat Task Structure:**
+- 모든 작업은 동일한 레벨(flat)에 존재합니다
+- parent/child 개념이 없습니다
+- 필요시 에이전트가 ID 형식으로 계층 표현 (예: "1.1", "1.2" 등)
+- 복잡한 parent 선택 없이 간단한 작업 추가 가능
 
 **주요 특징:**
 - 단일 `tasks` 도구로 모든 작업 관리

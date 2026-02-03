@@ -7,7 +7,6 @@ export interface TaskDetail {
   title: string;
   status: TaskStatus;
   details: string[];  // 작업 세부사항 (짧은 문장 리스트)
-  subtasks?: TaskDetail[];
   createdAt: string;
   updatedAt: string;
 }
@@ -50,8 +49,6 @@ export interface UnifiedOperation {
   title?: string;
   // For 'update', 'complete', 'remove'
   id?: string;
-  // For 'add' (optional)
-  parent?: string;
   // For 'update'
   status?: TaskStatus;
 }
@@ -92,7 +89,6 @@ export interface BatchOperation {
   type: OperationType;
   id?: string;
   title?: string;
-  parent?: string;
   status?: TaskStatus;
 }
 
@@ -157,7 +153,6 @@ export interface ToolResponse {
     operation?: 'add' | 'update' | 'complete' | 'remove' | 'batch' | 'init' | 'list' | 'status' | 'unified';
     taskId?: string;
     status?: TaskStatus;
-    parent?: string;
     message?: string;
     batchSummary?: {
       total: number;
