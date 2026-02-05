@@ -43,7 +43,15 @@ graph TD
     Plan --> Install[4. Install Deps]
     Install --> Build[5. Run Build]
     Build --> Verify[6. Verify Output]
-    Verify --> End[End]
+    Verify --> CodeReview[7. Code Review]
+    CodeReview --> ReviewResult{Review Result?}
+    ReviewResult -- REJECT --> Refine[8. Code Refinement]
+    Refine --> Build
+    ReviewResult -- APPROVE --> QA[9. QA Verification]
+    QA --> QAResult{QA Result?}
+    QAResult -- FAIL --> Reimplement[10. Reimplementation]
+    Reimplement --> Build
+    QAResult -- PASS --> End[End]
 ```
 
 ### 0. Todo 초기화 (Initialize Todo)
@@ -100,6 +108,40 @@ graph TD
   - [ ] **현재 단계 상태**: `completed`로 설정
   - [ ] **전체 작업 완료**: 모든 Todo 항목 `completed` 확인
 
+### 6. 코드 리뷰 (Code Review)
+- **Delegation**: **`#py-code-reviewer.md`** (Python) 또는 **`#senior-sw-engineer.md`**
+- **Action**: 코드 품질을 검토하고 승인/반려 결정을 받습니다.
+- **Todo**:
+  - [ ] 코드 리뷰 수행 (서브 에이전트 위임 필수)
+  - [ ] **리뷰 결과 판단**:
+    - **APPROVE**: QA 단계로 진행
+    - **REJECT**: 코드 보완 단계로 이동
+
+### 7. 코드 보완 (Code Refinement) **[REJECT 시에만]**
+- **Delegation**: **`#senior-sw-engineer.md`**
+- **Action**: 리뷰 지적 사항을 반영해 코드를 보완합니다.
+- **Todo**:
+  - [ ] 코드 리뷰 REJECT 리포트 분석
+  - [ ] **Senior SW Engineer**에게 수정 요청
+  - [ ] 보완 후 Step 4 (빌드 실행)로 복귀
+
+### 8. QA 검증 (QA Verification)
+- **Delegation**: **`#qa.md`**
+- **Action**: 오픈스펙 기반의 기능 검증을 수행합니다.
+- **Todo**:
+  - [ ] QA 수행 및 리포트 수신 (서브 에이전트 위임 필수)
+  - [ ] **QA 결과 판단**:
+    - **PASS**: 작업 완료 조건 충족
+    - **FAIL**: 재구현 단계로 이동
+
+### 9. 재구현 (Reimplementation) **[FAIL 시에만]**
+- **Delegation**: **`#senior-sw-engineer.md`**
+- **Action**: QA 지적 사항을 반영해 재구현합니다.
+- **Todo**:
+  - [ ] QA 리포트 분석
+  - [ ] **Senior SW Engineer**에게 재구현 요청
+  - [ ] 재구현 후 Step 4 (빌드 실행)로 복귀
+
 ---
 
 ### OpenSpec CLI Commands for Build
@@ -118,6 +160,8 @@ graph TD
 - **Must**: 각 워크플로우 단계의 상태를 실시간으로 업데이트해야 합니다.
 - **Must**: OpenSpec이 있는 경우 반드시 tasks.md의 빌드 단계를 우선적으로 따릅니다.
 - **Must**: OpenSpec design.md에 명시된 환경 변수와 도구 버전을 준수합니다.
+- **Must**: 코드 리뷰와 QA를 수행하고, **QA PASS**가 확인될 때까지 코드 보완 → 코드 리뷰 → QA를 반복합니다.
+- **Must**: 코드 리뷰, QA, 코드 보완/재구현(SW Engineering)은 반드시 해당 서브 에이전트에 위임합니다.
 - **Never**: 의존성 버전을 임의로 고정하거나 변경하지 않으며(사용자 요청 제외), 빌드 아티팩트를 무단으로 삭제하지 않습니다.
 - **Never**: Todo List 없이 작업을 시작하거나 상태 추적 없이 진행하지 않습니다.
 
