@@ -133,6 +133,23 @@ export interface StatusSummary {
 }
 
 // ===========================================
+// Completion Check Types (New)
+// ===========================================
+
+/**
+ * 세션 종료 시 미완료 작업 확인 결과
+ */
+export interface CompletionCheckResult {
+  hasIncomplete: boolean;
+  incompleteTasks: TaskDetail[];
+  summary: {
+    pending: number;
+    inProgress: number;
+    completed: number;
+  };
+}
+
+// ===========================================
 // Native UI Response Types (New)
 // ===========================================
 

@@ -50,7 +50,7 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
     });
   });
 
-  describe('Step 2: Plugin Installation', () => {
+  describe('Step 2: Plugin Installation (Modern Bundled Approach)', () => {
     it('should install plugin to target directory using install.sh', async () => {
       // Execute install.sh with --target option
       const result = execSync(
@@ -66,9 +66,10 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       expect(result).toContain('Installing tasks plugin to custom location');
       expect(result).toContain('Isolated test mode');
       expect(result).toContain('Installation complete');
+      expect(result).toContain('Bundling plugin into a single file');
     });
 
-    it('should create correct directory structure', async () => {
+    it('should create correct directory structure (bundled single file)', async () => {
       // Run installation
       execSync(
         `bash "${installScriptPath}" --target "${tempDir}"`,
@@ -83,24 +84,18 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       const opencodeStats = await fs.stat(opencodeDir);
       expect(opencodeStats.isDirectory()).toBe(true);
 
-      // Verify required subdirectories
-      const requiredDirs = [
-        'plugins',
-        'plugins/tasks',
-        'plugins/tasks/commands',
-        'plugins/tasks/lib',
-        'plugins/tasks/types',
-        'shared/tasks/docs'
-      ];
+      // Modern bundled approach: single file in plugins/
+      const pluginsDir = path.join(opencodeDir, 'plugins');
+      const pluginsStats = await fs.stat(pluginsDir);
+      expect(pluginsStats.isDirectory()).toBe(true);
 
-      for (const dir of requiredDirs) {
-        const dirPath = path.join(opencodeDir, dir);
-        const stats = await fs.stat(dirPath);
-        expect(stats.isDirectory()).toBe(true);
-      }
+      // Documentation in shared/
+      const sharedDir = path.join(opencodeDir, 'shared/tasks');
+      const sharedStats = await fs.stat(sharedDir);
+      expect(sharedStats.isDirectory()).toBe(true);
     });
 
-    it('should copy plugin files correctly', async () => {
+    it('should create bundled single file with all plugin code', async () => {
       // Run installation
       execSync(
         `bash "${installScriptPath}" --target "${tempDir}"`,
@@ -111,21 +106,35 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
         }
       );
 
-      // Verify main plugin file exists
-      const pluginFile = path.join(opencodeDir, 'plugins/tasks/index.ts');
+      // Verify bundled plugin file exists (renamed from .js to .ts)
+      const pluginFile = path.join(opencodeDir, 'plugins/tasks.ts');
       const pluginStats = await fs.stat(pluginFile);
       expect(pluginStats.isFile()).toBe(true);
 
-      // Verify plugin content
+      // Verify plugin content (bundled code)
       const content = await fs.readFile(pluginFile, 'utf-8');
-      expect(content).toContain('export const TasksPlugin: Plugin');
-      expect(content).toContain('import { tool } from "@opencode-ai/plugin"');
       
-      // Verify import paths are corrected (commands are imported from ./commands/)
-      expect(content).toContain("from './commands/");
+      // Should contain plugin export (bundled format uses 'var' and different export pattern)
+      expect(content).toContain('TasksPlugin');
+      // Bundled code exports at the end: export { TasksPlugin, index_default as default }
+      expect(content).toMatch(/export\s*\{\s*TasksPlugin/);
+      
+      // Should contain unified command
+      expect(content).toContain('unifiedCommand');
+      
+      // Should contain new features
+      expect(content).toContain('CompletionChecker');
+      expect(content).toContain('PromptGenerator');
+      expect(content).toContain('session.idle');
+      
+      // Should have substantial bundled code (not just imports)
+      expect(content.length).toBeGreaterThan(5000);
+      
+      // Verify in_progress status support
+      expect(content).toContain('in_progress');
     });
 
-    it('should copy all source files to tasks subdirectory', async () => {
+    it('should not create old directory structure (pre-bundling)', async () => {
       // Run installation
       execSync(
         `bash "${installScriptPath}" --target "${tempDir}"`,
@@ -136,39 +145,21 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
         }
       );
 
-      // Verify source directories
-      const tasksDir = path.join(opencodeDir, 'plugins/tasks');
-      
-      const commandsDir = path.join(tasksDir, 'commands');
-      const libDir = path.join(tasksDir, 'lib');
-      const typesDir = path.join(tasksDir, 'types');
-
-      const [commandsStats, libStats, typesStats] = await Promise.all([
-        fs.stat(commandsDir),
-        fs.stat(libDir),
-        fs.stat(typesDir)
-      ]);
-
-      expect(commandsStats.isDirectory()).toBe(true);
-      expect(libStats.isDirectory()).toBe(true);
-      expect(typesStats.isDirectory()).toBe(true);
-
-      // Verify some key files exist
-      const keyFiles = [
-        path.join(commandsDir, 'init.ts'),
-        path.join(libDir, 'storage.ts'),
-        path.join(libDir, 'parser.ts'),
-        path.join(typesDir, 'index.ts')
+      // Old structure should NOT exist (bundled approach)
+      const oldStructurePaths = [
+        path.join(opencodeDir, 'plugins/tasks/index.ts'),
+        path.join(opencodeDir, 'plugins/tasks/commands'),
+        path.join(opencodeDir, 'plugins/tasks/lib'),
+        path.join(opencodeDir, 'plugins/tasks/types')
       ];
 
-      for (const file of keyFiles) {
-        const stats = await fs.stat(file);
-        expect(stats.isFile()).toBe(true);
+      for (const oldPath of oldStructurePaths) {
+        await expect(fs.access(oldPath)).rejects.toThrow();
       }
     });
   });
 
-  describe('Step 3: Plugin Structure Validation', () => {
+  describe('Step 3: Bundled Plugin Structure Validation', () => {
     beforeEach(async () => {
       // Run installation before each test
       execSync(
@@ -181,30 +172,27 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       );
     });
 
-    it('should have valid TypeScript syntax in plugin file', async () => {
-      const pluginFile = path.join(opencodeDir, 'plugins/tasks/index.ts');
+    it('should have valid bundled TypeScript syntax', async () => {
+      const pluginFile = path.join(opencodeDir, 'plugins/tasks.ts');
       const content = await fs.readFile(pluginFile, 'utf-8');
 
-      // Check for valid plugin structure
-      expect(content).toMatch(/export\s+const\s+TasksPlugin\s*:\s*Plugin/);
-      expect(content).toMatch(/export\s+default\s+TasksPlugin/);
+      // Check for valid plugin structure (bundled format may vary)
+      expect(content).toContain('TasksPlugin');
+      expect(content).toMatch(/export\s*\{/);
+      // Check that TasksPlugin is exported (may be in different format)
+      expect(content).toMatch(/TasksPlugin/);
       expect(content).toMatch(/return\s*\{/);
       expect(content).toMatch(/tool\s*:/);
       
-      // Check all tools are defined
-      const expectedTools = [
-        'tasks_init',
-        'tasks_list',
-        'tasks_update',
-        'tasks_complete',
-        'tasks_add',
-        'tasks_remove',
-        'tasks_status'
-      ];
-
-      for (const toolName of expectedTools) {
-        expect(content).toContain(toolName);
-      }
+      // Check for bundled modules
+      expect(content).toContain('Parser');
+      expect(content).toContain('Storage');
+      expect(content).toContain('CompletionChecker');
+      expect(content).toContain('PromptGenerator');
+      
+      // Check for session event handler
+      expect(content).toContain('session.idle');
+      expect(content).toContain('event:');
     });
 
     it('should not have manifest.json (which caused infinite loop)', async () => {
@@ -214,20 +202,33 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       await expect(fs.access(manifestFile)).rejects.toThrow();
     });
 
-    it('should have correct import paths in plugin file', async () => {
-      const pluginFile = path.join(opencodeDir, 'plugins/tasks/index.ts');
+    it('should have all required imports bundled', async () => {
+      const pluginFile = path.join(opencodeDir, 'plugins/tasks.ts');
       const content = await fs.readFile(pluginFile, 'utf-8');
 
-      // All imports should use direct subdirectory paths (./commands/, ./lib/, ./types/)
-      const importMatches = content.match(/from\s+['"]\.\/[^'"]+['"]/g) || [];
+      // External imports should be preserved (not bundled)
+      expect(content).toContain('@opencode-ai/plugin');
       
-      for (const importPath of importMatches) {
-        expect(importPath).toMatch(/from\s+['"]\.\/(commands|lib|types)\//);
-      }
+      // Internal modules should be bundled (not imported)
+      expect(content).not.toMatch(/from\s+['"]\.\/commands['"]/);
+      expect(content).not.toMatch(/from\s+['"]\.\/lib['"]/);
+    });
+
+    it('should support in_progress status in bundled code', async () => {
+      const pluginFile = path.join(opencodeDir, 'plugins/tasks.ts');
+      const content = await fs.readFile(pluginFile, 'utf-8');
+
+      // Verify in_progress status support
+      expect(content).toContain('in_progress');
+      expect(content).toContain('pending');
+      expect(content).toContain('completed');
+      
+      // Should contain the checkbox pattern [~] for in_progress
+      expect(content).toContain('[~]');
     });
   });
 
-  describe('Step 4: Documentation and Templates', () => {
+  describe('Step 4: Documentation and Shared Resources', () => {
     beforeEach(async () => {
       execSync(
         `bash "${installScriptPath}" --target "${tempDir}"`,
@@ -239,7 +240,7 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       );
     });
 
-    it('should copy documentation files', async () => {
+    it('should copy documentation files to shared directory', async () => {
       const docsDir = path.join(opencodeDir, 'shared/tasks/docs');
       const guideFile = path.join(docsDir, 'tasks-tools-guide.md');
       
@@ -247,12 +248,20 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
       expect(stats.isFile()).toBe(true);
 
       const content = await fs.readFile(guideFile, 'utf-8');
-      expect(content).toContain('Tasks Plugin Tools Guide');
-      expect(content).toContain('tasks_*');
+      expect(content).toContain('Tasks Plugin');
+      expect(content).toContain('tasks');
+    });
+
+    it('should copy templates to shared directory', async () => {
+      const templatesDir = path.join(opencodeDir, 'shared/tasks/templates');
+      
+      // Templates directory should exist
+      const stats = await fs.stat(templatesDir);
+      expect(stats.isDirectory()).toBe(true);
     });
   });
 
-  describe('Full Integration Flow', () => {
+  describe('Full Integration Flow (Bundled)', () => {
     it('should complete full installation flow without errors', async () => {
       // Step 1: Create isolated environment
       const testStartTime = Date.now();
@@ -278,30 +287,26 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
 
       // Step 3: Verify all components
       const checks = [
-        // Main plugin file
-        fs.access(path.join(opencodeDir, 'plugins/tasks/index.ts')),
-        // Source directories
-        fs.access(path.join(opencodeDir, 'plugins/tasks/commands')),
-        fs.access(path.join(opencodeDir, 'plugins/tasks/lib')),
-        fs.access(path.join(opencodeDir, 'plugins/tasks/types')),
+        // Bundled plugin file
+        fs.access(path.join(opencodeDir, 'plugins/tasks.ts')),
         // Documentation
         fs.access(path.join(opencodeDir, 'shared/tasks/docs/tasks-tools-guide.md'))
       ];
 
       await Promise.all(checks);
 
-      // Step 4: Verify plugin content
+      // Step 4: Verify bundled plugin content
       const pluginContent = await fs.readFile(
-        path.join(opencodeDir, 'plugins/tasks/index.ts'),
+        path.join(opencodeDir, 'plugins/tasks.ts'),
         'utf-8'
       );
 
-      // Should be valid plugin structure
-      expect(pluginContent).toContain('Plugin');
-      expect(pluginContent).toContain('tool:');
+      // Should be valid bundled plugin
+      expect(pluginContent).toContain('TasksPlugin');
+      expect(pluginContent).toContain('unifiedCommand');
       expect(installOutput).toContain('✅ Installation complete');
 
-      console.log('✅ Full integration test passed');
+      console.log('✅ Full integration test passed (bundled approach)');
     });
 
     it('should handle concurrent installations to different directories', async () => {
@@ -331,14 +336,18 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
         expect(install1).toContain('Installation complete');
         expect(install2).toContain('Installation complete');
 
-        // Both directories should have the plugin
+        // Both directories should have the bundled plugin
         const [plugin1, plugin2] = await Promise.all([
-          fs.readFile(path.join(tempDir, '.opencode/plugins/tasks/index.ts'), 'utf-8'),
-          fs.readFile(path.join(tempDir2, '.opencode/plugins/tasks/index.ts'), 'utf-8')
+          fs.readFile(path.join(tempDir, '.opencode/plugins/tasks.ts'), 'utf-8'),
+          fs.readFile(path.join(tempDir2, '.opencode/plugins/tasks.ts'), 'utf-8')
         ]);
 
         expect(plugin1).toContain('TasksPlugin');
         expect(plugin2).toContain('TasksPlugin');
+        
+        // Both should be bundled (single file)
+        expect(plugin1.length).toBeGreaterThan(5000);
+        expect(plugin2.length).toBeGreaterThan(5000);
 
       } finally {
         await fs.rm(tempDir2, { recursive: true, force: true });
@@ -346,7 +355,7 @@ describe('Tasks Plugin Installation and Execution Integration', () => {
     });
   });
 
-  describe('Error Handling', () => {
+  describe('Error Handling in Isolated Mode', () => {
     it('should skip AGENTS.md update in isolated mode', async () => {
       // Run installation
       const output = execSync(
