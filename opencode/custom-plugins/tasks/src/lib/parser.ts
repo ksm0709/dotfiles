@@ -38,18 +38,28 @@ export class Parser {
 
       // Parse tasks - flat structure only
       if (currentSection === 'tasks') {
-        const taskMatch = line.match(/^- \[([ x])\] ((?:\d+\.)+\d*\.?\s*.+)$/);
+        const taskMatch = line.match(/^- \[([ x~])\] ((?:\d+\.)+\d*\.?\s*.+)$/);
         const detailMatch = line.match(/^\s+- (.+)$/);
 
         if (taskMatch) {
-          const isChecked = taskMatch[1] === 'x';
+          const checkbox = taskMatch[1];
           const title = taskMatch[2].trim();
           const id = title.match(/^((?:\d+\.)+\d*)/)?.[1]?.replace(/\.$/, '') || '';
+
+          // Determine status based on checkbox character
+          let status: TaskStatus;
+          if (checkbox === 'x') {
+            status = 'completed';
+          } else if (checkbox === '~') {
+            status = 'in_progress';
+          } else {
+            status = 'pending';
+          }
 
           const task: TaskDetail = {
             id,
             title: title.replace(/^(?:\d+\.)+\s*/, ''),
-            status: isChecked ? 'completed' : 'pending',
+            status,
             details: [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -133,7 +143,9 @@ export class Parser {
 
   private formatTask(task: TaskDetail): string[] {
     const lines: string[] = [];
-    const checkbox = task.status === 'completed' ? '[x]' : '[ ]';
+    // Generate checkbox based on status: completed -> [x], in_progress -> [~], pending -> [ ]
+    const checkbox = task.status === 'completed' ? '[x]' : 
+                    task.status === 'in_progress' ? '[~]' : '[ ]';
     
     lines.push(`- ${checkbox} ${task.id}. ${task.title}`);
 

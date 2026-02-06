@@ -546,9 +546,9 @@ describe('Parser', () => {
       expect(parsed.agent).toBe(original.agent);
       expect(parsed.tasks).toHaveLength(2);
       expect(parsed.tasks[0].title).toBe('Task with details');
-      // Note: Markdown format can only distinguish between 'completed' ([x]) and 'pending' ([ ])
-      // 'in_progress' status cannot be preserved through round-trip
-      expect(parsed.tasks[0].status).toBe('pending');
+      // Note: Markdown format now supports three statuses: completed ([x]), in_progress ([~]), and pending ([ ])
+      // 'in_progress' status is now preserved through round-trip (ADDED-001)
+      expect(parsed.tasks[0].status).toBe('in_progress');
       expect(parsed.tasks[1].id).toBe('1.1');
       expect(parsed.currentPhase).toBe('Testing');
     });

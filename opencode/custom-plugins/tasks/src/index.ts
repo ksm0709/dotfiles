@@ -7,9 +7,63 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import { unifiedCommand } from './commands/unified';
+import { Storage } from './lib/storage';
+import { Parser } from './lib/parser';
+import { CompletionChecker } from './lib/completion-checker';
+import { PromptGenerator } from './lib/prompt-generator';
 
 export const TasksPlugin: Plugin = async ({ client }: { client: any }) => {
+  // Storage와 Parser 인스턴스 생성 (재사용)
+  const storage = new Storage();
+  const parser = new Parser();
+
   return {
+    // Session idle event handler - check for incomplete tasks
+    event: async ({ event }: { event: any }) => {
+      if (event.type === 'session.idle') {
+        // OpenCode event structure: sessionID is in event.properties
+        const sessionId = event.properties?.sessionID || 
+                         event.properties?.session_id || 
+                         event.properties?.sessionId ||
+                         event.sessionID || 
+                         event.session_id || 
+                         event.sessionId;
+        
+        if (!sessionId) {
+          console.error('Session ID not provided in session.idle event');
+          console.error('Event structure:', JSON.stringify(event, null, 2));
+          return;
+        }
+
+        try {
+          // 미완료 작업 확인
+          const checker = new CompletionChecker(storage, parser);
+          const result = await checker.checkIncompleteTasks(sessionId);
+
+          // 미완료 작업이 있으면 프롬프트 생성 및 주입
+          if (result.hasIncomplete) {
+            const promptGen = new PromptGenerator();
+            const prompt = promptGen.generateIncompleteTaskPrompt(
+              result.incompleteTasks,
+              result.summary
+            );
+
+            // 사용자 입력처럼 메시지 주입
+            try {
+              await client.session.prompt({
+                path: { id: sessionId },
+                body: { parts: [{ type: 'text', text: prompt }] }
+              });
+            } catch (promptError) {
+              console.error('Failed to inject completion prompt:', promptError);
+            }
+          }
+        } catch (error) {
+          console.error('Error handling session.idle event:', error);
+        }
+      }
+    },
+
     // Define custom tools that agents can use
     tool: {
       // Tool: tasks - Unified task management tool
