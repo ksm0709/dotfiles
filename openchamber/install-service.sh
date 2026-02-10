@@ -54,6 +54,29 @@ if [[ ! "$EXEC_PATH" == /* ]]; then
         # Search specifically for the binary in common user-writable bin folders
         DETECTED_PATH=$(find "$USER_HOME/.nvm/versions/node" "$USER_HOME/.local/bin" "$USER_HOME/bin" -name "$EXEC_PATH" -type f -executable -print -quit 2>/dev/null | head -n 1)
     fi
+
+    # 5. Search for hash-suffixed executable (e.g., .openchamber-Lr8RUQ7B)
+    # This handles npm's behavior of creating hashed binaries for some packages
+    if [ -z "$DETECTED_PATH" ] && [ -n "$SERVICE_USER" ]; then
+        USER_HOME=$(getent passwd "$SERVICE_USER" | cut -d: -f6)
+        BASE_NAME=$(basename "$EXEC_PATH")
+        
+        # Try to find the executable with hash pattern
+        for DIR in "$USER_HOME/.nvm/versions/node"/*/bin "$USER_HOME/.local/bin" "$USER_HOME/bin"; do
+            if [ -d "$DIR" ]; then
+                # Look for pattern: .basename-XXXXXXX or basename-XXXXXXX
+                HASHED_EXEC=$(ls -1 "$DIR"/.$BASE_NAME-* 2>/dev/null | head -1)
+                if [ -z "$HASHED_EXEC" ]; then
+                    HASHED_EXEC=$(ls -1 "$DIR"/$BASE_NAME-* 2>/dev/null | head -1)
+                fi
+                if [ -n "$HASHED_EXEC" ] && [ -x "$HASHED_EXEC" ]; then
+                    echo "Debug: Found hash-suffixed executable: $HASHED_EXEC"
+                    DETECTED_PATH="$HASHED_EXEC"
+                    break
+                fi
+            fi
+        done
+    fi
     
     if [ -n "$DETECTED_PATH" ]; then
         EXEC_PATH="$DETECTED_PATH"
@@ -66,6 +89,17 @@ fi
 if [ ! -f "$EXEC_PATH" ]; then
     echo "Error: Executable not found at $EXEC_PATH"
     exit 1
+fi
+
+# Verify the executable is actually executable
+if [ ! -x "$EXEC_PATH" ]; then
+    echo "Error: File at $EXEC_PATH is not executable"
+    exit 1
+fi
+
+# Verify the executable is a valid script/binary
+if ! file "$EXEC_PATH" | grep -qE '(script|executable|text)'; then
+    echo "Warning: $EXEC_PATH may not be a valid executable (file type: $(file -b "$EXEC_PATH"))"
 fi
 
 if [ -z "$SERVICE_USER" ]; then
@@ -112,10 +146,14 @@ if [ -n "$NODE_BIN_DIR" ]; then
     echo "  Node Bin    : $NODE_BIN_DIR"
 fi
 
-# Construct Environment line for PATH if node bin is provided
-ENV_PATH_LINE=""
+# Construct Environment line for PATH
+# Always include NODE_BIN_DIR if available (critical for NVM users)
+# Include standard system paths as fallback
 if [ -n "$NODE_BIN_DIR" ]; then
     ENV_PATH_LINE="Environment=PATH=$NODE_BIN_DIR:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+else
+    # Fallback to standard paths if NODE_BIN_DIR couldn't be detected
+    ENV_PATH_LINE="Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 fi
 
 cat <<EOF > $SERVICE_FILE
