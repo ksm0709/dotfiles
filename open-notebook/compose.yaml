@@ -1,0 +1,31 @@
+services:
+  open_notebook:
+    image: lfnovo/open_notebook:v1-latest-single
+    # Or use: ghcr.io/lfnovo/open-notebook:v1-latest-single
+    ports:
+      - "8502:8502"  # Web UI
+      - "5055:5055"  # API (required!)
+    environment:
+      - OPEN_NOTEBOOK_PASSWORD_FILE=/run/secrets/app_password
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY_FILE=/run/secrets/encryption_key
+      # For remote access, uncomment and set your server IP/domain:
+      # - API_URL=http://192.168.1.100:5055
+      # Database connection (required for single-container)
+      - SURREAL_URL=ws://localhost:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD=root
+      - SURREAL_NAMESPACE=open_notebook
+      - SURREAL_DATABASE=production
+    secrets:
+      - app_password
+      - encryption_key
+    volumes:
+      - $HOME/notebook_data:/app/data
+      - $HOME/surreal_data:/mydata
+    restart: always
+
+secrets:
+  app_password:
+    file: $HOME/secrets/password.txt
+  encryption_key:
+    file: $HOME/secrets/encryption_key.txt
