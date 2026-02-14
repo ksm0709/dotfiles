@@ -1,5 +1,5 @@
 ---
-name: research
+name: quick-research
 description: |
   DuckDuckGo 기반 빠른 웹 검색 스킬.
   특정 사실 확인, 최신 뉴스 조회, 간단한 정보 수집에 사용.
@@ -80,4 +80,3 @@ duckduckgo-search>=3.0.0
 ## 관련 스킬
 
 - **deep-research**: 심층 분석이 필요한 경우
-- **memory**: 검색 결과 장기 저장 시

@@ -8,7 +8,7 @@
 
 모든 작업에서 기본적으로 준수해야 할 원칙입니다.
 
-1.  **MUST** **한국어 소통**: 모든 대화, 주석, 문서는 **한국어**를 기본으로 합니다. (기술 용어는 영어 사용 가능)
+1.  **MUST** **한국어 소통, 영문 코딩**: 모든 대화, 문서는 **한국어**를 기본으로 합니다. (기술 용어는 영어 사용 가능) 모든 코드, 주석은 **영어** 사용을 기본으로 합니다. 
 2.  **MUST** **안전 우선**: 파일 삭제, 강제 푸시(`git push -f`) 등 파괴적인 작업은 반드시 사용자의 명시적 승인을 받습니다.
 3.  **MUST** **검증 필수**: 코드를 작성한 후에는 반드시 실행하거나 테스트하여 동작을 검증해야 합니다.
 4.  **MUST** **컨텍스트 유지**: 작업의 전후 맥락을 파악하고, 불필요한 중복 질문을 하지 않습니다.
@@ -27,11 +27,21 @@
 
 사용자의 작업 스타일과 선호도 설정입니다.
 
-- **Preferred Language**: Python, TypeScript
-- **Editor**: VS Code
+- **Preferred Language**: C++, Python, TypeScript
+- **Editor**: vim
 - **Communication Style**: 명확하고 간결하게, 필요한 경우 예시 제공
-- **Code Style**: PEP8 (Python), ESLint/Prettier (TypeScript)
 
+### Code style: Python
+- PEP8 준수
+- **MUST** yapf 포맷팅
+- **MUST** google 스타일 가이드 준수
+
+### Code style: C++
+- **MUST** clangd, clang-tidy, clang-format 사용
+- **MUST** google 스타일 가이드 준수
+
+### Code style: TypeScript
+- ESLint와 Prettier 사용
 ---
 
 ## 3. Global Tools & Skills (글로벌 도구 및 스킬)
@@ -46,210 +56,7 @@
 - `todowrite`/`todoread`: 작업 목록 관리 및 조회 (Todo List)
 
 ### 🧠 Specialized Skills
-- **deep-research**: 심층 웹 리서치 및 보고서 생성 (`/deep-research`)
-- **memory**: 장기 기억 관리 및 검색
 - **doc-coauthoring**: 문서 공동 작성 지원
 - **agent-creator**: 새로운 에이전트 생성 및 설정 (`/create-agent`)
 
 ---
-
-
-<!-- TASKS_TOOLS_GUIDE_START -->
-<!-- 이 섹션은 Tasks Plugin에 의해 자동으로 관리됩니다. 수동으로 수정하지 마세요. -->
-
-### 📋 Task Management Tools
-
-Tasks Plugin은 에이전트가 작업을 체계적으로 관리할 수 있도록 **통합 `tasks` 도구**를 제공합니다.
-
-#### 사용 가능한 도구
-
-**통합 도구:**
-- **`tasks(operations)`** - 단일 도구로 모든 작업 관리
-  - 반환값: `{ title, output, metadata }`
-  - metadata: { results, summary, taskList, operation }
-  - 항상 현재 세션의 작업 현황 자동 표시
-  - 세션 격리: 다른 세션의 작업은 보이지 않음
-
-**사용 예시:**
-```typescript
-// 작업 목록 초기화
-tasks({
-  operations: [
-    { type: 'init', agent: 'senior-sw-engineer', title: 'API-구현' }
-  ]
-})
-
-// 배치 작업으로 여러 작업 한 번에 처리
-tasks({
-  operations: [
-    { type: 'add', title: '요구사항 분석' },
-    { type: 'add', title: '설계' },
-    { type: 'add', title: '구현', parent: '2' },
-    { type: 'update', id: '1', status: 'in_progress' },
-    { type: 'complete', id: '2' }
-  ]
-})
-```
-
-**Operation 타입:**
-- `init`: 작업 목록 초기화 (필수: agent, title)
-- `add`: 작업 추가 (필수: title, 선택: parent)
-- `update`: 상태 업데이트 (필수: id, status)
-- `complete`: 작업 완료 (필수: id)
-- `remove`: 작업 제거 (필수: id)
-
-**주요 특징:**
-- 단일 `tasks` 도구로 모든 작업 관리
-- 한 번에 최대 50개 operation 처리 (배치 작업)
-- 부분적 실패 허용: 일부 실패 시 성공한 작업은 유지
-- 세션 격리: 현재 세션의 작업만 표시
-- 자동 현황 표시: 모든 작업 후 현재 세션 상태 자동 출력
-- OpenCode 네이티브 UI 렌더링 지원
-- 작업 파일은 `~/.local/share/opencode/tasks/{session-id}/`에 저장
-
-**설치 구조:**
-- 플러그인 코드: `~/.config/opencode/plugins/tasks/`
-- 문서 및 가이드: `~/.config/opencode/shared/tasks/`
-
-#### 에이전트 설정
-
-에이전트가 Tasks 도구를 사용하려면 frontmatter에 다음을 추가하세요:
-
-```yaml
----
-tools:
-  tasks: true
----
-```
-
-#### 자세한 사용법
-
-자세한 사용법은 다음 문서를 참조하세요:
-- `~/.config/opencode/shared/tasks/README.md`
-- `~/.config/opencode/shared/tasks/docs/MIGRATION-v2-to-v3.md`
-
-<!-- TASKS_TOOLS_GUIDE_END -->
-
-
-
-
-
-
-
-
-
-
-
-
-## 4. Global Agent Registry (글로벌 에이전트 명부)
-
-전역적으로 호출 가능한 에이전트 목록입니다.
-
-### 📋 Project Manager (PM)
-- **File**: `.config/opencode/agent/pm.md`
-- **Role**: 개발 PM (Project Manager)
-- **Description**: 프로젝트 총괄, 기술적 의사결정, 스펙 정의(OpenSpec), 일정 관리.
-- **Trigger**: 새로운 기능 개발, 복잡한 요구사항 분석, 프로젝트 구조 변경 시.
-
-### 👨‍💻 Senior SW Engineer (Dev)
-- **File**: `.config/opencode/agent/senior-sw-engineer.md`
-- **Role**: Senior Software Engineer
-- **Description**: 실제 코드 구현, 리팩토링, 테스트 작성 (다국어 지원).
-- **Trigger**: 구체적인 기능 구현, 버그 수정, 단위 테스트 작성 시.
-
-### 🐍 Py Code Reviewer
-- **File**: `.config/opencode/agent/py-code-reviewer.md`
-- **Role**: Py Code Reviewer
-- **Description**: Python 코드 품질, PEP 표준, 보안 취약점 검토.
-- **Trigger**: Python 코드 구현 완료 후 PR 생성 전.
-
-### ➕ C++ Code Reviewer
-- **File**: `.config/opencode/agent/cpp-review.md`
-- **Role**: C++ Code Reviewer
-- **Description**: C++ 코드 품질, 메모리 안전성, 성능 검토.
-- **Trigger**: C++ 코드 리뷰 요청 시.
-
-### 🏗️ Build Agent
-- **File**: `.config/opencode/agent/build.md`
-- **Role**: Build Agent
-- **Description**: 프로젝트 빌드, 의존성 관리, 환경 설정.
-- **Trigger**: 빌드 오류 해결, 패키지 설치, 환경 구성 시.
-
-### 📅 Planner
-- **File**: `.config/opencode/agent/plan.md`
-- **Role**: Planner
-- **Description**: 고수준 계획, 전략 수립, 로드맵 작성 (코드 수정 불가).
-- **Trigger**: 프로젝트 초기 기획, 장기 로드맵 수립 시.
-
-### 🔎 Research Analyst
-- **File**: `.config/opencode/agent/research-analyst.md`
-- **Role**: 리서치 분석가 (Research Analyst)
-- **Description**: 심층 웹 검색 및 정보 분석, 리포트 작성.
-- **Trigger**: 복잡한 주제 연구, 최신 기술 동향 파악 시.
-
-### 🛠️ Agent Creator
-- **File**: `.config/opencode/agent/agent-creator.md`
-- **Role**: 에이전트 크리에이터 (Agent Creator)
-- **Description**: 새로운 에이전트 설정 파일 생성.
-- **Trigger**: 새로운 역할의 에이전트가 필요할 때.
-
-### 🌐 General Agent
-- **File**: `.config/opencode/agent/general.md`
-- **Role**: General Agent
-- **Description**: 범용 작업 처리 및 다단계 태스크 실행.
-- **Trigger**: 특정 카테고리에 속하지 않는 복잡한 작업 시.
-
----
-
-## 5. Integration (통합)
-
-이 글로벌 설정은 프로젝트별 `AGENTS.md`와 함께 작동합니다.
-
-- **우선순위**: 프로젝트별 `AGENTS.md`의 설정이 글로벌 설정보다 우선합니다.
-- **상속**: 프로젝트 설정에 명시되지 않은 항목은 글로벌 설정을 따릅니다.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- OPENCODE_MEMORY_INSTRUCTIONS_START -->
-### Context & Memory Management (컨텍스트 및 기억 관리)
-OpenCode의 장기 기억(Long-term Memory)과 작업 기억(Working Memory)을 적극 활용하여 일관성을 유지합니다.
-
-**⚠️ 필수 워크플로우 (Mandatory Workflow)**
-모든 작업은 반드시 다음 순서로 진행해야 합니다:
-1. **Start**: `context_start`로 작업 시작 알림 (관련 기억 검색됨)
-2. **Intent**: `context_intent`로 목표 설정 (사고 과정 기록)
-3. **Work**: 작업 수행 (중간중간 `context_decision`, `context_learning` 기록)
-4. **End**: `context_end`로 작업 종료 및 기억 저장
-
----
-
-#### 🛠️ Memory Tools Guide
-
-1. **Task Lifecycle (작업 수명주기)**
-   - `context_start(task="...")`: 작업을 시작할 때 가장 먼저 호출합니다.
-   - `context_end(result="...")`: 작업이 완료되면 반드시 호출하여 기억을 저장합니다.
-
-2. **Thought Process (사고 과정)**
-   - `context_intent`: 작업의 **목표(Goal)**와 **의도(Intent)**를 기록합니다. (작업 시작 직후 권장)
-     - `agent_thoughts` 파라미터로 에이전트의 **사고 흐름/계획**을 리스트 형태로 기록할 수 있습니다.
-   - `context_decision`: 라이브러리 선택, 아키텍처 설계 등 **중요한 의사결정**을 기록합니다.
-   - `context_learning`: 오류 해결, 새로운 패턴 발견 등 **학습한 내용**을 기록합니다.
-
-3. **Maintenance (상태 관리)**
-   - `context_checkpoint`: 작업이 길어지거나 단계가 바뀔 때 **중간 저장**을 수행합니다. (메모리 압축 효과)
-   - `context_status`: 현재 작업의 진행 상태와 컨텍스트를 **점검**합니다.
-
-이 도구들을 통해 에이전트는 과거의 경험을 기억하고 더 똑똑해집니다.
-<!-- OPENCODE_MEMORY_INSTRUCTIONS_END -->
