@@ -54,9 +54,4 @@
 - `glob`/`grep`: 파일 검색
 - `webfetch`: 웹 콘텐츠 가져오기
 - `todowrite`/`todoread`: 작업 목록 관리 및 조회 (Todo List)
-
-### 🧠 Specialized Skills
-- **doc-coauthoring**: 문서 공동 작성 지원
-- **agent-creator**: 새로운 에이전트 생성 및 설정 (`/create-agent`)
-
 ---
