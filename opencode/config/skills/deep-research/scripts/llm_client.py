@@ -9,9 +9,14 @@ and integration with the new environment management system.
 import os
 import json
 import logging
+import subprocess
+import importlib
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+_OPENCODE_FALLBACK_ENV = "DEEP_RESEARCH_USE_OPENCODE_FALLBACK"
+_OPENCODE_FALLBACK_TIMEOUT_SECONDS = 30
 
 # Import new modules
 try:
@@ -27,15 +32,15 @@ _gemini_available = False
 _openai_available = False
 
 try:
-    from google import genai
+    genai = importlib.import_module("google.genai")
     _gemini_available = True
-except ImportError:
+except Exception:
     genai = None
 
 try:
-    from openai import OpenAI
+    OpenAI = importlib.import_module("openai").OpenAI
     _openai_available = True
-except ImportError:
+except Exception:
     OpenAI = None
 
 
@@ -57,8 +62,7 @@ def gemini_complete(prompt: str, model: str = "gemini-2.0-flash") -> str:
     api_key = api_keys.get("GEMINI_API_KEY")
 
     if not api_key:
-        logger.warning("GEMINI_API_KEY not found, using mock response")
-        return mock_response(prompt)
+        return _fallback_without_api_key(prompt, "GEMINI_API_KEY")
 
     if not _gemini_available or genai is None:
         logger.warning("google-generativeai not installed, using mock response")
@@ -95,8 +99,7 @@ def openai_complete(prompt: str, model: str = "gpt-4o") -> str:
     api_key = api_keys.get("OPENAI_API_KEY")
 
     if not api_key:
-        logger.warning("OPENAI_API_KEY not found, using mock response")
-        return mock_response(prompt)
+        return _fallback_without_api_key(prompt, "OPENAI_API_KEY")
 
     if not _openai_available or OpenAI is None:
         logger.warning("openai not installed, using mock response")
@@ -161,6 +164,52 @@ def llm_complete(
     else:
         logger.info("Using mock response (no valid provider available)")
         return mock_response(prompt)
+
+
+def _fallback_without_api_key(prompt: str, key_name: str) -> str:
+    """Try optional opencode fallback, then return mock response."""
+    fallback_response = _try_opencode_run(prompt)
+    if fallback_response is not None:
+        return fallback_response
+
+    logger.warning("%s not found, using mock response", key_name)
+    return mock_response(prompt)
+
+
+def _try_opencode_run(prompt: str) -> Optional[str]:
+    """Try opencode run fallback unless explicitly disabled."""
+    if os.getenv(_OPENCODE_FALLBACK_ENV) == "0":
+        return None
+
+    try:
+        result = subprocess.run(
+            ["opencode", "run", prompt],
+            capture_output=True,
+            text=True,
+            timeout=_OPENCODE_FALLBACK_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except FileNotFoundError:
+        logger.warning("opencode fallback unavailable: command not found")
+        return None
+    except subprocess.TimeoutExpired:
+        logger.warning("opencode fallback unavailable: command timed out")
+        return None
+    except Exception as e:
+        logger.warning("opencode fallback unavailable: %s", e.__class__.__name__)
+        return None
+
+    if result.returncode != 0:
+        logger.warning("opencode fallback unavailable: non-zero exit status")
+        return None
+
+    output = (result.stdout or "").strip()
+    if not output:
+        logger.warning("opencode fallback unavailable: empty output")
+        return None
+
+    logger.info("Using opencode fallback response")
+    return output
 
 
 def mock_response(prompt: str) -> str:

@@ -19,6 +19,79 @@ if scripts_dir not in sys.path:
 class TestLLMClient(unittest.TestCase):
     """Test cases for LLM client module."""
 
+    def test_keyless_fallback_opt_out_disabled_uses_mock(self):
+        from llm_client import gemini_complete
+
+        mock_env_manager = MagicMock()
+        mock_env_manager.load_api_keys.return_value = {}
+
+        with patch.dict(
+            os.environ, {"DEEP_RESEARCH_USE_OPENCODE_FALLBACK": "0"}, clear=True
+        ), patch(
+            "llm_client.get_env_manager", return_value=mock_env_manager
+        ), patch("llm_client.mock_response", return_value="mocked") as mock_mock_response, patch(
+            "llm_client.subprocess.run"
+        ) as mock_run:
+            response = gemini_complete("Test prompt")
+
+            self.assertEqual(response, "mocked")
+            mock_run.assert_not_called()
+            mock_mock_response.assert_called_once_with("Test prompt")
+
+    def test_no_key_opt_in_enabled_success_uses_opencode_output(self):
+        from llm_client import gemini_complete
+
+        mock_env_manager = MagicMock()
+        mock_env_manager.load_api_keys.return_value = {}
+        mock_completed = MagicMock(returncode=0, stdout="opencode result\n")
+
+        with patch.dict(
+            os.environ, {"DEEP_RESEARCH_USE_OPENCODE_FALLBACK": "1"}, clear=True
+        ), patch("llm_client.get_env_manager", return_value=mock_env_manager), patch(
+            "llm_client.subprocess.run", return_value=mock_completed
+        ) as mock_run, patch("llm_client.mock_response", return_value="mocked") as mock_mock_response:
+            response = gemini_complete("Test prompt")
+
+            self.assertEqual(response, "opencode result")
+            mock_run.assert_called_once()
+            mock_mock_response.assert_not_called()
+
+    def test_no_key_env_unset_success_uses_opencode_output(self):
+        from llm_client import gemini_complete
+
+        mock_env_manager = MagicMock()
+        mock_env_manager.load_api_keys.return_value = {}
+        mock_completed = MagicMock(returncode=0, stdout="opencode result\n")
+
+        with patch.dict(os.environ, {}, clear=True), patch(
+            "llm_client.get_env_manager", return_value=mock_env_manager
+        ), patch("llm_client.subprocess.run", return_value=mock_completed) as mock_run, patch(
+            "llm_client.mock_response", return_value="mocked"
+        ) as mock_mock_response:
+            response = gemini_complete("Test prompt")
+
+            self.assertEqual(response, "opencode result")
+            mock_run.assert_called_once()
+            mock_mock_response.assert_not_called()
+
+    def test_keyless_fallback_opt_in_enabled_failure_falls_back_to_mock(self):
+        from llm_client import gemini_complete
+
+        mock_env_manager = MagicMock()
+        mock_env_manager.load_api_keys.return_value = {}
+        mock_completed = MagicMock(returncode=1, stdout="", stderr="failed")
+
+        with patch.dict(
+            os.environ, {"DEEP_RESEARCH_USE_OPENCODE_FALLBACK": "1"}, clear=True
+        ), patch("llm_client.get_env_manager", return_value=mock_env_manager), patch(
+            "llm_client.subprocess.run", return_value=mock_completed
+        ) as mock_run, patch("llm_client.mock_response", return_value="mocked") as mock_mock_response:
+            response = gemini_complete("Test prompt")
+
+            self.assertEqual(response, "mocked")
+            mock_run.assert_called_once()
+            mock_mock_response.assert_called_once_with("Test prompt")
+
     def test_mock_response_json(self):
         """Test mock response returns valid JSON for plan requests."""
         from llm_client import mock_response
@@ -40,16 +113,23 @@ class TestLLMClient(unittest.TestCase):
         self.assertIn("Mock", response)
         self.assertIn("#", response)  # Has markdown headers
 
-    def test_llm_complete_without_keys(self):
-        """Test llm_complete falls back to mock without API keys."""
+    def test_keyless_fallback_llm_complete_without_keys(self):
         from llm_client import llm_complete
 
-        # Clear API keys
-        with patch.dict(os.environ, {}, clear=True):
+        mock_env_manager = MagicMock()
+        mock_env_manager.get_preferred_provider.return_value = "gemini"
+        mock_env_manager.load_api_keys.return_value = {}
+
+        with patch.dict(os.environ, {}, clear=True), patch(
+            "llm_client.get_env_manager", return_value=mock_env_manager
+        ), patch(
+            "llm_client.subprocess.run", side_effect=FileNotFoundError
+        ) as mock_run, patch("llm_client.mock_response", return_value="mocked-json") as mock_mock_response:
             response = llm_complete("Test prompt with JSON")
 
-            # Should return mock response
-            self.assertIn("steps", response.lower())
+            self.assertEqual(response, "mocked-json")
+            mock_run.assert_not_called()
+            mock_mock_response.assert_called_once_with("Test prompt with JSON")
 
 
 class TestSearchEngine(unittest.TestCase):

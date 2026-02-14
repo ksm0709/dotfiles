@@ -11,11 +11,24 @@ description: |
   (4) 슬래시 커맨드 /deep-research 실행 시
   
   Prerequisites: GEMINI_API_KEY 또는 OPENAI_API_KEY 환경 변수 필요
+metadata:
+  trigger_keywords:
+    - deep research
+    - 심층 리서치
+    - 종합 리포트
+    - 웹 스크래핑
+    - research plan
 ---
 
 # Deep Research Skill
 
 LLM 기반 자동 심층 리서치. 격리된 venv 환경에서 안전하게 실행됩니다.
+
+## Activation hints
+
+- Trigger keywords: `deep research`, `심층 리서치`, `종합 리포트`, `웹 스크래핑`, `research plan`
+- Example phrases: "이 주제를 deep research로 분석해줘", "웹 소스를 모아 심층 리서치 리포트 만들어줘"
+- `/deep-research` 는 레거시/예시 커맨드로 문맥상 함께 언급될 수 있습니다.
 
 ## 워크플로우
 
@@ -96,7 +109,7 @@ deep-research/
 
 ```bash
 # 스킬 디렉토리로 이동
-cd ~/.config/opencode/skill/deep-research
+cd ~/.config/opencode/skills/deep-research
 
 # 첫 실행 (자동으로 venv 설정)
 ./scripts/run_research.sh "AI trends in 2026"

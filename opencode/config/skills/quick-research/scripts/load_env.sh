@@ -3,7 +3,7 @@
 # Extracts and sources only the export statements from ~/.bashrc
 #
 # Usage:
-#   source ~/.config/opencode/skill/research/scripts/load_env.sh
+#   source ~/.config/opencode/skills/quick-research/scripts/load_env.sh
 #
 # This script helps load environment variables when running Python scripts
 # from non-interactive shells (e.g., AI agents).

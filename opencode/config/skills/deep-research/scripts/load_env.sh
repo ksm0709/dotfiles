@@ -3,7 +3,7 @@
 # Loads API keys from multiple sources with proper priority handling
 #
 # Usage:
-#   source ~/.config/opencode/skill/deep-research/scripts/load_env.sh
+#   source ~/.config/opencode/skills/deep-research/scripts/load_env.sh
 #
 # Priority (high → low):
 # 1. Direct environment variables

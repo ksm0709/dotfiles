@@ -6,6 +6,7 @@ Run: python test_search.py
 """
 
 import sys
+import argparse
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -13,74 +14,95 @@ from unittest.mock import patch, MagicMock
 class TestSearchFunction(unittest.TestCase):
     """Test cases for the search function."""
 
-    def test_import_duckduckgo(self):
-        """Test that duckduckgo-search is importable."""
-        import importlib.util
+    def _mock_ddgs_class_with_results(self, search_results):
+        mock_ddgs = MagicMock()
+        mock_instance = MagicMock()
+        mock_ddgs.return_value.__enter__.return_value = mock_instance
+        mock_instance.text.return_value = search_results
+        return mock_ddgs
 
-        spec = importlib.util.find_spec("duckduckgo_search")
-        self.assertIsNotNone(spec, "duckduckgo-search not installed")
+    def test_positive_int_valid(self):
+        from run import _positive_int
+
+        self.assertEqual(_positive_int("1"), 1)
+        self.assertEqual(_positive_int("5"), 5)
+
+    def test_positive_int_invalid(self):
+        from run import _positive_int
+
+        with self.assertRaises(argparse.ArgumentTypeError):
+            _positive_int("0")
+
+        with self.assertRaises(argparse.ArgumentTypeError):
+            _positive_int("-3")
+
+        with self.assertRaises(argparse.ArgumentTypeError):
+            _positive_int("abc")
+
+    def test_search_handles_missing_dependency(self):
+        from run import search
+
+        with patch("run._load_ddgs_class", return_value=None) as mock_loader:
+            results = search("test query", max_results=1)
+
+        mock_loader.assert_called_once_with(emit_error=True)
+        self.assertEqual(results, [])
 
     def test_search_returns_list(self):
         """Test that search returns a list."""
         from run import search
 
-        # Mock DDGS to avoid actual network calls
-        with patch("run.DDGS") as mock_ddgs:
-            mock_instance = MagicMock()
-            mock_ddgs.return_value.__enter__.return_value = mock_instance
-            mock_instance.text.return_value = [
-                {"title": "Test", "href": "https://test.com", "body": "Test body"}
-            ]
+        mock_ddgs = self._mock_ddgs_class_with_results(
+            [{"title": "Test", "href": "https://test.com", "body": "Test body"}]
+        )
 
+        with patch("run._load_ddgs_class", return_value=mock_ddgs):
             results = search("test query", max_results=1)
 
-            self.assertIsInstance(results, list)
-            self.assertEqual(len(results), 1)
+        self.assertIsInstance(results, list)
+        self.assertEqual(len(results), 1)
 
     def test_search_result_structure(self):
         """Test that search results have correct structure."""
         from run import search
 
-        with patch("run.DDGS") as mock_ddgs:
-            mock_instance = MagicMock()
-            mock_ddgs.return_value.__enter__.return_value = mock_instance
-            mock_instance.text.return_value = [
-                {"title": "Test Title", "href": "https://test.com", "body": "Snippet"}
-            ]
+        mock_ddgs = self._mock_ddgs_class_with_results(
+            [{"title": "Test Title", "href": "https://test.com", "body": "Snippet"}]
+        )
 
+        with patch("run._load_ddgs_class", return_value=mock_ddgs):
             results = search("test", max_results=1)
 
-            self.assertIn("title", results[0])
-            self.assertIn("url", results[0])
-            self.assertIn("snippet", results[0])
-            self.assertEqual(results[0]["title"], "Test Title")
-            self.assertEqual(results[0]["url"], "https://test.com")
+        self.assertIn("title", results[0])
+        self.assertIn("url", results[0])
+        self.assertIn("snippet", results[0])
+        self.assertEqual(results[0]["title"], "Test Title")
+        self.assertEqual(results[0]["url"], "https://test.com")
 
     def test_search_handles_empty_results(self):
         """Test that search handles empty results gracefully."""
         from run import search
 
-        with patch("run.DDGS") as mock_ddgs:
-            mock_instance = MagicMock()
-            mock_ddgs.return_value.__enter__.return_value = mock_instance
-            mock_instance.text.return_value = []
+        mock_ddgs = self._mock_ddgs_class_with_results([])
 
+        with patch("run._load_ddgs_class", return_value=mock_ddgs):
             results = search("nonexistent query xyz123", max_results=5)
 
-            self.assertIsInstance(results, list)
-            self.assertEqual(len(results), 0)
+        self.assertIsInstance(results, list)
+        self.assertEqual(len(results), 0)
 
     def test_search_handles_exception(self):
         """Test that search handles exceptions gracefully."""
         from run import search
 
-        with patch("run.DDGS") as mock_ddgs:
-            mock_ddgs.return_value.__enter__.side_effect = Exception("Network error")
+        mock_ddgs = MagicMock()
+        mock_ddgs.return_value.__enter__.side_effect = Exception("Network error")
 
+        with patch("run._load_ddgs_class", return_value=mock_ddgs):
             results = search("test", max_results=1)
 
-            self.assertIsInstance(results, list)
-            self.assertEqual(len(results), 0)
+        self.assertIsInstance(results, list)
+        self.assertEqual(len(results), 0)
 
 
 class TestIntegration(unittest.TestCase):
