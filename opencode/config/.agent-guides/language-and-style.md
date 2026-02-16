@@ -16,7 +16,7 @@
 ### Python
 
 - PEP8 준수
-- `yapf` 포맷팅
+- `ruff` 포맷팅
 - Google 스타일 가이드 준수
 
 ### C++
