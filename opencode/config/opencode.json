@@ -4,6 +4,7 @@
     "opencode-gemini-auth@latest",
     "oh-my-opencode@latest",
     "opencode-antigravity-auth@latest",
+    "@spoons-and-mirrors/subtask2@latest",
   ],
   "mcp": {
     "context7": {
