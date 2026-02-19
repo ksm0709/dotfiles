@@ -1,0 +1,2 @@
+- Chose English for troubleshooting.md to match SKILL.md, hook-types.md, and examples.md.
+- Organized troubleshooting by lifecycle (installation -> triggering -> config -> output) for better flow.
