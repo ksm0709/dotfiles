@@ -1,18 +1,10 @@
 # Deep Research Skill Dependencies
-# Generated: 2026-01-21
+# These are standard library modules, no external dependencies needed for core functionality
 
-# Required - Core functionality
-ddgs>=8.0.0  # NEW: replaced duckduckgo-search
-beautifulsoup4>=4.12.0
-requests>=2.31.0
-
-# LLM Providers (at least one required)
-google-genai>=1.0.0  # Gemini (NEW: replaced google-generativeai)
-openai>=1.0.0
-
-# Utility
-packaging>=23.0
-
-# Phase 2 Enhancements
-aiohttp>=3.9.0  # Parallel scraping
-rich>=13.0.0    # Progress UI (optional but recommended)
+# Optional: For enhanced features, uncomment if needed
+# requests>=2.31.0  # For web fetching
+# beautifulsoup4>=4.12.0  # For HTML parsing
+# markdownify>=0.11.6  # For HTML to markdown conversion
+# numpy>=1.24.0  # For statistical analysis
+# pandas>=2.0.0  # For data analysis
+# networkx>=3.1  # For knowledge graph analysis

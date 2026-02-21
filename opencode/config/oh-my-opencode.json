@@ -1,78 +1,86 @@
 {
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "google_auth": false,
   "agents": {
     "sisyphus": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "high"
-    },
-    "hephaestus": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "medium"
-    },
-    "oracle": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "high"
-    },
-    "librarian": {
+      "description": "메인 오케스트레이션 에이전트. 요구사항 분석, 작업 위임, 직접 코드 작성. Kimi-k2.5: 스웜 병렬화 + 고성능 추론",
       "model": "opencode/kimi-k2.5"
     },
+    "hephaestus": {
+      "description": "백그라운드 빌더 및 실행 에이전트. 특정 컴포넌트 구현 및 작업 처리. GLM-5: 장기 실행 안정성 + 낮은 환각률",
+      "model": "opencode/glm-5"
+    },
+    "oracle": {
+      "description": "읽기 전용 고지능 컨설턴트. 복잡한 아키텍처, 난해한 디버깅, 다중 시스템 트레이드오프 설계. GLM-5: 신뢰성 + 정확성",
+      "model": "opencode/glm-5"
+    },
+    "librarian": {
+      "description": "외부 레퍼런스(공식 문서, OSS 구현체 등) 탐색 및 이해 특화 에이전트. GLM-5: 신뢰성 + 문서 파싱",
+      "model": "opencode/glm-5"
+    },
     "explore": {
+      "description": "코드베이스 컨텍스트 파악 및 패턴 검색 에이전트. Kimi-k2.5: 컨텍스트 윈도우 + 패턴 인식",
       "model": "opencode/kimi-k2.5"
     },
     "multimodal-looker": {
+      "description": "이미지, PDF 등 시각적 데이터 분석 및 해석 에이전트. Kimi-k2.5: 네이티브 멀티모달 + 시각적 코딩",
       "model": "opencode/kimi-k2.5"
     },
     "prometheus": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "high"
+      "description": "작업 실행 계획(Plan), 로드맵, 아키텍처 방향성을 수립하는 에이전트. Kimi-k2.5: 전략적 사고 + 복합 추론",
+      "model": "opencode/kimi-k2.5"
     },
     "metis": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "high"
+      "description": "사전 계획 컨설턴트. 사용자 요청의 숨겨진 의도, 모호성, AI 실패 가능성을 식별. GLM-5: 신뢰성 + 모호성 탐지",
+      "model": "opencode/glm-5"
     },
     "momus": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "medium"
+      "description": "전문 리뷰어 에이전트. 작업 계획의 명확성, 검증 가능성, 완전성을 평가. GLM-5: 비판적 분석 + 일관성",
+      "model": "opencode/glm-5"
     },
     "atlas": {
-      "model": "opencode/kimi-k2.5"
+      "description": "시스템 매핑, 아키텍처 오버뷰 및 디렉토리 구조 파악 에이전트. GLM-5: 구조적 추론 + 안정성",
+      "model": "opencode/glm-5"
     }
   },
   "categories": {
     "visual-engineering": {
+      "description": "프론트엔드, UI/UX, 디자인, 스타일링, 애니메이션. Kimi-k2.5: 시각적 코딩 강점",
       "model": "opencode/kimi-k2.5"
     },
     "ultrabrain": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "xhigh"
+      "description": "진정으로 어려운 논리 중심 작업. Kimi-k2.5: AIME 96.1% 최고 추론 성능",
+      "model": "opencode/kimi-k2.5"
     },
     "deep": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "medium"
+      "description": "목표 중심 자율 문제 해결. GLM-5: 장기 실행 안정성 + 에이전틱 엔지니어링",
+      "model": "opencode/glm-5"
     },
     "artistry": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "high"
+      "description": "복잡한 창의적 문제 해결. Kimi-k2.5: 멀티모달 + 창의적 변형",
+      "model": "opencode/kimi-k2.5"
     },
     "quick": {
-      "model": "opencode/kimi-k2.5"
+      "description": "사소한 작업, 단일 파일 변경. GLM-5: 빠른 응답 + 경제성",
+      "model": "opencode/glm-5"
     },
     "unspecified-low": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "medium"
+      "description": "다른 카테고리에 맞지 않는 저노력 작업. GLM-5: 비용 효율적",
+      "model": "opencode/glm-5"
     },
     "unspecified-high": {
-      "model": "opencode/kimi-k2.5",
-      "variant": "medium"
+      "description": "다른 카테고리에 맞지 않는 고노력 작업. Kimi-k2.5: 복잡한 추론",
+      "model": "opencode/kimi-k2.5"
     },
     "writing": {
-      "model": "opencode/kimi-k2.5"
+      "description": "문서화, 산문, 기술 문서 작성. GLM-5: 다국어 + 문서 품질",
+      "model": "opencode/glm-5"
     }
   },
   "lsp": {
     "pylance": {
       "command": [
-        "/home/bear1130/.nvm/versions/node/v22.17.0/bin/pyright-langserver",
+        "pyright-langserver",
         "--stdio"
       ],
       "extensions": [
@@ -82,7 +90,7 @@
     },
     "clangd": {
       "command": [
-        "/home/bear1130/.local/share/nvim/mason/bin/clangd"
+        "clangd"
       ],
       "extensions": [
         "c",
@@ -94,12 +102,5 @@
         "cxx"
       ]
     }
-  },
-  "_migrations": [
-    "model-version:openai/gpt-5.2-codex->opencode/kimi-k2.5",
-    "model-version:openai/gpt-5.2-codex->opencode/kimi-k2.5",
-    "model-version:openai/gpt-5.2-codex->opencode/kimi-k2.5",
-    "model-version:openai/gpt-5.2-codex->opencode/kimi-k2.5",
-    "model-version:openai/gpt-5.2-codex->opencode/kimi-k2.5"
-  ]
+  }
 }

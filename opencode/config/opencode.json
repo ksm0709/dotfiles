@@ -5,6 +5,7 @@
     "oh-my-opencode@latest",
     "opencode-antigravity-auth@latest",
     "@spoons-and-mirrors/subtask2@latest",
+    "opencode-command-hooks@latest"
   ],
   "mcp": {
     "context7": {
