@@ -13,7 +13,14 @@ echo "Backing up opencode config from $CONFIG_SRC to $CONFIG_DST..."
 
 mkdir -p "$CONFIG_DST"
 
-# Use rsync to copy and exclude node_modules, .git, and venv
-rsync -av --delete --exclude 'node_modules' --exclude '.git' --exclude 'venv' --exclude 'antigravity-*' "$CONFIG_SRC/" "$CONFIG_DST/"
+# Use rsync to copy and exclude node_modules, .git, and venv, antigravity-, oh-my-opencode configs
+rsync -av --delete \
+	--exclude 'node_modules' \
+	--exclude '.git' \
+	--exclude 'venv' \
+	--exclude 'antigravity-*' \
+	--exclude 'oh-my-opencode*' \
+	"$CONFIG_SRC/" \
+	"$CONFIG_DST/"
 
 echo "Backup complete."
