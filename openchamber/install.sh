@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# ── Install bun (if not already installed) ───────────────────────────────
+BUN_PATH="$HOME/.bun/bin/bun"
+if [ ! -x "$BUN_PATH" ]; then
+    echo "Installing bun..."
+    curl -fsSL https://bun.sh/install | bash
+    if [ ! -x "$BUN_PATH" ]; then
+        echo "Error: bun installation failed."
+        exit 1
+    fi
+    echo "  bun installed: $($BUN_PATH --version)"
+else
+    echo "bun already installed: $($BUN_PATH --version)"
+fi
+
+
 if ! command -v npm &> /dev/null; then
     echo "Error: npm is not installed. Please install Node.js and npm first."
     exit 1
