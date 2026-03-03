@@ -20,6 +20,7 @@ rsync -av --delete \
 	--exclude 'venv' \
 	--exclude 'antigravity-*' \
 	--exclude 'oh-my-opencode*' \
+	--exclude '.opencode' \
 	"$CONFIG_SRC/" \
 	"$CONFIG_DST/"
 

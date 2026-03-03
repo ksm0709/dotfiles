@@ -6,7 +6,8 @@
     "opencode-antigravity-auth@latest",
     "@spoons-and-mirrors/subtask2@latest",
     "opencode-command-hooks@latest",
-    "@ksm0709/context@latest"
+    "@ksm0709/context@latest",
+    "@azumag/opencode-rate-limit-fallback@latest"
   ],
   "mcp": {
     "context7": {
