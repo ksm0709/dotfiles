@@ -1,0 +1,107 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "google_auth": false,
+
+  "agents": {
+    "sisyphus": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "hephaestus": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "prometheus": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "oracle": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "librarian": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "explore": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "multimodal-looker": {
+      "model": "google/gemini-3.1-pro-preview-customtools"
+    },
+    "metis": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "momus": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "atlas": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    }
+  },
+
+  "categories": {
+    "quick": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "unspecified-low": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "unspecified-high": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "writing": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "visual-engineering": {
+      "model": "google/gemini-3.1-pro-preview",
+      "variant": "high"
+    },
+    "ultrabrain": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "deep": {
+      "model": "google/gemini-3.1-flash-lite-preview"
+    },
+    "artistry": {
+      "model": "google/gemini-3.1-pro-preview",
+      "variant": "high"
+    }
+  },
+
+  "runtime_fallback": true,
+
+  "background_task": {
+    "providerConcurrency": {
+      "anthropic": 1,
+      "openai": 1,
+      "google": 6,
+      "github-copilot": 5
+    },
+    "modelConcurrency": {
+      "google/gemini-3.1-flash-lite-preview": 6
+    }
+  },
+
+  "lsp": {
+    "pylance": {
+      "command": [
+        "pyright-langserver",
+        "--stdio"
+      ],
+      "extensions": [
+        "py",
+        "pyi"
+      ]
+    },
+    "clangd": {
+      "command": [
+        "clangd"
+      ],
+      "extensions": [
+        "c",
+        "cpp",
+        "h",
+        "hpp",
+        "cc",
+        "hh",
+        "cxx"
+      ]
+    }
+  }
+}
